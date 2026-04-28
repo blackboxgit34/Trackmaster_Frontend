@@ -33,7 +33,7 @@ const TimeActivityReportsPage = () => {
       <div className="px-6 bg-card border-b">
         <div className="flex items-baseline gap-8">
           <h1 className="text-2xl font-bold tracking-tight text-foreground py-2">
-            Time & Activjkjhkjhity Analysis
+            Time & Activity Analysis
           </h1>
           <TabsList>
             {tabs.map(tab => (
