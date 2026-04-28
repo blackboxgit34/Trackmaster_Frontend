@@ -33,7 +33,7 @@ export const smsSettingsData: SmsAlertSetting[] = actualVehicles.slice(0, 20).ma
     ignition: Math.random() > 0.5,
     battery: Math.random() > 0.3,
     overSpeed: Math.random() > 0.2,
-    overStoppage: Math.random() > 0.4,
+    overStoppage: Math.random() > 0.7,
     fuelLid: Math.random() > 0.8,
     milkLid: Math.random() > 0.9,
     geofence: Math.random() > 0.1,
