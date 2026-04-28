@@ -7,7 +7,7 @@ export interface Poi {
 }
 
 export const poiData: Poi[] = [
-  { id: '1', poiName: 'Main Warehouse', latitude: 19.0760, longitude: 72.8777, radius: 500 },
+  { id: '1', poiName: 'MW Main Warehouse', latitude: 19.0760, longitude: 72.8777, radius: 500 },
   { id: '2', poiName: 'North Distribution Center', latitude: 19.2288, longitude: 72.8540, radius: 1000 },
   { id: '3', poiName: 'South Hub', latitude: 18.9220, longitude: 72.8347, radius: 750 },
   { id: '4', poiName: 'East Side Depot', latitude: 19.0785, longitude: 72.9080, radius: 600 },
