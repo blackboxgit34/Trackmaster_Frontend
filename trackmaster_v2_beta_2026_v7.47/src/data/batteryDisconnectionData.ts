@@ -34,7 +34,7 @@ const generateDisconnectionData = (): BatteryDisconnectionEvent[] => {
           endTime: format(endTime, 'yyyy-MM-dd HH:mm:ss'),
           duration: durationSeconds,
           startLocation: `Site ${String.fromCharCode(65 + (i % 5))}, Sector ${i + 1}`,
-          endLocation: `Near Warehouse ${i + 2}`,
+          endLocation: `Near Warehouse testttt ${i + 2}`,
         });
       }
     }
