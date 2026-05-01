@@ -1,6 +1,5 @@
-import { API_BASE_URL } from '@/config/Api';
 import { useState } from 'react';
-import { Routes, Route, Navigate, Outlet, useLocation,useNavigate } from 'react-router-dom';
+import { Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import Sidebar from '@/components/Sidebar';
 import Header from '@/components/Header';
 import { dashboardItems } from '@/data/mockData';
@@ -30,14 +29,9 @@ import OperationalCrewReportsPage from '@/pages/OperationalCrewReportsPage';
 import CommunicationAlertsReportsPage from '@/pages/CommunicationAlertsReportsPage';
 import SummaryManagementReportsPage from '@/pages/SummaryManagementReportsPage';
 import CustomReport from '@/components/page/CustomReport';
+import SelectCustomerPage from '@/pages/SelectCustomerPage';
 import { cn } from '@/lib/utils';
 import { Toaster } from '@/components/ui/toaster';
-import AsyncSelect from 'react-select/async';
-type OptionType = {
-  value: string;
-  label: string;
-  otherValue: string;
-};
 
 function AppLayout() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -52,133 +46,48 @@ function AppLayout() {
   const handleShowWidget = (widgetId: string) => {
     setHiddenWidgetIds((prev) => prev.filter((id) => id !== widgetId));
   };
-  const { isStaffMember } = useUser();
-const loadOptions = async (inputValue: string): Promise<OptionType[]> => {
-  if (!inputValue || inputValue.length < 3) {
-    return [];
-  }
-  try {
-    const response = await fetch(`${API_BASE_URL}/Account/GetUserBySearching?search=${inputValue}`);
-    const data = await response.json();
 
-    return data.map((item: any) => ({
-      value: item.value,
-      label: item.label,
-      otherValue: item.otherValue
-    }));
-  } catch (error) {
-    console.error("Error loading options:", error);
-    return [];
-  }
-};
-
-  /* ✅ FIXED state typing */
-  const [selectedOption, setSelectedOption] = useState<OptionType | null>(null);
-   const { login } = useUser();
   return (
-    <>
-      {!isStaffMember && (
-        <div className="flex h-screen w-full bg-background">
-          {menuPosition === 'sidebar' && (
-            <Sidebar
-              isCollapsed={isSidebarCollapsed}
-              setIsCollapsed={setIsSidebarCollapsed}
-            />
-          )}
-          <div className="flex flex-col flex-1 min-w-0">
-            <Header
-              setIsCustomizationSidebarOpen={setIsCustomizationSidebarOpen}
-            />
-            <main className={cn("flex-1 relative", isMapPage ? "overflow-hidden" : "overflow-y-auto")}>
-              <Outlet />
-            </main>
-          </div>
-          <CustomizationSidebar
-            isOpen={isCustomizationSidebarOpen}
-            onOpenChange={setIsCustomizationSidebarOpen}
-            isCustomizationEnabled={isCustomizationEnabled}
-            setIsCustomizationEnabled={setIsCustomizationEnabled}
-            hiddenWidgetIds={hiddenWidgetIds}
-            onShowWidget={handleShowWidget}
-            allItems={dashboardItems}
-          />
-          <Toaster />
-        </div>
+    <div className="flex h-screen w-full bg-background">
+      {menuPosition === 'sidebar' && (
+        <Sidebar
+          isCollapsed={isSidebarCollapsed}
+          setIsCollapsed={setIsSidebarCollapsed}
+        />
       )}
-
-      {/* This will ALWAYS render */}
-       {/* ✅ Full Screen Background Section */}
-<div className="relative min-h-screen flex items-center justify-center overflow-hidden">
-
-  {/* 🌄 Background Image */}
-  <div
-    className="absolute inset-0 bg-cover bg-center"
-    style={{
-      backgroundImage: "url('https://scx2.b-cdn.net/gfx/news/hires/2019/2-nature.jpg')" // 👈 put your image here
-    }}
-  />
-
-  {/* 🌫️ Overlay (IMPORTANT for readability) */}
-  <div className="absolute inset-0 bg-white/70 backdrop-blur-sm" />
-
-  {/* 🎯 Card Content */}
-  <div className="relative z-10 w-full max-w-xl px-4">
-    <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-200 p-6">
-
-      <h2 className="text-xl font-semibold text-gray-800 mb-1 text-center">
-        Select Customer
-      </h2>
-
-      <p className="text-sm text-gray-500 mb-4 text-center">
-        Search by Customer ID / Login / Name (minimum 3 characters)
-      </p>
-
-      <AsyncSelect<OptionType>
-        cacheOptions
-        defaultOptions={false}
-        loadOptions={loadOptions}
-        value={selectedOption}
-        onChange={(option) => {
-          setSelectedOption(option);
-          if (option) {
-            login(option.value, option.otherValue, "Staff");
-          }
-        }}
-        placeholder="Type to search customer..."
-        classNamePrefix="react-select"
-        styles={{
-          control: (base) => ({
-            ...base,
-            borderRadius: "12px",
-            borderColor: "#e5e7eb",
-            padding: "4px",
-            boxShadow: "none",
-            "&:hover": { borderColor: "#6366f1" }
-          })
-        }}
+      <div className="flex flex-col flex-1 min-w-0">
+        <Header
+          setIsCustomizationSidebarOpen={setIsCustomizationSidebarOpen}
+        />
+        <main className={cn("flex-1 relative", isMapPage ? "overflow-hidden" : "overflow-y-auto")}>
+          <Outlet />
+        </main>
+      </div>
+      <CustomizationSidebar
+        isOpen={isCustomizationSidebarOpen}
+        onOpenChange={setIsCustomizationSidebarOpen}
+        isCustomizationEnabled={isCustomizationEnabled}
+        setIsCustomizationEnabled={setIsCustomizationEnabled}
+        hiddenWidgetIds={hiddenWidgetIds}
+        onShowWidget={handleShowWidget}
+        allItems={dashboardItems}
       />
-
-      {selectedOption && (
-        <div className="mt-4 text-center text-sm text-indigo-700">
-          Selected: {selectedOption.label}
-        </div>
-      )}
-
+      <Toaster />
     </div>
-  </div>
-</div>
-    </>
   );
 }
 // This component protects routes that require authentication.
 function ProtectedRoutes() {
-  const { isAuthenticated } = useUser();
+  const { isAuthenticated, isStaffMember } = useUser();
 
   // If the user is not authenticated, redirect them to the login page.
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
+  if (isStaffMember && location.pathname !== "/select-customer") {
+    return <Navigate to="/select-customer" replace />;
+  }
   // If they are authenticated, render the main application layout.
   // The nested routes will be rendered inside the <Outlet /> of AppLayout.
   return <AppLayout />;
@@ -192,8 +101,9 @@ export default function AppRoutes() {
       {/* Public Route: Login Page */}
       {/* If the user is already logged in, navigating to /login will redirect them to the dashboard. */}
       <Route
-        path="/login" element={ isAuthenticated ? <Navigate to="/" replace /> : <LoginPage /> }
+        path="/login" element={isAuthenticated ? <Navigate to="/" replace /> : <LoginPage />}
       />
+      <Route path="/select-customer" element={<SelectCustomerPage />} />
       {/* Protected Routes Wrapper */}
       {/* All routes inside this wrapper require authentication. */}
       <Route element={<ProtectedRoutes />}>
