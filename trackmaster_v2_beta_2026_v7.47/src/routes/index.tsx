@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '@/config/Api';
 import { useState } from 'react';
 import { Routes, Route, Navigate, Outlet, useLocation,useNavigate } from 'react-router-dom';
 import Sidebar from '@/components/Sidebar';
@@ -57,7 +58,7 @@ const loadOptions = async (inputValue: string): Promise<OptionType[]> => {
     return [];
   }
   try {
-    const response = await fetch(`https://localhost:7182/api/Account/GetUserBySearching?search=${inputValue}`);
+    const response = await fetch(`${API_BASE_URL}/Account/GetUserBySearching?search=${inputValue}`);
     const data = await response.json();
 
     return data.map((item: any) => ({

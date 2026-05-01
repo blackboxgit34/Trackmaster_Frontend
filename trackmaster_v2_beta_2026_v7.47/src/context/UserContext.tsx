@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '@/config/Api';
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 
 interface User {
@@ -58,7 +59,7 @@ const [isStaffMember, setIsStaffMember] = useState<boolean>(() => {
 
   const login = async (email: string, pass: string, type: string): Promise<LoginResponse> => {
     try {
-      const url = `https://localhost:7182/api/Account/login?userId=${encodeURIComponent(email)}&password=${encodeURIComponent(pass)}&type=${type}`;
+      const url = `${API_BASE_URL}/Account/login?userId=${encodeURIComponent(email)}&password=${encodeURIComponent(pass)}&type=${type}`;
 
       const res = await fetch(url, { method: "GET" });
 

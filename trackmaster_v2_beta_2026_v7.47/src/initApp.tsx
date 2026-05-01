@@ -13,6 +13,5 @@ export const initApp = () => {
 
     sessionStorage.setItem("firstLoad", "done");
 
-    console.log("✅ First time app load: cleared ALL localStorage");
   }
 };
