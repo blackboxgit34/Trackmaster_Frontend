@@ -130,7 +130,7 @@ const loadOptions = async (inputValue: string): Promise<OptionType[]> => {
       </h2>
 
       <p className="text-sm text-gray-500 mb-4 text-center">
-        Search by Customer ID or Name (minimum 3 characters)
+        Search by Customer ID / Login / Name (minimum 3 characters)
       </p>
 
       <AsyncSelect<OptionType>
