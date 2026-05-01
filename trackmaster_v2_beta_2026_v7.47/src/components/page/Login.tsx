@@ -11,22 +11,27 @@ import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 export default function LoginPage() {
   const navigate = useNavigate();
   const [view, setView] = useState<'login' | 'forgot-password'>('login');
-  const [email, setEmail] = useState('admin@trackmaster.com');
-  const [password, setPassword] = useState('password123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [resetEmail, setResetEmail] = useState('');
   const [error, setError] = useState('');
   const [resetMessage, setResetMessage] = useState('');
   const { login } = useUser();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setResetMessage('');
-    const success = login(email, password);
-    if (success) {
-      navigate('/');
-    } else {
-      setError('Invalid email or password. Please try again.');
+    const user = await login(email, password);
+    if (user.data?.isStaffMember) {
+      navigate('/settings/profile');
+    }
+    else {
+      if (user.message == "Login successful") {
+        navigate('/');
+      } else {
+        setError(user.message);
+      }
     }
   };
 
@@ -66,11 +71,11 @@ export default function LoginPage() {
           {view === 'login' ? (
             <form onSubmit={handleLogin} className="grid gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">Username</Label>
                 <Input
                   id="email"
-                  type="email"
-                  placeholder="m@example.com"
+                  type="text"
+                  placeholder='Enter Username'
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -117,10 +122,10 @@ export default function LoginPage() {
           ) : (
             <div className="grid gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="reset-email">Email</Label>
+                <Label htmlFor="reset-email">Username</Label>
                 <Input
                   id="reset-email"
-                  type="email"
+                  type="text"
                   placeholder="m@example.com"
                   required
                   value={resetEmail}

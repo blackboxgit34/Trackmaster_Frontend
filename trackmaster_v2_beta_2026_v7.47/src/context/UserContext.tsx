@@ -1,15 +1,20 @@
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 
 interface User {
+  custId: number;
   name: string;
   role: string;
-  email: string;
+  userName: string;
+  isStaffMember: boolean;
 }
-
+interface LoginResponse {
+  message: string;
+  data?: User;
+}
 interface UserContextType {
   isAuthenticated: boolean;
   user: User | null;
-  login: (email: string, pass: string) => boolean;
+  login: (email: string, pass: string) => Promise<LoginResponse>;
   logout: () => void;
   updateUser: (newUserData: Partial<User>) => void;
 }
@@ -47,25 +52,55 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   const DEMO_EMAIL = 'admin@trackmaster.com';
   const DEMO_PASSWORD = 'password123';
 
-  const login = (email: string, pass: string): boolean => {
-    if (email === DEMO_EMAIL && pass === DEMO_PASSWORD) {
-      const demoUser: User = {
-        name: 'Admin User',
-        role: 'Super Admin',
-        email: DEMO_EMAIL,
-      };
-      try {
-        localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(demoUser));
-        setUser(demoUser);
-        setIsAuthenticated(true);
-        return true;
-      } catch {
-        return false;
-      }
-    }
-    return false;
-  };
+  // const login = (email: string, pass: string): boolean => {
+  //   if (email === DEMO_EMAIL && pass === DEMO_PASSWORD) {
+  //     const demoUser: User = {
+  //       name: 'Admin User',
+  //       role: 'Super Admin',
+  //       email: DEMO_EMAIL,
+  //     };
+  //     try {
+  //       localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(demoUser));
+  //       setUser(demoUser);
+  //       setIsAuthenticated(true);
+  //       return true;
+  //     } catch {
+  //       return false;
+  //     }
+  //   }
+  //   return false;
+  // };
+  const login = async (email: string, pass: string): Promise<LoginResponse> => {
+    try {
+      const url = `https://localhost:7182/api/Account/login?userId=${encodeURIComponent(email)}&password=${encodeURIComponent(pass)}`;
 
+      const res = await fetch(url, { method: "GET" });
+
+      const response = await res.json();
+
+      if (!res.ok) {
+        return { message: response.message || "Login failed" };
+      }
+      const data = response.data;
+      const loggedInUser: User = {
+        custId: data.custId,
+        name: data.custName,
+        role: data.role,
+        userName: data.userName,
+        isStaffMember: data.isStaffMember
+      };
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(loggedInUser));
+      setUser(loggedInUser);
+      setIsAuthenticated(true);
+      return {
+        message: response.message,
+        data: loggedInUser,
+      };
+    } catch (error) {
+      console.error("Login failed", error);
+      return { message: "Something went wrong" };
+    }
+  };
   const logout = () => {
     try {
       localStorage.removeItem(USER_STORAGE_KEY);
