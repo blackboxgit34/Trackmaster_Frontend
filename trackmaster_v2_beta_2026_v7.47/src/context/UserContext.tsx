@@ -13,8 +13,9 @@ interface LoginResponse {
 }
 interface UserContextType {
   isAuthenticated: boolean;
+  isStaffMember: boolean;
   user: User | null;
-  login: (email: string, pass: string) => Promise<LoginResponse>;
+  login: (email: string, pass: string, type: string) => Promise<LoginResponse>;
   logout: () => void;
   updateUser: (newUserData: Partial<User>) => void;
 }
@@ -30,15 +31,22 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       if (!storedUserJSON) {
         return false; // No key, not authenticated.
       }
-      // Try to parse the stored data and check if it's a valid user object.
-      const user = JSON.parse(storedUserJSON);
-      return !!user && !!user.email; // A valid user must have an email.
+      else{
+        return true; // A valid user must have an email.
+      }
     } catch {
       // If parsing fails or any other error, they are not authenticated.
       return false;
     }
   });
-
+const [isStaffMember, setIsStaffMember] = useState<boolean>(() => {
+    try {
+      const storedUserJSON = localStorage.getItem(USER_STORAGE_KEY);
+      return storedUserJSON ? JSON.parse(storedUserJSON).isStaffMember === true : false;
+    } catch {
+      return false;
+    }
+  });
   const [user, setUser] = useState<User | null>(() => {
     try {
       const storedUser = localStorage.getItem(USER_STORAGE_KEY);
@@ -48,31 +56,9 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     }
   });
 
-  // Demo credentials
-  const DEMO_EMAIL = 'admin@trackmaster.com';
-  const DEMO_PASSWORD = 'password123';
-
-  // const login = (email: string, pass: string): boolean => {
-  //   if (email === DEMO_EMAIL && pass === DEMO_PASSWORD) {
-  //     const demoUser: User = {
-  //       name: 'Admin User',
-  //       role: 'Super Admin',
-  //       email: DEMO_EMAIL,
-  //     };
-  //     try {
-  //       localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(demoUser));
-  //       setUser(demoUser);
-  //       setIsAuthenticated(true);
-  //       return true;
-  //     } catch {
-  //       return false;
-  //     }
-  //   }
-  //   return false;
-  // };
-  const login = async (email: string, pass: string): Promise<LoginResponse> => {
+  const login = async (email: string, pass: string, type: string): Promise<LoginResponse> => {
     try {
-      const url = `https://localhost:7182/api/Account/login?userId=${encodeURIComponent(email)}&password=${encodeURIComponent(pass)}`;
+      const url = `https://localhost:7182/api/Account/login?userId=${encodeURIComponent(email)}&password=${encodeURIComponent(pass)}&type=${type}`;
 
       const res = await fetch(url, { method: "GET" });
 
@@ -92,6 +78,8 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(loggedInUser));
       setUser(loggedInUser);
       setIsAuthenticated(true);
+      setIsStaffMember(loggedInUser.isStaffMember);
+
       return {
         message: response.message,
         data: loggedInUser,
@@ -106,6 +94,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       localStorage.removeItem(USER_STORAGE_KEY);
       setUser(null);
       setIsAuthenticated(false);
+      setIsStaffMember(false);
     } catch (error) {
       console.error("Failed to logout", error);
     }
@@ -125,7 +114,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <UserContext.Provider value={{ isAuthenticated, user, login, logout, updateUser }}>
+    <UserContext.Provider value={{ isAuthenticated, isStaffMember, user, login, logout, updateUser }}>
       {children}
     </UserContext.Provider>
   );

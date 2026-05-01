@@ -9,7 +9,6 @@ import { AlertCircle, CheckCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 
 export default function LoginPage() {
-  const navigate = useNavigate();
   const [view, setView] = useState<'login' | 'forgot-password'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -18,21 +17,11 @@ export default function LoginPage() {
   const [resetMessage, setResetMessage] = useState('');
   const { login } = useUser();
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setResetMessage('');
-    const user = await login(email, password);
-    if (user.data?.isStaffMember) {
-      navigate('/settings/profile');
-    }
-    else {
-      if (user.message == "Login successful") {
-        navigate('/');
-      } else {
-        setError(user.message);
-      }
-    }
+    login(email, password, "Customer");
   };
 
   const handlePasswordReset = () => {
