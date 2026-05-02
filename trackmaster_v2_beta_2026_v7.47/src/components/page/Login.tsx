@@ -22,16 +22,9 @@ export default function LoginPage() {
     e.preventDefault();
     setError('');
     setResetMessage('');
-    const user = await login(email, password);
-    if (user.data?.isStaffMember) {
-      navigate('/settings/profile');
-    }
-    else {
-      if (user.message == "Login successful") {
-        navigate('/');
-      } else {
-        setError(user.message);
-      }
+    const user = await login(email, password, "Customer");
+    if (user.message != "Login successful"){
+      setError(user.message);
     }
   };
 
