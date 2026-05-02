@@ -1,8 +1,42 @@
 import { subDays, formatISO, format, addHours, subHours, startOfDay, isWithinInterval, parse, endOfDay, addMinutes, addSeconds } from 'date-fns';
 import { Clock, Gauge, type LucideIcon, Power, Ban, BatteryWarning, MapPin, ArrowUp, ArrowDown, Undo2, Fuel, Droplets, Box, Thermometer } from 'lucide-react';
 
-// --- CONFIGURATION & CONSTANTS ---
-const NUM_VEHICLES = 50;
+
+
+// let NUM_VEHICLES = 50;
+
+let NUM_VEHICLES = 0;
+
+export async function getVehicleCount(): Promise<number> {
+    debugger;
+    try {
+        const auth = JSON.parse(localStorage.getItem("trackmaster-auth") || "{}");
+        const custId = auth.custId;
+
+        
+        const url = `https://localhost:7182/api/Dashboard/dashboarddata?userid=${custId}`;
+
+      const res = await fetch(url, { method: "GET" });
+
+      const response = await res.json();
+        if (!res.ok) {
+            throw new Error("Failed API");
+        }
+
+        const data = response.data;
+
+        NUM_VEHICLES = data.totalVehicles; // ✅ store here
+        return NUM_VEHICLES;              // ✅ return value
+
+    } catch (err) {
+        console.log(err);
+        return 0;
+    }
+}
+const count = await getVehicleCount();
+console.log(count);         // correct value
+console.log(NUM_VEHICLES);  // also updated
+
 const NUM_DAYS_OF_DATA = 90;
 
 export type VehicleStatus = 'Moving' | 'Parked' | 'Unreachable' | 'Breakdown' | 'Ignition On' | 'Battery Disconnect' | 'High Speed' | 'Towed' | 'Idle';
