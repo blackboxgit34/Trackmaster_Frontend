@@ -32,7 +32,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       if (!storedUserJSON) {
         return false; // No key, not authenticated.
       }
-      else{
+      else {
         return true; // A valid user must have an email.
       }
     } catch {
@@ -40,7 +40,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       return false;
     }
   });
-const [isStaffMember, setIsStaffMember] = useState<boolean>(() => {
+  const [isStaffMember, setIsStaffMember] = useState<boolean>(() => {
     try {
       const storedUserJSON = localStorage.getItem(USER_STORAGE_KEY);
       return storedUserJSON ? JSON.parse(storedUserJSON).isStaffMember === true : false;
@@ -76,6 +76,9 @@ const [isStaffMember, setIsStaffMember] = useState<boolean>(() => {
         userName: data.userName,
         isStaffMember: data.isStaffMember
       };
+      if (type != "Staff") {
+        localStorage.setItem("AccessToGoBackToCustomerSelect", data.isStaffMember);
+      }
       localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(loggedInUser));
       setUser(loggedInUser);
       setIsAuthenticated(true);
@@ -92,7 +95,7 @@ const [isStaffMember, setIsStaffMember] = useState<boolean>(() => {
   };
   const logout = () => {
     try {
-      localStorage.removeItem(USER_STORAGE_KEY);
+      localStorage.clear();
       setUser(null);
       setIsAuthenticated(false);
       setIsStaffMember(false);
@@ -104,12 +107,20 @@ const [isStaffMember, setIsStaffMember] = useState<boolean>(() => {
   const updateUser = (newUserData: Partial<User>) => {
     setUser(currentUser => {
       if (!currentUser) return null;
+
       const updatedUser = { ...currentUser, ...newUserData };
+
       try {
         localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(updatedUser));
       } catch (error) {
         console.error("Failed to update user in localStorage", error);
       }
+
+      // ✅ IMPORTANT: also update derived states
+      if (newUserData.isStaffMember !== undefined) {
+        setIsStaffMember(newUserData.isStaffMember);
+      }
+
       return updatedUser;
     });
   };

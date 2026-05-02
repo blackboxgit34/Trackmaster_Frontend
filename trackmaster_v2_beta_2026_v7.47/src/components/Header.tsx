@@ -1,7 +1,8 @@
 import React from 'react';
-import { Search, Bell, User, Settings, Sun, Moon, GaugeCircle, MapPin, Wrench, LogOut, Palette } from 'lucide-react';
+import { Search, Bell, User, Settings, Sun, Moon, GaugeCircle, MapPin, Wrench, LogOut, Palette, Users } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { useNavigate } from 'react-router-dom';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,7 +17,13 @@ import TopNav from './TopNav';
 import { cn } from '@/lib/utils';
 import Logo from './Logo';
 import { useUser } from '@/context/UserContext';
-
+interface User {
+  custId: number;
+  name: string;
+  role: string;
+  userName: string;
+  isStaffMember: boolean;
+}
 type HeaderProps = {
   setIsCustomizationSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>;
 };
@@ -24,7 +31,16 @@ type HeaderProps = {
 const Header = ({ setIsCustomizationSidebarOpen }: HeaderProps) => {
   const { theme, setTheme, menuPosition } = useTheme();
   const { user, logout } = useUser();
+  const navigate = useNavigate();
+  const { updateUser } = useUser();
 
+  const handleGoBack = () => {
+    updateUser({
+      isStaffMember: true
+    });
+    navigate("/select-customer");
+  };
+  const canGoBack = localStorage.getItem("AccessToGoBackToCustomerSelect") === "true";
   return (
     <header className={cn(
       "sticky top-0 z-30 bg-card",
@@ -41,11 +57,20 @@ const Header = ({ setIsCustomizationSidebarOpen }: HeaderProps) => {
           </a>
         )}
         <div className="flex items-center gap-2">
+          {canGoBack && (
+            <button
+              onClick={handleGoBack}
+              className="h-8 px-3 flex items-center gap-2 bg-gray-200 hover:bg-gray-300 rounded"
+            >
+              <Users className="h-4 w-4" />
+              Change Customer
+            </button>
+          )}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Search vehicles, reports..." className="pl-10 w-64" />
           </div>
-          
+
           <Button variant="ghost" size="icon" onClick={() => setIsCustomizationSidebarOpen(true)}>
             <Palette className="h-5 w-5" />
             <span className="sr-only">Customize Theme</span>
@@ -67,21 +92,21 @@ const Header = ({ setIsCustomizationSidebarOpen }: HeaderProps) => {
               <DropdownMenuLabel>Notifications</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem className="flex gap-3">
-                <div className="bg-red-500/10 text-red-500 p-2 rounded-full"><GaugeCircle className="h-5 w-5"/></div>
+                <div className="bg-red-500/10 text-red-500 p-2 rounded-full"><GaugeCircle className="h-5 w-5" /></div>
                 <div>
                   <p className="font-semibold">Overspeed Alert</p>
                   <p className="text-xs text-muted-foreground">Vehicle MH-12-AB-1234 exceeded speed limit.</p>
                 </div>
               </DropdownMenuItem>
               <DropdownMenuItem className="flex gap-3">
-                <div className="bg-yellow-500/10 text-yellow-500 p-2 rounded-full"><MapPin className="h-5 w-5"/></div>
+                <div className="bg-yellow-500/10 text-yellow-500 p-2 rounded-full"><MapPin className="h-5 w-5" /></div>
                 <div>
                   <p className="font-semibold">Geofence Entry</p>
                   <p className="text-xs text-muted-foreground">Vehicle KA-01-CD-5678 entered Mumbai.</p>
                 </div>
               </DropdownMenuItem>
               <DropdownMenuItem className="flex gap-3">
-                <div className="bg-blue-500/10 text-blue-500 p-2 rounded-full"><Wrench className="h-5 w-5"/></div>
+                <div className="bg-blue-500/10 text-blue-500 p-2 rounded-full"><Wrench className="h-5 w-5" /></div>
                 <div>
                   <p className="font-semibold">Service Due</p>
                   <p className="text-xs text-muted-foreground">Service for DL-03-EF-9012 is due tomorrow.</p>
