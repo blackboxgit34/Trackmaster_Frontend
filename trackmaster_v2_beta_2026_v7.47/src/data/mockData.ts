@@ -1,41 +1,40 @@
 import { subDays, formatISO, format, addHours, subHours, startOfDay, isWithinInterval, parse, endOfDay, addMinutes, addSeconds } from 'date-fns';
 import { Clock, Gauge, type LucideIcon, Power, Ban, BatteryWarning, MapPin, ArrowUp, ArrowDown, Undo2, Fuel, Droplets, Box, Thermometer } from 'lucide-react';
-
+import { API_BASE_URL } from '@/config/Api';
 
 
 // let NUM_VEHICLES = 50;
 
-let NUM_VEHICLES = 0;
+let NUM_VEHICLES = 50;
 
-export async function getVehicleCount(): Promise<number> {
-    debugger;
-    try {
-        const auth = JSON.parse(localStorage.getItem("trackmaster-auth") || "{}");
-        const custId = auth.custId;
+  // export async function getVehicleCount(): Promise<number> {
+  //   // debugger;
+  //     try {
+  //         const auth = JSON.parse(localStorage.getItem("trackmaster-auth") || "{}");
+  //         const custId = auth.custId;
 
-        
-        const url = `https://localhost:7182/api/Dashboard/dashboarddata?userid=${custId}`;
+          
+  //         const url = `${API_BASE_URL}/api/Dashboard/dashboarddata?userid=${custId}`;
 
-      const res = await fetch(url, { method: "GET" });
+  //       const res = await fetch(url, { method: "GET" });
 
-      const response = await res.json();
-        if (!res.ok) {
-            throw new Error("Failed API");
-        }
+  //       const response = await res.json();
+  //         if (!res.ok) {
+  //             throw new Error("Failed API");
+  //         }
 
-        const data = response.data;
+  //         const data = response.data;
 
-        NUM_VEHICLES = data.totalVehicles; // ✅ store here
-        return NUM_VEHICLES;              // ✅ return value
+  //         NUM_VEHICLES = data.totalVehicles; // ✅ store here
+  //         return NUM_VEHICLES;              // ✅ return value
 
-    } catch (err) {
-        console.log(err);
-        return 0;
-    }
-}
-const count = await getVehicleCount();
-console.log(count);         // correct value
-console.log(NUM_VEHICLES);  // also updated
+  //     } catch (err) {
+  //         console.log(err);
+  //         return 0;
+  //     }
+  // }
+  //         // correct value
+  // console.log(NUM_VEHICLES);  // also updated
 
 const NUM_DAYS_OF_DATA = 90;
 
