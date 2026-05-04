@@ -1,6 +1,6 @@
 import { subDays, formatISO, format, addHours, subHours, startOfDay, isWithinInterval, parse, endOfDay, addMinutes, addSeconds } from 'date-fns';
 import { Clock, Gauge, type LucideIcon, Power, Ban, BatteryWarning, MapPin, ArrowUp, ArrowDown, Undo2, Fuel, Droplets, Box, Thermometer } from 'lucide-react';
-import { API_BASE_URL } from '@/config/Api';
+
 
 
 // let NUM_VEHICLES = 50;
