@@ -44,7 +44,7 @@ export default function LoginPage() {
   const handlePasswordReset = async () => {
     try {
       if (resetEmail.trim() === '') {
-        setError("Please enter your username");
+        setError("Please enter your valid username or e-mail !");
         return;
       }
       setLoading(true);
@@ -54,10 +54,17 @@ export default function LoginPage() {
 
       const res = await fetch(url, { method: "GET" });
       const response = await res.json();
+
+      const mobile = response.number || "";
+
       if (response.message === "Success" && response.custid) {
         setCustId(response.custid);
+          const maskedNumber =
+    mobile.length > 4
+      ? mobile.slice(0, -4).replace(/./g, "*") + mobile.slice(-4)
+      : mobile;
         setResetMessage(
-          `You will receive OTP on register No ${response.number}. Kindly wait for 2 min in case of delay.`
+          `You will receive OTP on register No ${maskedNumber}. Kindly wait for 2 min in case of delay.`
         );
         setResetEmail('');
         setView('otp-verification');
@@ -169,7 +176,7 @@ export default function LoginPage() {
               <>
                 <h1 className="text-3xl font-bold">Forgot Password</h1>
                 <p className="text-balance text-muted-foreground">
-                  Enter your username to receive a mobile otp
+                  Enter your username or e-mail to receive a mobile otp
                 </p>
               </>
             )}
@@ -255,11 +262,11 @@ export default function LoginPage() {
           {view === 'forgot-password' && (
             <div className="grid gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="reset-email">Username</Label>
+                <Label htmlFor="reset-email">Username / E-mail</Label>
                 <Input
                   id="reset-email"
                   type="text"
-                  placeholder="Enter username"
+                  placeholder="Enter username or e-mail"
                   required
                   value={resetEmail}
                   onChange={(e) => setResetEmail(e.target.value)}
