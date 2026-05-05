@@ -1,21 +1,81 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { vehicleStatusPieData } from '@/data/mockData';
 import { Info } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { API_BASE_URL } from '@/config/Api';
 
 const VehicleUtilization = () => {
+    const [data, setData] = useState<any>(null);
   const [activeStatus, setActiveStatus] = useState<string | null>(null);
 
+useEffect(() => {
+  const fetchVehicleUtilization = async () => {
+    try {
+      const custid = JSON.parse(localStorage.getItem("trackmaster-auth") ?? "{}")?.custId;
+
+      if (!custid) {
+        console.error("custid not found");
+        return;
+      }
+
+      const url = `${API_BASE_URL}/Dashboard/VehicleUtilization?custid=${custid}`;
+
+      const response = await fetch(url, {
+        method: "GET",
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      //const data = await response.json();
+      
+const result = await response.json();
+setData(result.data); // set state here if needed
+      console.log("API response:", result.data);
+      
+
+
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    }
+  };
+
+  fetchVehicleUtilization();
+}, []); // empty dependency array = run on
   const chartData = useMemo(() => {
-    const includedStatuses = ['Moving', 'Idle', 'Parked'];
-    return vehicleStatusPieData.today.filter(item => includedStatuses.includes(item.name));
-  }, []);
+  if (!data) return [];
 
-  const totalVehicles = useMemo(() => chartData.reduce((acc, curr) => acc + curr.value, 0), [chartData]);
+  return [
+    {
+      name: 'Moving',
+      value: data.moving || 0,
+      color: '#22c55e',
+    },
+    {
+      name: 'Idle',
+      value: data.ignitionON || 0,
+      color: '#ef4444',
+    },
+    {
+      name: 'Parked',
+      value: data.parked || 0,
+       color: '#facc15',
+     
+    },
+  ];
+}, [data]);
+//const totalVehicles = data?.totalvehicle || 0;
+const totalVehicles = data?.totalvehicle || 0;
 
+// ✅ used only for % calculation
+const totalForPercentage = useMemo(
+  () => chartData.reduce((acc, curr) => acc + curr.value, 0),
+  [chartData]
+);
   const activeEntry = useMemo(
     () => (activeStatus ? chartData.find((d) => d.name === activeStatus) : null),
     [activeStatus, chartData]
@@ -85,7 +145,7 @@ const VehicleUtilization = () => {
           </div>
           <div className="flex flex-col gap-4">
             {chartData.map((entry) => {
-              const percentage = totalVehicles > 0 ? ((entry.value / totalVehicles) * 100).toFixed(0) : 0;
+              const percentage = totalForPercentage > 0 ? ((entry.value / totalForPercentage) * 100).toFixed(1) : 0;
               return (
                 <Link
                   key={entry.name}
