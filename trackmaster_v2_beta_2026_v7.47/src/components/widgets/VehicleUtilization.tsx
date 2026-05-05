@@ -1,81 +1,53 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { vehicleStatusPieData } from '@/data/mockData';
+
 import { Info } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { API_BASE_URL } from '@/config/Api';
 
-const VehicleUtilization = () => {
-    const [data, setData] = useState<any>(null);
+type VehicleUtilizationType = {
+  totalVehicles: number;
+  moving: number;
+  ignitionON: number;
+  parked: number;
+};
+
+type Props = {
+  data: VehicleUtilizationType;
+};
+
+const VehicleUtilization = ({ data }: Props) => {
   const [activeStatus, setActiveStatus] = useState<string | null>(null);
 
-useEffect(() => {
-  const fetchVehicleUtilization = async () => {
-    try {
-      const custid = JSON.parse(localStorage.getItem("trackmaster-auth") ?? "{}")?.custId;
-     const type="VehicleUtilization";
-      if (!custid) {
-        console.error("custid not found");
-        return;
-      }
-
-      const url = `${API_BASE_URL}/Dashboard/dashboarddata?userid=${custid}&type=${type}`;
-
-      const response = await fetch(url, {
-        method: "GET",
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      //const data = await response.json();
-      
-const result = await response.json();
-setData(result); // set state here if needed
-      console.log("API response:", result);
-      
-
-
-    } catch (error) {
-      console.error("Error fetching data:", error);
-    }
-  };
-
-  fetchVehicleUtilization();
-}, []); // empty dependency array = run on
   const chartData = useMemo(() => {
-  if (!data) return [];
+    if (!data) return [];
 
-  return [
-    {
-      name: 'Moving',
-      value: data.moving || 0,
-      color: '#22c55e',
-    },
-    {
-      name: 'Idle',
-      value: data.ignitionON || 0,
-      color: '#ef4444',
-    },
-    {
-      name: 'Parked',
-      value: data.parked || 0,
-       color: '#facc15',
-     
-    },
-  ];
-}, [data]);
-//const totalVehicles = data?.totalvehicle || 0;
-const totalVehicles = data?.totalvehicle || 0;
+    return [
+      {
+        name: 'Moving',
+        value: data.moving || 0,
+        color: '#22c55e',
+      },
+      {
+        name: 'Idle',
+        value: data.ignitionON || 0,
+        color: '#ef4444',
+      },
+      {
+        name: 'Parked',
+        value: data.parked || 0,
+        color: '#facc15',
 
-// ✅ used only for % calculation
-const totalForPercentage = useMemo(
-  () => chartData.reduce((acc, curr) => acc + curr.value, 0),
-  [chartData]
-);
+      },
+    ];
+  }, [data]);
+
+  // ✅ used only for % calculation
+  const totalForPercentage = useMemo(
+    () => chartData.reduce((acc, curr) => acc + curr.value, 0),
+    [chartData]
+  );
   const activeEntry = useMemo(
     () => (activeStatus ? chartData.find((d) => d.name === activeStatus) : null),
     [activeStatus, chartData]
@@ -132,13 +104,16 @@ const totalForPercentage = useMemo(
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center">
               {activeEntry ? (
                 <>
-                  <span className="text-3xl font-bold tracking-tighter">{activeEntry.value.toLocaleString()}</span>
+                  <span className="text-3xl font-bold tracking-tighter">
+                    {totalForPercentage > 0
+                      ? ((activeEntry.value / totalForPercentage) * 100).toFixed(1) + '%'
+                      : '0%'}
+                  </span>
                   <span className="text-sm text-muted-foreground px-2">{activeEntry.name}</span>
                 </>
               ) : (
                 <>
-                  <span className="text-3xl font-bold tracking-tighter">{totalVehicles.toLocaleString()}</span>
-                  <span className="text-sm text-muted-foreground">Total</span>
+
                 </>
               )}
             </div>
@@ -163,8 +138,7 @@ const totalForPercentage = useMemo(
                     <span className="text-muted-foreground truncate">{entry.name}</span>
                   </div>
                   <div className="font-semibold text-foreground text-right flex items-baseline gap-2">
-                    <span>{entry.value.toLocaleString()}</span>
-                    <span className="text-xs text-muted-foreground w-8 text-left">{percentage}%</span>
+                    <span>{percentage}%</span>
                   </div>
                 </Link>
               );
