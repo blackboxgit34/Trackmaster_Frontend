@@ -6,7 +6,7 @@ import { PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { CrewMember } from '@/data/crewData';
 import AddCrewDialog, { type AddCrewFormValues } from './AddCrewDialog';
-
+import { API_BASE_URL } from '@/config/Api';
 // =========================
 // RECEIVE SEARCH FROM PARENT
 // =========================
@@ -53,7 +53,7 @@ const fetchCrew = async () => {
           // sSearch: search && search.trim() !== '' ? search : 'null'
           sSearch: search && search.trim() !== '' ? search : 'null'
         });
-        const url = `https://localhost:7182/api/Reports?${params.toString()}`;
+        const url = `${API_BASE_URL}/Reports/GetConductorInfo?${params.toString()}`;
         const res = await fetch(url);
         console.log('Fetching crew with URL:', url);
         if (!res.ok) throw new Error(`API Error: ${res.status}`);
