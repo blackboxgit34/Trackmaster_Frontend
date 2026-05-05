@@ -2,7 +2,7 @@ import { actualVehicles } from './mockData';
 
 export interface CrewMember {
   id: string;
-  type: 'Driver' | 'Conductor';
+  type: string; // e.g. "Driver", "Conductor"
   vehicleId: string;
   vehicleName: string;
   driverName: string;

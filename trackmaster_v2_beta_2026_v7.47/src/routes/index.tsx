@@ -39,9 +39,13 @@ function AppLayout() {
   const { menuPosition } = useTheme();
   const [hiddenWidgetIds, setHiddenWidgetIds] = useState<string[]>([]);
   const location = useLocation();
+ 
 
+   // =========================
+  // ✅ CHANGE 1: SEARCH STATE ADDED HERE (GLOBAL SOURCE) neha k
+  // =========================
+  const [search, setSearch] = useState("");
   const isMapPage = location.pathname === '/vehicle-status/on-map' || location.pathname === '/vehicle-status/route-playback';
-
   const handleShowWidget = (widgetId: string) => {
     setHiddenWidgetIds((prev) => prev.filter((id) => id !== widgetId));
   };
@@ -55,11 +59,24 @@ function AppLayout() {
         />
       )}
       <div className="flex flex-col flex-1 min-w-0">
+        {/* <Header
+          setIsCustomizationSidebarOpen={setIsCustomizationSidebarOpen}
+        /> */}
+
+        {/* =========================
+            ✅ CHANGE 2: PASS SEARCH HANDLER TO HEADER neha k
+           ========================= */}
         <Header
           setIsCustomizationSidebarOpen={setIsCustomizationSidebarOpen}
+          onSearchChange={setSearch}   // 👈 NEW
         />
         <main className={cn("flex-1 relative", isMapPage ? "overflow-hidden" : "overflow-y-auto")}>
-          <Outlet />
+
+        {/* <Outlet /> */}
+        {/* =========================
+              ✅ CHANGE 3: PASS SEARCH TO ALL PAGES neha k
+             ========================= */}
+        <Outlet context={{ search }} />   {/* 👈 NEW */}
         </main>
       </div>
       <CustomizationSidebar
@@ -79,12 +96,10 @@ function AppLayout() {
 // This component protects routes that require authentication.
 function ProtectedRoutes() {
   const { isAuthenticated } = useUser();
-  
   // If the user is not authenticated, redirect them to the login page.
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
-  
   // If they are authenticated, render the main application layout.
   // The nested routes will be rendered inside the <Outlet /> of AppLayout.
   return <AppLayout />;
@@ -92,7 +107,6 @@ function ProtectedRoutes() {
 
 export default function AppRoutes() {
   const { isAuthenticated } = useUser();
-
   return (
     <Routes>
       {/* Public Route: Login Page */}

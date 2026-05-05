@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { Search, Bell, User, Settings, Sun, Moon, GaugeCircle, MapPin, Wrench, LogOut, Palette } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -17,15 +17,20 @@ import { cn } from '@/lib/utils';
 import Logo from './Logo';
 import { useUser } from '@/context/UserContext';
 
+
 type HeaderProps = {
+  //setIsCustomizationSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>; previous
   setIsCustomizationSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  onSearchChange: (value: string) => void; // neha k
 };
 
-const Header = ({ setIsCustomizationSidebarOpen }: HeaderProps) => {
-  const { theme, setTheme, menuPosition } = useTheme();
-  const { user, logout } = useUser();
-
-  return (
+// const Header = ({ setIsCustomizationSidebarOpen }: HeaderProps) => {previous
+const Header = ({ setIsCustomizationSidebarOpen ,onSearchChange,}: HeaderProps) => {
+// neha k
+ const { theme, setTheme, menuPosition } = useTheme();
+ const { user, logout } = useUser();
+ 
+ return (
     <header className={cn(
       "sticky top-0 z-30 bg-card",
       menuPosition === 'sidebar' && 'border-b'
@@ -43,7 +48,9 @@ const Header = ({ setIsCustomizationSidebarOpen }: HeaderProps) => {
         <div className="flex items-center gap-2">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Search vehicles, reports..." className="pl-10 w-64" />
+            {/* {<Input placeholder="Search vehicles, reports..." className="pl-10 w-64" />} */}
+            <Input placeholder="Search vehicles, reports..." className="pl-10 w-64" onChange={(e) => onSearchChange(e.target.value)} />
+            {/*  CHANGE 3: controlled input + send value to parent  neha k */}
           </div>
           
           <Button variant="ghost" size="icon" onClick={() => setIsCustomizationSidebarOpen(true)}>
@@ -124,9 +131,7 @@ const Header = ({ setIsCustomizationSidebarOpen }: HeaderProps) => {
           </DropdownMenu>
         </div>
       </div>
-      {menuPosition === 'header' && (
-        <TopNav />
-      )}
+      {menuPosition === 'header' && (<TopNav />)}
     </header>
   );
 };
