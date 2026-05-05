@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react';
+import { API_BASE_URL } from '@/config/Api';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   TrendingUp,
@@ -10,15 +12,11 @@ import {
   TriangleAlert,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { liveStatusData } from '@/data/mockData';
-import type { VehicleStatus } from '@/data/mockData';
+
 
 const VehicleStatusWidget = () => {
-  const statusCounts = liveStatusData.reduce((acc, machine) => {
-    acc[machine.status] = (acc[machine.status] || 0) + 1;
-    return acc;
-  }, {} as Record<VehicleStatus, number>);
-
+  
+ const [statusCounts, setStatusCounts] = useState<Record<string, number>>({});
   const statusData = [
     { label: 'Moving', value: statusCounts['Moving'] || 0, icon: TrendingUp, color: 'text-green-50', bgColor: 'bg-green-500' },
     { label: 'Parked', value: statusCounts['Parked'] || 0, icon: ParkingCircle, color: 'text-yellow-50', bgColor: 'bg-yellow-500' },
@@ -30,7 +28,55 @@ const VehicleStatusWidget = () => {
     { label: 'Breakdown', value: statusCounts['Breakdown'] || 0, icon: TriangleAlert, color: 'text-red-50', bgColor: 'bg-red-500' },
   ];
 
-  const totalVehicles = liveStatusData.length;
+   const [totalVehicles, setTotalVehicles] = useState(0);
+const getVehicleCount  =  async (): Promise<number> => {
+    
+      try {
+          const auth = JSON.parse(localStorage.getItem("trackmaster-auth") || "{}");
+          const custId = auth.custId;       
+          const url = `${API_BASE_URL}/Dashboard/dashboarddata?userid=${custId}`;
+
+          const res = await fetch(url, { method: "GET" });
+
+          const response = await res.json();
+          if (!res.ok) {
+              throw new Error("Failed API");
+          }
+
+          const data = response.data;
+ setStatusCounts({
+      Moving: data.moving || 0,
+      Parked: data.parked || 0,
+      'Ignition On': data.ignitionOn || 0,
+      'High Speed': data.highSpeed || 0,
+      Towed: data.towed || 0,
+      Unreachable: data.unreachable || 0,
+      'Battery Disconnect': data.batteryDisconnect || 0,
+      Breakdown: data.breakdown || 0,
+    });
+
+          const vehcount = data.totalVehicles; // ✅ store here
+
+          
+          return vehcount;              // ✅ return value
+
+      } catch (err) {
+          console.log(err);
+          return 0;
+      }
+  }
+        
+  useEffect(() => {
+    const fetchData = async () => {
+      const count = await getVehicleCount();
+      setTotalVehicles(count); // ✅ triggers UI update
+    };
+
+    fetchData();
+  }, []);
+ 
+ 
+  console.log(totalVehicles);  // also updated
 
   return (
     <Card className="col-span-1 lg:col-span-3">

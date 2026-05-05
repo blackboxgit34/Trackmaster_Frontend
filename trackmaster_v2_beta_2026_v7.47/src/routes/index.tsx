@@ -29,6 +29,7 @@ import OperationalCrewReportsPage from '@/pages/OperationalCrewReportsPage';
 import CommunicationAlertsReportsPage from '@/pages/CommunicationAlertsReportsPage';
 import SummaryManagementReportsPage from '@/pages/SummaryManagementReportsPage';
 import CustomReport from '@/components/page/CustomReport';
+import SelectCustomerPage from '@/pages/SelectCustomerPage';
 import { cn } from '@/lib/utils';
 import { Toaster } from '@/components/ui/toaster';
 
@@ -92,13 +93,17 @@ function AppLayout() {
     </div>
   );
 }
-
 // This component protects routes that require authentication.
 function ProtectedRoutes() {
-  const { isAuthenticated } = useUser();
+  const { isAuthenticated, isStaffMember } = useUser();
+
   // If the user is not authenticated, redirect them to the login page.
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
+  }
+
+  if (isStaffMember && location.pathname !== "/select-customer") {
+    return <Navigate to="/select-customer" replace />;
   }
   // If they are authenticated, render the main application layout.
   // The nested routes will be rendered inside the <Outlet /> of AppLayout.
@@ -111,11 +116,10 @@ export default function AppRoutes() {
     <Routes>
       {/* Public Route: Login Page */}
       {/* If the user is already logged in, navigating to /login will redirect them to the dashboard. */}
-      <Route 
-        path="/login" 
-        element={isAuthenticated ? <Navigate to="/" replace /> : <LoginPage />} 
+      <Route
+        path="/login" element={isAuthenticated ? <Navigate to="/" replace /> : <LoginPage />}
       />
-
+      <Route path="/select-customer" element={<SelectCustomerPage />} />
       {/* Protected Routes Wrapper */}
       {/* All routes inside this wrapper require authentication. */}
       <Route element={<ProtectedRoutes />}>
@@ -156,9 +160,9 @@ export default function AppRoutes() {
         <Route path="/addons" element={<Navigate to="/addons/fuel-reports/fuel-analysis" replace />} />
         <Route path="/addons/fuel-reports/:reportType" element={<AddonsPage />} />
         <Route path="/addons/:subpage" element={<AddonsPage />} />
-        
+
         <Route path="/500" element={<Error500 />} />
-        
+
         {/* This is the catch-all route for any invalid paths when the user is logged in. */}
         <Route path="*" element={<NotFound />} />
       </Route>
