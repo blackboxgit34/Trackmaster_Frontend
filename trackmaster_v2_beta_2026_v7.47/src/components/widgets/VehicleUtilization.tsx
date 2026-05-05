@@ -15,13 +15,13 @@ useEffect(() => {
   const fetchVehicleUtilization = async () => {
     try {
       const custid = JSON.parse(localStorage.getItem("trackmaster-auth") ?? "{}")?.custId;
-
+     const type="VehicleUtilization";
       if (!custid) {
         console.error("custid not found");
         return;
       }
 
-      const url = `${API_BASE_URL}/Dashboard/VehicleUtilization?custid=${custid}`;
+      const url = `${API_BASE_URL}/Dashboard/dashboarddata?userid=${custid}&type=${type}`;
 
       const response = await fetch(url, {
         method: "GET",
@@ -34,8 +34,8 @@ useEffect(() => {
       //const data = await response.json();
       
 const result = await response.json();
-setData(result.data); // set state here if needed
-      console.log("API response:", result.data);
+setData(result); // set state here if needed
+      console.log("API response:", result);
       
 
 
