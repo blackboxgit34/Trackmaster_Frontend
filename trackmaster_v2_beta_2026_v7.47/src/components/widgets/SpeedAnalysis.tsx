@@ -5,18 +5,42 @@ import { Info } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-const speedData = [
-  { name: 'Normal Speed', value: 2, color: '#22c55e' }, // Green
-  { name: 'Overspeed', value: 6, color: '#ef4444' }, // Red
-];
+type Props = {
+  data: {
+    os: number;
+    nonOS: number;
+  };
+};
 
-const SpeedAnalysis = () => {
+const SpeedAnalysis = ({ data }: Props) => {
   const [activeStatus, setActiveStatus] = useState<string | null>(null);
-  const totalMoving = useMemo(() => speedData.reduce((acc, curr) => acc + curr.value, 0), []);
+
+  // ✅ dynamic data from API
+  const speedData = useMemo(() => {
+    if (!data) return [];
+
+    return [
+      {
+        name: 'Normal Speed',
+        value: data.nonOS || 0,
+        color: '#22c55e',
+      },
+      {
+        name: 'Overspeed',
+        value: data.os || 0,
+        color: '#ef4444',
+      },
+    ];
+  }, [data]);
+
+  const totalMoving = useMemo(
+    () => speedData.reduce((acc, curr) => acc + curr.value, 0),
+    [speedData]
+  );
 
   const activeEntry = useMemo(
     () => (activeStatus ? speedData.find((d) => d.name === activeStatus) : null),
-    [activeStatus]
+    [activeStatus, speedData]
   );
 
   return (
@@ -113,11 +137,11 @@ const SpeedAnalysis = () => {
                 <div className="font-semibold text-foreground text-right">
                   {entry.name === 'Normal Speed' ? (
                     <>
-                      -3 <span className="text-xs text-muted-foreground">-38%</span>
+                       <span className="text-xs text-muted-foreground">{data.nonOS} </span> {totalMoving ? (((data.nonOS || 0) / totalMoving) * 100).toFixed(1) : 0 } %
                     </>
                   ) : (
                     <>
-                      11 <span className="text-xs text-muted-foreground">138%</span>
+                       <span className="text-xs text-muted-foreground">{data.os} </span> {totalMoving ? (((data.os || 0) / totalMoving) * 100).toFixed(1) : 0 } %
                     </>
                   )}
                 </div>
