@@ -61,7 +61,7 @@ const VehicleAnalysisDashboard = () => {
         <GpsDeviceStatus />
       </div>
       <div className="lg:col-span-4">
-        <AvgSpeedVsOverspeed />
+        <AvgSpeedVsOverspeed  data={dashboardData.overSpeedReport }  />
       </div>
       <div className="lg:col-span-4">
         <StoppageChart />

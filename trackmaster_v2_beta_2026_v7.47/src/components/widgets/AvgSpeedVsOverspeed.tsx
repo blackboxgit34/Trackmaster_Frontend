@@ -1,43 +1,28 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { ChartContainer, ChartTooltipContent, ChartLegendContent, type ChartConfig } from '@/components/ui/chart';
-import { vehicles } from '@/data/mockData';
+// import { vehicles } from '@/data/mockData';
 import { VehicleCombobox } from '../VehicleCombobox';
 import { Info } from 'lucide-react';
 import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { API_BASE_URL } from '@/config/Api';
 
-// Local mock data to ensure the chart renders correctly without crashing
-const speedAnalysisData = [
-  { vehicleId: 'VIO-001', day: 'Mon', avgSpeed: 22, overspeedIncidents: 2 },
-  { vehicleId: 'VIO-001', day: 'Tue', avgSpeed: 35, overspeedIncidents: 1 },
-  { vehicleId: 'VIO-001', day: 'Wed', avgSpeed: 15, overspeedIncidents: 0 },
-  { vehicleId: 'VIO-001', day: 'Thu', avgSpeed: 42, overspeedIncidents: 3 },
-  { vehicleId: 'VIO-001', day: 'Fri', avgSpeed: 50, overspeedIncidents: 4 },
-  { vehicleId: 'VIO-001', day: 'Sat', avgSpeed: 62, overspeedIncidents: 5 },
-  { vehicleId: 'VIO-001', day: 'Sun', avgSpeed: 30, overspeedIncidents: 1 },
-  
-  { vehicleId: 'V-002', day: 'Mon', avgSpeed: 20, overspeedIncidents: 1 },
-  { vehicleId: 'V-002', day: 'Tue', avgSpeed: 30, overspeedIncidents: 2 },
-  { vehicleId: 'V-002', day: 'Wed', avgSpeed: 18, overspeedIncidents: 0 },
-  { vehicleId: 'V-002', day: 'Thu', avgSpeed: 45, overspeedIncidents: 2 },
-  { vehicleId: 'V-002', day: 'Fri', avgSpeed: 55, overspeedIncidents: 3 },
-  { vehicleId: 'V-002', day: 'Sat', avgSpeed: 60, overspeedIncidents: 4 },
-  { vehicleId: 'V-002', day: 'Sun', avgSpeed: 25, overspeedIncidents: 0 },
 
-  // Generic data for 'all' view aggregation (simulating other vehicles)
-  { vehicleId: 'other', day: 'Mon', avgSpeed: 25, overspeedIncidents: 8 },
-  { vehicleId: 'other', day: 'Tue', avgSpeed: 32, overspeedIncidents: 9 },
-  { vehicleId: 'other', day: 'Wed', avgSpeed: 12, overspeedIncidents: 14 },
-  { vehicleId: 'other', day: 'Thu', avgSpeed: 38, overspeedIncidents: 7 },
-  { vehicleId: 'other', day: 'Fri', avgSpeed: 45, overspeedIncidents: 8 },
-  { vehicleId: 'other', day: 'Sat', avgSpeed: 65, overspeedIncidents: 7 },
-  { vehicleId: 'other', day: 'Sun', avgSpeed: 32, overspeedIncidents: 13 },
-];
+type OverSpeedData = {
+  overspeedCount: number;
+  overCustomCount: number;
+  dateTime: string;
+};
+
+type Props = {
+  data: OverSpeedData[];
+};
 
 const chartConfig = {
   avgSpeed: {
-    label: 'Avg. Speed (km/h)',
+    // label: 'Avg. Speed (km/h)',
+    label: 'Non Overspeed Incidents',
     color: '#F97316', // Brand Orange
   },
   overspeedIncidents: {
@@ -46,37 +31,96 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
-const AvgSpeedVsOverspeed = () => {
+const AvgSpeedVsOverspeed = ({ data }: Props) => {
+  const [vehicleList, setVehicleList] = useState<any[]>([]);
   const [selectedVehicle, setSelectedVehicle] = useState('all');
+  const [graphData, setGraphData] = useState<OverSpeedData[]>(data || []);
+  const [loading, setLoading] = useState(false);
+  const custId = JSON.parse(localStorage.getItem("trackmaster-auth") ?? "{}")?.custId;
+
 
   const chartData = useMemo(() => {
-    const daysOrder = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    
-    let filteredData = speedAnalysisData;
-    if (selectedVehicle !== 'all') {
-      filteredData = speedAnalysisData.filter(d => d.vehicleId === selectedVehicle);
+    if (!graphData) return [];
+
+    return graphData.map((item) => ({
+      day: new Date(item.dateTime).toLocaleDateString('en-US', {
+        weekday: 'short'
+      }),
+      overspeedIncidents: item.overspeedCount ?? 0,
+      avgSpeed: item.overCustomCount ?? 0
+    }));
+  }, [graphData]);
+
+  // ===============================
+  // 🚗 VEHICLE LIST API
+  // ===============================
+
+  useEffect(() => {
+    if (!custId) return;
+    fetch(`${API_BASE_URL}/Dashboard/GetAllVehicleListByCustId?userid=${custId}`)
+      .then(async (res) => {
+        const text = await res.text();
+
+        if (!text) {
+          console.warn("Empty response");
+          return [];
+        }
+
+        return JSON.parse(text);
+      })
+      .then(data => {
+        const vehicles = data?.data || [];
+
+        const formatted = [
+          { label: 'All', value: 'all' },
+          ...vehicles.map((v: any) => ({
+            label: v.vehName,
+            value: v.bbid
+          }))
+        ];
+
+        setVehicleList(formatted);
+      })
+      .catch(err => console.error("API error:", err));
+  }, []);
+
+
+  // ===============================
+  // 🚗 Over Speed Graph Data API
+  // ===============================
+
+  useEffect(() => {
+    if (!custId) return;
+
+    if (selectedVehicle === "all") {
+      setGraphData(data);
+      return;
     }
+    // ✅ START loader
+    setLoading(true);
 
-    const aggregated = filteredData.reduce((acc: { [key: string]: any }, curr) => {
-      if (!acc[curr.day]) {
-        acc[curr.day] = { day: curr.day, avgSpeed: 0, overspeedIncidents: 0, count: 0 };
-      }
-      acc[curr.day].avgSpeed += curr.avgSpeed;
-      acc[curr.day].overspeedIncidents += curr.overspeedIncidents;
-      acc[curr.day].count += 1;
-      return acc;
-    }, {});
+    const url =
+      `${API_BASE_URL}/Dashboard/dashboarddata?userid=${custId}&bbid=${selectedVehicle}&type=avgspeedgraph`;
 
-    return daysOrder.map(day => {
-      const item = aggregated[day];
-      if (!item) return { day, avgSpeed: 0, overspeedIncidents: 0 };
-      return {
-        day,
-        avgSpeed: Math.round(item.avgSpeed / item.count),
-        overspeedIncidents: item.overspeedIncidents,
-      };
-    });
-  }, [selectedVehicle]);
+    fetch(url)
+      .then(res => res.json())
+      .then(result => {
+        setGraphData(result.overSpeedReport || []);
+      })
+      .catch(err => console.error("Graph API error:", err))
+      .finally(() => {
+        setLoading(false);
+      });
+
+  }, [selectedVehicle, custId, data]);
+
+
+  if (loading) return <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+    <div className="bg-white p-4 rounded-lg flex items-center gap-3 shadow-lg">
+      <div className="animate-spin h-5 w-5 border-2 border-black border-t-transparent rounded-full"></div>
+      <span>Please wait...</span>
+    </div>
+  </div>;
 
   return (
     <Card className="h-full flex flex-col">
@@ -97,7 +141,7 @@ const AvgSpeedVsOverspeed = () => {
           </TooltipProvider>
         </div>
         <VehicleCombobox
-          vehicles={vehicles}
+          vehicles={vehicleList}
           value={selectedVehicle}
           onChange={setSelectedVehicle}
           className="h-8 text-xs w-[150px]"
@@ -108,12 +152,12 @@ const AvgSpeedVsOverspeed = () => {
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={chartData} margin={{ top: 10, right: 10, bottom: 0, left: 10 }}>
               <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#E5E7EB" />
-              <XAxis 
-                dataKey="day" 
-                tickLine={false} 
-                axisLine={false} 
-                tickMargin={8} 
-                fontSize={12} 
+              <XAxis
+                dataKey="day"
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+                fontSize={12}
                 tick={{ fill: '#6B7280' }}
               />
               <YAxis
@@ -141,19 +185,19 @@ const AvgSpeedVsOverspeed = () => {
               />
               <Tooltip content={<ChartTooltipContent indicator="dot" />} />
               <Legend content={<ChartLegendContent />} verticalAlign="bottom" height={36} />
-              <Bar 
-                dataKey="avgSpeed" 
-                yAxisId="left" 
-                fill="var(--color-avgSpeed)" 
-                radius={[4, 4, 0, 0]} 
-                barSize={24} 
+              <Bar
+                dataKey="avgSpeed"
+                yAxisId="left"
+                fill="var(--color-avgSpeed)"
+                radius={[4, 4, 0, 0]}
+                barSize={24}
               />
-              <Line 
-                dataKey="overspeedIncidents" 
-                yAxisId="right" 
-                stroke="var(--color-overspeedIncidents)" 
-                type="monotone" 
-                strokeWidth={2} 
+              <Line
+                dataKey="overspeedIncidents"
+                yAxisId="right"
+                stroke="var(--color-overspeedIncidents)"
+                type="monotone"
+                strokeWidth={2}
                 dot={{ r: 4, fill: 'var(--color-overspeedIncidents)', strokeWidth: 0 }}
                 activeDot={{ r: 6 }}
               />
@@ -165,4 +209,7 @@ const AvgSpeedVsOverspeed = () => {
   );
 };
 
+
+
 export default AvgSpeedVsOverspeed;
+
