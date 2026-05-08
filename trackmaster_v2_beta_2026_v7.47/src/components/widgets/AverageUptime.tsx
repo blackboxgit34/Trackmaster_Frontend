@@ -68,28 +68,61 @@ const AverageUptime = ({ data }: Props) => {
     }
   };
 
-  
+
+
 const chartData = useMemo(() => {
   if (!data) return [];
 
-  const formattedData = data.map((item) => ({
+  // Remove zero driving vehicles
+  const filteredData = data.filter(
+    (item) => item.driving_time > 0
+  );
+
+  const formattedData = filteredData.map((item) => ({
     vehicleId: item.bbid,
     vehicleName: item.vehname,
-    avgHours: Number((item.driving_time / 3600).toFixed(1)), // seconds → hours
+    avgHours: Number((item.driving_time / 3600).toFixed(1)),
   }));
 
   if (sortOrder === "asc") {
-    return [...formattedData].sort((a, b) => a.avgHours - b.avgHours);
+    return [...formattedData].sort(
+      (a, b) => a.avgHours - b.avgHours
+    );
   }
 
   if (sortOrder === "desc") {
-    return [...formattedData].sort((a, b) => b.avgHours - a.avgHours);
+    return [...formattedData].sort(
+      (a, b) => b.avgHours - a.avgHours
+    );
   }
 
   return [...formattedData].sort((a, b) =>
     a.vehicleName.localeCompare(b.vehicleName)
   );
 }, [data, sortOrder]);
+
+  
+// const chartData = useMemo(() => {
+//   if (!data) return [];
+
+//   const formattedData = data.map((item) => ({
+//     vehicleId: item.bbid,
+//     vehicleName: item.vehname,
+//     avgHours: Number((item.driving_time / 3600).toFixed(1)), // seconds → hours
+//   }));
+
+//   if (sortOrder === "asc") {
+//     return [...formattedData].sort((a, b) => a.avgHours - b.avgHours);
+//   }
+
+//   if (sortOrder === "desc") {
+//     return [...formattedData].sort((a, b) => b.avgHours - a.avgHours);
+//   }
+
+//   return [...formattedData].sort((a, b) =>
+//     a.vehicleName.localeCompare(b.vehicleName)
+//   );
+// }, [data, sortOrder]);
 
 
 
