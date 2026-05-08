@@ -41,10 +41,23 @@ const CustomLegend = ({ data }: { data: { vehicleName: string; avgHours: number 
   );
 };
 
-const AverageUptime = () => {
+
+interface AverageDrivingHoursItem {
+  bbid: string;
+  reportDate: string;
+  driving_time: number;
+  vehname: string;
+}
+
+interface Props {
+  data: AverageDrivingHoursItem[];
+}
+
+
+
+const AverageUptime = ({ data }: Props) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | 'default'>('default');
-
   const scroll = (direction: 'left' | 'right') => {
     if (scrollContainerRef.current) {
       const scrollAmount = 300;
@@ -55,35 +68,31 @@ const AverageUptime = () => {
     }
   };
 
-  const chartData = useMemo(() => {
-    const vehicleData: Record<string, { totalHours: number; count: number }> = {};
+  
+const chartData = useMemo(() => {
+  if (!data) return [];
 
-    consolidatedReportTableData.forEach(record => {
-      if (!vehicleData[record.vehicleId]) {
-        vehicleData[record.vehicleId] = { totalHours: 0, count: 0 };
-      }
-      vehicleData[record.vehicleId].totalHours += record.workingHours;
-      vehicleData[record.vehicleId].count += 1;
-    });
+  const formattedData = data.map((item) => ({
+    vehicleId: item.bbid,
+    vehicleName: item.vehname,
+    avgHours: Number((item.driving_time / 3600).toFixed(1)), // seconds → hours
+  }));
 
-    const aggregatedData = Object.keys(vehicleData).map(vehicleId => {
-      const vehicleInfo = vehicles.find(v => v.id === vehicleId);
-      return {
-        vehicleId: vehicleId,
-        vehicleName: vehicleInfo ? vehicleInfo.name : vehicleId,
-        avgHours: vehicleData[vehicleId].totalHours / vehicleData[vehicleId].count,
-      };
-    });
+  if (sortOrder === "asc") {
+    return [...formattedData].sort((a, b) => a.avgHours - b.avgHours);
+  }
 
-    if (sortOrder === 'asc') {
-      return aggregatedData.sort((a, b) => a.avgHours - b.avgHours);
-    }
-    if (sortOrder === 'desc') {
-      return aggregatedData.sort((a, b) => b.avgHours - a.avgHours);
-    }
+  if (sortOrder === "desc") {
+    return [...formattedData].sort((a, b) => b.avgHours - a.avgHours);
+  }
 
-    return aggregatedData.sort((a, b) => a.vehicleName.localeCompare(b.vehicleName));
-  }, [sortOrder]);
+  return [...formattedData].sort((a, b) =>
+    a.vehicleName.localeCompare(b.vehicleName)
+  );
+}, [data, sortOrder]);
+
+
+
 
   const Y_AXIS_WIDTH = 80;
   const X_AXIS_HEIGHT = 70;
