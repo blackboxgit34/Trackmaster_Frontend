@@ -17,13 +17,21 @@ const VehicleAnalysisDashboard = () => {
   const [dashboardData, setDashboardData] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const [dateRange, setDateRange] = useState({
+    start: new Date(),
+    end: new Date()
+ });
+
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         const auth = JSON.parse(localStorage.getItem("trackmaster-auth") || "{}");
         const custId = auth.custId;
 
-        const url = `${API_BASE_URL}/Dashboard/dashboarddata?userid=${custId}`;
+        const start = dateRange.start.toISOString();
+        const end = dateRange.end.toISOString();
+
+        const url = `${API_BASE_URL}/Dashboard/dashboarddata?userid=${custId}&start=${start}&end=${end}`;   
 
         const res = await fetch(url);
         const result = await res.json();
@@ -39,7 +47,7 @@ const VehicleAnalysisDashboard = () => {
     };
 
     fetchDashboardData();
-  }, []);
+  }, [dateRange]);
   if (loading || !dashboardData) return <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
     <div className="bg-white p-4 rounded-lg flex items-center gap-3 shadow-lg">
       <div className="animate-spin h-5 w-5 border-2 border-black border-t-transparent rounded-full"></div>
@@ -67,13 +75,15 @@ const VehicleAnalysisDashboard = () => {
         <StoppageChart />
       </div>
       <div className="lg:col-span-4">
-        <IdlingDuration />
+        <IdlingDuration data={dashboardData.idlingDuration}/>
       </div>
       <div className="lg:col-span-4">
         <AverageUptime data={dashboardData.averageDrivingHours} />
       </div>
       <div className="lg:col-span-8">
-        <DistanceCovered />
+        <DistanceCovered  data={dashboardData.distanceData}
+                          dateRange={dateRange}
+                          setDateRange={setDateRange} />
       </div>
       <div className="lg:col-span-8 flex flex-col gap-4">
         <ComplianceStatus />
