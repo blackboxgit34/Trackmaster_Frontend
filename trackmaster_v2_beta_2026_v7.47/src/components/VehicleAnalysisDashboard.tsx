@@ -23,7 +23,9 @@ const VehicleAnalysisDashboard = () => {
         const auth = JSON.parse(localStorage.getItem("trackmaster-auth") || "{}");
         const custId = auth.custId;
 
-        const url = `${API_BASE_URL}/Dashboard/dashboarddata?userid=${custId}`;
+       
+
+        const url = `${API_BASE_URL}/Dashboard/dashboarddata?userid=${custId}&start=${start}&end=${end}`;   
 
         const res = await fetch(url);
         const result = await res.json();
@@ -39,7 +41,7 @@ const VehicleAnalysisDashboard = () => {
     };
 
     fetchDashboardData();
-  }, []);
+  },[]);
   if (loading || !dashboardData) return <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
     <div className="bg-white p-4 rounded-lg flex items-center gap-3 shadow-lg">
       <div className="animate-spin h-5 w-5 border-2 border-black border-t-transparent rounded-full"></div>
@@ -61,7 +63,7 @@ const VehicleAnalysisDashboard = () => {
         <GpsDeviceStatus />
       </div>
       <div className="lg:col-span-4">
-        <AvgSpeedVsOverspeed />
+        <AvgSpeedVsOverspeed  data={dashboardData.overSpeedReport }/>
       </div>
       <div className="lg:col-span-4">
         <StoppageChart />
@@ -73,7 +75,9 @@ const VehicleAnalysisDashboard = () => {
         <AverageUptime />
       </div>
       <div className="lg:col-span-8">
-        <DistanceCovered />
+        <DistanceCovered  data={dashboardData.distanceData}
+                          dateRange={dateRange}
+                          setDateRange={setDateRange} />
       </div>
       <div className="lg:col-span-8 flex flex-col gap-4">
         <ComplianceStatus />
