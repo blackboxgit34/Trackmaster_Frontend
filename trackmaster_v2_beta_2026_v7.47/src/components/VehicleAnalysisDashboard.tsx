@@ -16,7 +16,7 @@ import AverageUptime from './widgets/AverageUptime';
 const VehicleAnalysisDashboard = () => {
   const [dashboardData, setDashboardData] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
-
+ 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
