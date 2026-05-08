@@ -25,7 +25,7 @@ const VehicleAnalysisDashboard = () => {
 
        
 
-        const url = `${API_BASE_URL}/Dashboard/dashboarddata?userid=${custId}&start=${start}&end=${end}`;   
+        const url = `${API_BASE_URL}/Dashboard/dashboarddata?userid=${custId}`;   
 
         const res = await fetch(url);
         const result = await res.json();
