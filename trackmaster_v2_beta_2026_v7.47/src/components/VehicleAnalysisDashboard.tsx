@@ -67,7 +67,7 @@ const VehicleAnalysisDashboard = () => {
         <StoppageChart />
       </div>
       <div className="lg:col-span-4">
-        <IdlingDuration />
+        <IdlingDuration data={dashboardData.idlingDuration}/>
       </div>
       <div className="lg:col-span-4">
         <AverageUptime />
