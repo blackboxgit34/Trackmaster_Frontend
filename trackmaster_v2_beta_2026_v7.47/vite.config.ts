@@ -9,4 +9,7 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  server: {
+    open: true, // or false (recommended if you DON'T want auto-open)
+  }
 });
