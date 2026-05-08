@@ -20,7 +20,7 @@ const VehicleAnalysisDashboard = () => {
   const [dateRange, setDateRange] = useState({
     start: new Date(),
     end: new Date()
-  });
+ });
 
   useEffect(() => {
     const fetchDashboardData = async () => {
