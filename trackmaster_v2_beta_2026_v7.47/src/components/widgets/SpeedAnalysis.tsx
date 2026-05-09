@@ -199,7 +199,7 @@ const SpeedAnalysis = ({ data: initialData }: Props) => {
           </Select>
         </div>
       </CardHeader>
-      <CardContent className="flex-grow flex items-center p-4 pt-2">
+      <CardContent className="flex-grow flex items-center p-4 pt-2 relative">
         {/* ✅ Loader Overlay */}
   {loading && (
     <div className="absolute inset-0 bg-white/70 z-10 flex items-center justify-center rounded-b-xl">
