@@ -17,10 +17,20 @@ const VehicleAnalysisDashboard = () => {
   const [dashboardData, setDashboardData] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const [dateRange, setDateRange] = useState({
-    start: new Date(),
-    end: new Date()
- });
+  const getTodayRange = () => {
+  const now = new Date();
+
+  const end = new Date(now);
+  end.setHours(23, 59, 59, 999);
+
+  const start = new Date(now);
+  start.setDate(start.getDate() - 1);
+  start.setHours(0, 0, 0, 0);
+
+  return { start, end };
+};
+
+const [dateRange, setDateRange] = useState(getTodayRange());
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -28,8 +38,17 @@ const VehicleAnalysisDashboard = () => {
         const auth = JSON.parse(localStorage.getItem("trackmaster-auth") || "{}");
         const custId = auth.custId;
 
-        const start = dateRange.start.toISOString();
-        const end = dateRange.end.toISOString();
+        const formatDateTime = (date: Date) => {
+        const pad = (n: number) => String(n).padStart(2, '0');
+
+        return (
+          `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ` +
+          `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
+        );
+      };
+
+      const start = formatDateTime(dateRange.start);
+      const end = formatDateTime(dateRange.end);
 
         const url = `${API_BASE_URL}/Dashboard/dashboarddata?userid=${custId}&start=${start}&end=${end}`;   
 
@@ -81,9 +100,10 @@ const VehicleAnalysisDashboard = () => {
         <AverageUptime />
       </div>
       <div className="lg:col-span-8">
-        <DistanceCovered  data={dashboardData.distanceData}
-                          dateRange={dateRange}
-                          setDateRange={setDateRange} />
+        <DistanceCovered
+                  dateRange={dateRange}
+                  setDateRange={setDateRange}
+                />
       </div>
       <div className="lg:col-span-8 flex flex-col gap-4">
         <ComplianceStatus />
