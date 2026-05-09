@@ -15,6 +15,7 @@ import AverageUptime from './widgets/AverageUptime';
 
 const VehicleAnalysisDashboard = () => {
   const [dashboardData, setDashboardData] = useState<any | null>(null);
+
   const [loading, setLoading] = useState(true);
 
   const [dateRange, setDateRange] = useState({
@@ -64,6 +65,7 @@ const VehicleAnalysisDashboard = () => {
       </div>
       <div className="lg:col-span-4">
         <SpeedAnalysis data={dashboardData.speedAnalysis} />
+       
       </div>
       <div className="lg:col-span-4">
         <GpsDeviceStatus />
