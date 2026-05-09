@@ -44,6 +44,7 @@ import {
 } from '@/components/ui/tooltip';
 
 type Props = {
+  data: any[];
   dateRange: {
     start: Date;
     end: Date;
@@ -78,6 +79,7 @@ const CustomTooltip = ({ active, payload }: any) => {
       </div>
     );
   }
+
   return null;
 };
 
@@ -99,7 +101,9 @@ const CustomLegend = ({ data }: any) => {
         className="h-3 w-3 rounded-sm"
         style={{ backgroundColor: 'hsl(34, 94%, 50%)' }}
       />
+
       <span>Average Distance Covered:</span>
+
       <span className="font-semibold text-foreground">
         {avgDistance.toFixed(1)} km
       </span>
@@ -108,13 +112,33 @@ const CustomLegend = ({ data }: any) => {
 };
 
 /* ---------------- MAIN COMPONENT ---------------- */
-const DistanceCovered = ({ dateRange, setDateRange }: Props) => {
+const DistanceCovered = ({
+  data: initialData,
+  dateRange,
+  setDateRange
+}: Props) => {
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+
   const [sortOrder, setSortOrder] =
     useState<'asc' | 'desc' | 'default'>('default');
 
-  const [data, setData] = useState<any[]>([]);
+  const [data, setData] = useState<any[]>(initialData || []);
   const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+    if (initialData?.length) {
+      setData(initialData);
+    }
+  }, [initialData]);
+
+  /* ---------------- TEMP RANGE ---------------- */
+  const [tempRange, setTempRange] = useState<{
+    start: Date | null;
+    end: Date | null;
+  }>({
+    start: null,
+    end: null
+  });
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -128,7 +152,7 @@ const DistanceCovered = ({ dateRange, setDateRange }: Props) => {
     });
   };
 
-  /* ---------------- DATE FORMAT (IMPORTANT FIX) ---------------- */
+  /* ---------------- DATE FORMAT ---------------- */
   const formatDateTime = (date: Date) => {
     const pad = (n: number) => String(n).padStart(2, '0');
 
@@ -139,7 +163,10 @@ const DistanceCovered = ({ dateRange, setDateRange }: Props) => {
   };
 
   /* ---------------- FETCH DATA ---------------- */
-  const fetchData = async () => {
+  const fetchData = async (range: {
+    start: Date;
+    end: Date;
+  }) => {
     try {
       setLoading(true);
 
@@ -149,8 +176,8 @@ const DistanceCovered = ({ dateRange, setDateRange }: Props) => {
 
       const custId = auth.custId;
 
-      const start = formatDateTime(dateRange.start);
-      const end = formatDateTime(dateRange.end);
+      const start = formatDateTime(range.start);
+      const end = formatDateTime(range.end);
 
       const url =
         `${API_BASE_URL}/Dashboard/dashboarddata` +
@@ -177,9 +204,16 @@ const DistanceCovered = ({ dateRange, setDateRange }: Props) => {
     }
   };
 
+ 
+  /* ---------------- PREFILL TEMP RANGE ---------------- */
   useEffect(() => {
-    fetchData();
-  }, [dateRange]);
+    if (isCalendarOpen) {
+      setTempRange({
+        start: dateRange.start,
+        end: dateRange.end
+      });
+    }
+  }, [isCalendarOpen, dateRange]);
 
   /* ---------------- CHART DATA ---------------- */
   const chartData = useMemo(() => {
@@ -219,7 +253,9 @@ const DistanceCovered = ({ dateRange, setDateRange }: Props) => {
       {/* HEADER */}
       <CardHeader>
         <div className="flex items-center gap-2">
-          <CardTitle className="text-base">Distance Covered</CardTitle>
+          <CardTitle className="text-base">
+            Distance Covered
+          </CardTitle>
 
           <TooltipProvider>
             <UITooltip>
@@ -228,6 +264,7 @@ const DistanceCovered = ({ dateRange, setDateRange }: Props) => {
                   <Info className="h-4 w-4 text-muted-foreground" />
                 </button>
               </TooltipTrigger>
+
               <TooltipContent>
                 <p>Total distance covered for each vehicle.</p>
               </TooltipContent>
@@ -239,37 +276,75 @@ const DistanceCovered = ({ dateRange, setDateRange }: Props) => {
       {/* CONTROLS */}
       <div className="absolute right-4 top-4 z-10 flex items-center gap-2">
 
-        <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+        {/* CALENDAR */}
+        <Popover
+          open={isCalendarOpen}
+          onOpenChange={setIsCalendarOpen}
+        >
           <PopoverTrigger asChild>
             <Button variant="outline">
               <CalendarIcon className="mr-2 h-4 w-4" />
+
               {format(dateRange.start, 'LLL dd, yyyy')} -{' '}
               {format(dateRange.end, 'LLL dd, yyyy')}
             </Button>
           </PopoverTrigger>
 
           <PopoverContent className="w-auto p-0">
+
             <Calendar
               mode="range"
               selected={{
-                from: dateRange.start,
-                to: dateRange.end
+                from: tempRange.start || undefined,
+                to: tempRange.end || undefined
               }}
               onSelect={(range) => {
-                if (!range?.from || !range?.to) return;
+                if (!range?.from) return;
 
-                setDateRange({
+                setTempRange({
                   start: range.from,
-                  end: range.to
+                  end: range.to || range.from
                 });
-
-                setIsCalendarOpen(false);
               }}
               numberOfMonths={2}
             />
+
+            {/* APPLY BUTTONS */}
+            <div className="flex justify-end gap-2 border-t p-3">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setIsCalendarOpen(false)}
+              >
+                Cancel
+              </Button>
+
+              <Button
+                size="sm"
+                disabled={!tempRange.start || !tempRange.end}
+                onClick={async () => {
+                  if (tempRange.start && tempRange.end) {
+                    const newRange = {
+                      start: tempRange.start,
+                      end: tempRange.end
+                    };
+
+                    setDateRange(newRange);
+
+                    // API CALL ONLY ON APPLY
+                    await fetchData(newRange);
+                  }
+
+                  setIsCalendarOpen(false);
+                }}
+              >
+                Apply
+              </Button>
+            </div>
           </PopoverContent>
         </Popover>
 
+        {/* SORT ASC */}
         <Button
           size="icon"
           variant={sortOrder === 'asc' ? 'secondary' : 'outline'}
@@ -280,6 +355,7 @@ const DistanceCovered = ({ dateRange, setDateRange }: Props) => {
           <ArrowUpNarrowWide className="h-4 w-4" />
         </Button>
 
+        {/* SORT DESC */}
         <Button
           size="icon"
           variant={sortOrder === 'desc' ? 'secondary' : 'outline'}
@@ -290,11 +366,21 @@ const DistanceCovered = ({ dateRange, setDateRange }: Props) => {
           <ArrowDownNarrowWide className="h-4 w-4" />
         </Button>
 
-        <Button size="icon" variant="outline" onClick={() => scroll('left')}>
+        {/* SCROLL LEFT */}
+        <Button
+          size="icon"
+          variant="outline"
+          onClick={() => scroll('left')}
+        >
           <ChevronLeft className="h-4 w-4" />
         </Button>
 
-        <Button size="icon" variant="outline" onClick={() => scroll('right')}>
+        {/* SCROLL RIGHT */}
+        <Button
+          size="icon"
+          variant="outline"
+          onClick={() => scroll('right')}
+        >
           <ChevronRight className="h-4 w-4" />
         </Button>
       </div>
@@ -313,13 +399,19 @@ const DistanceCovered = ({ dateRange, setDateRange }: Props) => {
             <div style={{ width: 60, height: 320 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={[]}>
-                  <YAxis domain={yDomain} tick={{ fontSize: 12 }} />
+                  <YAxis
+                    domain={yDomain}
+                    tick={{ fontSize: 12 }}
+                  />
                 </BarChart>
               </ResponsiveContainer>
             </div>
 
             {/* CHART */}
-            <div ref={scrollContainerRef} className="flex-1 overflow-x-hidden">
+            <div
+              ref={scrollContainerRef}
+              className="flex-1 overflow-x-hidden"
+            >
               <div
                 style={{
                   width: `${Math.max(chartData.length * 8, 100)}%`,
@@ -328,6 +420,7 @@ const DistanceCovered = ({ dateRange, setDateRange }: Props) => {
               >
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={chartData}>
+
                     <XAxis
                       dataKey="vehicle"
                       angle={-45}

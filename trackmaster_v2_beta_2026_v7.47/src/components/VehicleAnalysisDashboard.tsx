@@ -67,7 +67,7 @@ const [dateRange, setDateRange] = useState(getTodayRange());
     };
 
     fetchDashboardData();
-  }, [dateRange]);
+  }, []);
   if (loading || !dashboardData) return <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
     <div className="bg-white p-4 rounded-lg flex items-center gap-3 shadow-lg">
       <div className="animate-spin h-5 w-5 border-2 border-black border-t-transparent rounded-full"></div>
@@ -103,9 +103,10 @@ const [dateRange, setDateRange] = useState(getTodayRange());
       </div>
       <div className="lg:col-span-8">
         <DistanceCovered
-                  dateRange={dateRange}
-                  setDateRange={setDateRange}
-                />
+            data={dashboardData.distanceData}
+            dateRange={dateRange}
+            setDateRange={setDateRange}
+          />
       </div>
       <div className="lg:col-span-8 flex flex-col gap-4">
         <ComplianceStatus />
