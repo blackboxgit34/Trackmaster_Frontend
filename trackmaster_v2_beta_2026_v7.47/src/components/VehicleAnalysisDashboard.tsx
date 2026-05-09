@@ -15,7 +15,23 @@ import AverageUptime from './widgets/AverageUptime';
 
 const VehicleAnalysisDashboard = () => {
   const [dashboardData, setDashboardData] = useState<any | null>(null);
+
   const [loading, setLoading] = useState(true);
+
+  const getTodayRange = () => {
+  const now = new Date();
+
+  const end = new Date(now);
+  end.setHours(23, 59, 59, 999);
+
+  const start = new Date(now);
+  start.setDate(start.getDate() - 1);
+  start.setHours(0, 0, 0, 0);
+
+  return { start, end };
+};
+
+const [dateRange, setDateRange] = useState(getTodayRange());
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -23,7 +39,19 @@ const VehicleAnalysisDashboard = () => {
         const auth = JSON.parse(localStorage.getItem("trackmaster-auth") || "{}");
         const custId = auth.custId;
 
-        const url = `${API_BASE_URL}/Dashboard/dashboarddata?userid=${custId}`;
+        const formatDateTime = (date: Date) => {
+        const pad = (n: number) => String(n).padStart(2, '0');
+
+        return (
+          `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ` +
+          `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
+        );
+      };
+
+      const start = formatDateTime(dateRange.start);
+      const end = formatDateTime(dateRange.end);
+
+        const url = `${API_BASE_URL}/Dashboard/dashboarddata?userid=${custId}&start=${start}&end=${end}`;   
 
         const res = await fetch(url);
         const result = await res.json();
@@ -56,24 +84,29 @@ const VehicleAnalysisDashboard = () => {
       </div>
       <div className="lg:col-span-4">
         <SpeedAnalysis data={dashboardData.speedAnalysis} />
+       
       </div>
       <div className="lg:col-span-4">
         <GpsDeviceStatus />
       </div>
       <div className="lg:col-span-4">
-        <AvgSpeedVsOverspeed />
+        <AvgSpeedVsOverspeed  data={dashboardData.overSpeedReport }  />
       </div>
       <div className="lg:col-span-4">
         <StoppageChart />
       </div>
       <div className="lg:col-span-4">
-        <IdlingDuration />
+        <IdlingDuration data={dashboardData.idlingDuration}/>
       </div>
       <div className="lg:col-span-4">
-        <AverageUptime />
+        <AverageUptime data={dashboardData.averageDrivingHours} />
       </div>
       <div className="lg:col-span-8">
-        <DistanceCovered />
+        <DistanceCovered
+            data={dashboardData.distanceData}
+            dateRange={dateRange}
+            setDateRange={setDateRange}
+          />
       </div>
       <div className="lg:col-span-8 flex flex-col gap-4">
         <ComplianceStatus />
