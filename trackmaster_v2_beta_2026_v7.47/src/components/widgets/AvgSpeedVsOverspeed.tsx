@@ -115,12 +115,12 @@ const AvgSpeedVsOverspeed = ({ data }: Props) => {
   }, [selectedVehicle, custId, data]);
 
 
-  if (loading) return <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-    <div className="bg-white p-4 rounded-lg flex items-center gap-3 shadow-lg">
-      <div className="animate-spin h-5 w-5 border-2 border-black border-t-transparent rounded-full"></div>
-      <span>Please wait...</span>
-    </div>
-  </div>;
+  // if (loading) return <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+  //   <div className="bg-white p-4 rounded-lg flex items-center gap-3 shadow-lg">
+  //     <div className="animate-spin h-5 w-5 border-2 border-black border-t-transparent rounded-full"></div>
+  //     <span>Please wait...</span>
+  //   </div>
+  // </div>;
 
   return (
     <Card className="h-full flex flex-col">
@@ -147,7 +147,15 @@ const AvgSpeedVsOverspeed = ({ data }: Props) => {
           className="h-8 text-xs w-[150px]"
         />
       </CardHeader>
-      <CardContent className="px-2 flex-1 min-h-[250px]">
+      <CardContent className="px-2 flex-1 min-h-[250px] relative" >
+        {loading && (
+          <div className="absolute inset-0 bg-white/70 z-10 flex items-center justify-center rounded-md">
+            <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-lg shadow">
+              <div className="animate-spin h-4 w-4 border-2 border-black border-t-transparent rounded-full"></div>
+              <span className="text-sm">Please wait ...</span>
+            </div>
+          </div>
+        )}
         <ChartContainer config={chartConfig} className="h-full w-full">
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={chartData} margin={{ top: 10, right: 10, bottom: 0, left: 10 }}>
