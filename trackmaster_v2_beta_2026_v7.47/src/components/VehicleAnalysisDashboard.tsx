@@ -15,6 +15,7 @@ import AverageUptime from './widgets/AverageUptime';
 
 const VehicleAnalysisDashboard = () => {
   const [dashboardData, setDashboardData] = useState<any | null>(null);
+
   const [loading, setLoading] = useState(true);
 
   const getTodayRange = () => {
@@ -83,21 +84,22 @@ const [dateRange, setDateRange] = useState(getTodayRange());
       </div>
       <div className="lg:col-span-4">
         <SpeedAnalysis data={dashboardData.speedAnalysis} />
+       
       </div>
       <div className="lg:col-span-4">
         <GpsDeviceStatus />
       </div>
       <div className="lg:col-span-4">
-        <AvgSpeedVsOverspeed  data={dashboardData.overSpeedReport }/>
+        <AvgSpeedVsOverspeed  data={dashboardData.overSpeedReport }  />
       </div>
       <div className="lg:col-span-4">
         <StoppageChart />
       </div>
       <div className="lg:col-span-4">
-        <IdlingDuration />
+        <IdlingDuration data={dashboardData.idlingDuration}/>
       </div>
       <div className="lg:col-span-4">
-        <AverageUptime />
+        <AverageUptime data={dashboardData.averageDrivingHours} />
       </div>
       <div className="lg:col-span-8">
         <DistanceCovered
