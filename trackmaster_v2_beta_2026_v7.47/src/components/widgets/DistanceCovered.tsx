@@ -396,7 +396,7 @@ const DistanceCovered = ({
           <div className="flex">
 
             {/* Y AXIS */}
-            <div style={{ width: 60, height: 320 }}>
+            <div style={{ width: 60, height: 400 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={[]}>
                   <YAxis
@@ -415,11 +415,14 @@ const DistanceCovered = ({
               <div
                 style={{
                   width: `${Math.max(chartData.length * 8, 100)}%`,
-                  height: 320
+                  height: 400
                 }}
               >
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData}>
+                  <BarChart
+                      data={chartData}
+                      margin={{ top: 20, right: 20, left: 10, bottom: 80 }}
+                    >
 
                     <XAxis
                       dataKey="vehicle"
