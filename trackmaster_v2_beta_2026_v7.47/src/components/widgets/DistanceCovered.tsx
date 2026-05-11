@@ -124,6 +124,7 @@ const DistanceCovered = ({
 
   const [data, setData] = useState<any[]>(initialData || []);
   const [loading, setLoading] = useState(false);
+  const [selecting, setSelecting] = useState<'start' | 'end'>('start');
 
     useEffect(() => {
     if (initialData?.length) {
@@ -298,17 +299,44 @@ const DistanceCovered = ({
                 from: tempRange.start || undefined,
                 to: tempRange.end || undefined
               }}
-              onSelect={(range) => {
-                if (!range?.from) return;
+              disabled={(date) => date >= new Date()}
+              onSelect={(range, selectedDay) => {
+                if (!selectedDay) return;
 
-                setTempRange({
-                  start: range.from,
-                  end: range.to || range.from
-                });
+                // FIRST CLICK -> START
+                if (selecting === 'start') {
+                  setTempRange({
+                    start: selectedDay,
+                    end: null
+                  });
+
+                  setSelecting('end');
+                  return;
+                }
+
+                // SECOND CLICK -> END
+                if (selecting === 'end') {
+                  const start = tempRange.start;
+
+                  if (!start) return;
+
+                  if (selectedDay < start) {
+                    setTempRange({
+                      start: selectedDay,
+                      end: start
+                    });
+                  } else {
+                    setTempRange({
+                      start,
+                      end: selectedDay
+                    });
+                  }
+
+                  setSelecting('start');
+                }
               }}
               numberOfMonths={2}
             />
-
             {/* APPLY BUTTONS */}
             <div className="flex justify-end gap-2 border-t p-3">
               <Button
@@ -323,20 +351,21 @@ const DistanceCovered = ({
                 size="sm"
                 disabled={!tempRange.start || !tempRange.end}
                 onClick={async () => {
-                  if (tempRange.start && tempRange.end) {
-                    const newRange = {
-                      start: tempRange.start,
-                      end: tempRange.end
-                    };
+                if (tempRange.start && tempRange.end) {
+                  const newRange = {
+                    start: tempRange.start,
+                    end: tempRange.end
+                  };
 
-                    setDateRange(newRange);
+                  setDateRange(newRange);
 
-                    // API CALL ONLY ON APPLY
-                    await fetchData(newRange);
-                  }
-
+                  // CLOSE CALENDAR IMMEDIATELY
                   setIsCalendarOpen(false);
-                }}
+
+                  // FETCH IN BACKGROUND
+                  await fetchData(newRange);
+                }
+              }}
               >
                 Apply
               </Button>
