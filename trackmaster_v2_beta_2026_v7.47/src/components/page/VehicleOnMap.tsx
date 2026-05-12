@@ -4,7 +4,7 @@ import { Search, Filter, ChevronLeft, ChevronRight, Loader } from 'lucide-react'
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { type VehicleStatus } from '@/data/mockData';
+// import { type VehicleStatus } from '@/data/mockData';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -26,9 +26,12 @@ import MapComponent from './MapComponent';
 import { LoadScript } from '@react-google-maps/api';
 import { GOOGLE_MAPS_API_KEY } from '@/config/maps';
 import { useApi } from '@/hooks/useApi';
-import { getLiveStatusData } from '@/data/mockApi';
-import type { LiveVehicleStatus } from '@/types';
+//import { getLiveStatusData } from '@/data/mockApi';
+//import type { LiveVehicleStatus } from '@/types';
 import { getIconUrl } from '@/lib/map-utils';
+import { API_BASE_URL } from '@/config/Api';
+import type {LiveVehicleStatus,VehicleStatus} from '@/types';
+
 
 const VehicleOnMap = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -49,18 +52,69 @@ const VehicleOnMap = () => {
   // State for vehicle type filter search
   const [typeSearch, setTypeSearch] = useState('');
 
-  // Data fetching
-  const { data: liveStatusData, loading, refetch } = useApi(getLiveStatusData);
 
-  // Auto-refresh logic
-  useEffect(() => {
-    if (autoRefresh) {
-      const intervalId = setInterval(() => {
-        refetch();
-      }, 30000); // Refresh every 30 seconds
-      return () => clearInterval(intervalId);
-    }
-  }, [autoRefresh, refetch]);
+const getLiveStatusData = useCallback(async (): Promise<LiveVehicleStatus[]> => {
+  const auth = JSON.parse(localStorage.getItem("trackmaster-auth") || "{}");
+
+  const custId = auth.custId;
+
+  const url = `${API_BASE_URL}/VehicleStatus/GetvehicleStatusList?userid=${custId}`;
+
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch vehicle data');
+  }
+
+  const result = await response.json();
+
+  return result.data.map((item: any) => ({
+    id: item.vehName,
+    vehicleNo: item.vehName,
+    type: item.type || 'Other',
+    model: item.model || '',
+    status: item.vehicleStatus as VehicleStatus,
+    lat: Number(item.lat),
+    lng: Number(item.lng),
+    speed: Number(item.speed),
+    location: item.location || '',
+    lastUpdated: item.lastUpdated || '',
+
+    workingHours: 0,
+    idlingHours: 0,
+    fuelConsumed: 0,
+    gsmSignal: 0,
+    deviceSignal: 0,
+    battery: 0,
+    gpsDeviceBattery: 0,
+    alerts: 0,
+    errors: 0,
+    alertDetails: [],
+    errorDetails: [],
+    distance: 0,
+    fuelLevel: 0,
+    fuelLiters: 0,
+    fuelTankCapacity: 0,
+    engineTemp: 0,
+    hydraulicTemp: 0,
+    acStatus: 'Off',
+    ignitionStatus: 'Off',
+  }));
+}, []);
+  // Data fetching
+  const { data: liveStatusData, loading, refetch} = useApi(getLiveStatusData);
+
+  
+   //Auto-refresh logic
+ useEffect(() => {
+  if (!autoRefresh) return;
+
+  const intervalId = setInterval(() => {
+    refetch();
+  }, 30000);
+
+  return () => clearInterval(intervalId);
+}, [autoRefresh]);
 
   // Handle vehicle from URL parameter
   useEffect(() => {
@@ -262,29 +316,34 @@ const VehicleOnMap = () => {
                 <Loader className="animate-spin text-muted-foreground" />
               </div>
             ) : (
-              <div className="p-2 space-y-1">
-                {filteredVehicles.map(vehicle => (
-                  <div
-                    key={vehicle.id}
-                    onClick={() => handleSelectVehicle(vehicle.id)}
-                    className={cn(
-                      "flex items-center gap-3 p-2 rounded-md cursor-pointer transition-colors",
-                      selectedVehicleId === vehicle.id ? 'bg-primary/10' : 'hover:bg-accent'
-                    )}
-                  >
-                    <img
-                      src={getIconUrl(vehicle.type, 'Parked')}
-                      alt={vehicle.type}
-                      className="h-10 w-10 object-contain"
-                    />
-                    <div className="flex-1">
-                      <p className="font-semibold text-sm">{vehicle.vehicleNo}</p>
-                      <p className="text-xs text-muted-foreground">{vehicle.model} / {vehicle.type}</p>
+                <div className="p-2 space-y-1 relative">
+                  {loading && (
+                    <div className="absolute top-2 right-2 z-10">
+                      <Loader className="animate-spin h-4 w-4" />
                     </div>
-                    <Badge className={cn('border-transparent', getStatusBadgeClasses(vehicle.status))}>{vehicle.status}</Badge>
-                  </div>
-                ))}
-              </div>
+                  )}
+                  {filteredVehicles.map(vehicle => (
+                    <div
+                      key={vehicle.id}
+                      onClick={() => handleSelectVehicle(vehicle.id)}
+                      className={cn(
+                        "flex items-center gap-3 p-2 rounded-md cursor-pointer transition-colors",
+                        selectedVehicleId === vehicle.id ? 'bg-primary/10' : 'hover:bg-accent'
+                      )}
+                    >
+                      <img
+                        src={getIconUrl(vehicle.type, vehicle.status)}
+                        alt={vehicle.type}
+                        className="h-10 w-10 object-contain"
+                      />
+                      <div className="flex-1">
+                        <p className="font-semibold text-sm">{vehicle.vehicleNo}</p>
+                        <p className="text-xs text-muted-foreground">{vehicle.model} / {vehicle.type}</p>
+                      </div>
+                      <Badge className={cn('border-transparent', getStatusBadgeClasses(vehicle.status))}>{vehicle.status}</Badge>
+                    </div>
+                  ))}
+                </div>
             )}
           </ScrollArea>
         </div>
