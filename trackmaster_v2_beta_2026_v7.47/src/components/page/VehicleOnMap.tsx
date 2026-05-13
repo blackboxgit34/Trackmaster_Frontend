@@ -26,8 +26,6 @@ import MapComponent from './MapComponent';
 import { LoadScript } from '@react-google-maps/api';
 import { GOOGLE_MAPS_API_KEY } from '@/config/maps';
 import { useApi } from '@/hooks/useApi';
-//import { getLiveStatusData } from '@/data/mockApi';
-//import type { LiveVehicleStatus } from '@/types';
 import { getIconUrl } from '@/lib/map-utils';
 import { API_BASE_URL } from '@/config/Api';
 import type {LiveVehicleStatus,VehicleStatus} from '@/types';
@@ -98,7 +96,7 @@ const getLiveStatusData = useCallback(async (): Promise<LiveVehicleStatus[]> => 
     engineTemp: 0,
     hydraulicTemp: 0,
     acStatus: 'Off',
-    ignitionStatus: 'Off',
+    ignitionStatus: 'on',
   }));
 }, []);
   // Data fetching
