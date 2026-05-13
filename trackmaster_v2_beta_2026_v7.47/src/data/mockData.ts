@@ -2,46 +2,14 @@ import { subDays, formatISO, format, addHours, subHours, startOfDay, isWithinInt
 import { Clock, Gauge, type LucideIcon, Power, Ban, BatteryWarning, MapPin, ArrowUp, ArrowDown, Undo2, Fuel, Droplets, Box, Thermometer } from 'lucide-react';
 
 
-
-// let NUM_VEHICLES = 50;
-
 let NUM_VEHICLES = 50;
-
-  // export async function getVehicleCount(): Promise<number> {
-  //   // debugger;
-  //     try {
-  //         const auth = JSON.parse(localStorage.getItem("trackmaster-auth") || "{}");
-  //         const custId = auth.custId;
-
-          
-  //         const url = `${API_BASE_URL}/api/Dashboard/dashboarddata?userid=${custId}`;
-
-  //       const res = await fetch(url, { method: "GET" });
-
-  //       const response = await res.json();
-  //         if (!res.ok) {
-  //             throw new Error("Failed API");
-  //         }
-
-  //         const data = response.data;
-
-  //         NUM_VEHICLES = data.totalVehicles; // ✅ store here
-  //         return NUM_VEHICLES;              // ✅ return value
-
-  //     } catch (err) {
-  //         console.log(err);
-  //         return 0;
-  //     }
-  // }
-  //         // correct value
-  // console.log(NUM_VEHICLES);  // also updated
 
 const NUM_DAYS_OF_DATA = 90;
 
 export type VehicleStatus = 'Moving' | 'Parked' | 'Unreachable' | 'Breakdown' | 'Ignition On' | 'Battery Disconnect' | 'High Speed' | 'Towed' | 'Idle';
 
 export const VEHICLE_TYPES = {
-  'Ambulance': { prefix: 'AMB', models: ['Force Traveller', 'Tata Winger'], make: 'Various' },
+  'Ambulance50': { prefix: 'AMB', models: ['Force Traveller', 'Tata Winger'], make: 'Various' },
   'Backhoe Loader': { prefix: 'BHL', models: ['JCB 3DX', 'CAT 424'], make: 'JCB/CAT' },
   'Bolero': { prefix: 'BOL', models: ['Bolero', 'Bolero Neo'], make: 'Mahindra' },
   'Bolero Camper': { prefix: 'BCM', models: ['Bolero Camper'], make: 'Mahindra' },
