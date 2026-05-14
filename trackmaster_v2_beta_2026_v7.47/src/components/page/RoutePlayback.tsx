@@ -164,80 +164,143 @@ const RoutePlayback = () => {
           duration,
         });
 
-        // ================= DISTANCE =================
-        // Last distance - First distance
+        // // ================= DISTANCE =================
+        // // Last distance - First distance
 
-        const firstDistance =
-          processedPath[0]?.distance || 0;
+        // const firstDistance =
+        //   processedPath[0]?.distance || 0;
 
-        const lastDistance =
-          processedPath[processedPath.length - 1]?.distance || 0;
+        // const lastDistance =
+        //   processedPath[processedPath.length - 1]?.distance || 0;
 
-        const totalDistanceValue =
-          lastDistance - firstDistance;
+        // const totalDistanceValue =
+        //   lastDistance - firstDistance;
 
-        setTotalDistance(
-          totalDistanceValue > 0
-            ? totalDistanceValue
-            : 0
-        );
+        // setTotalDistance(
+        //   totalDistanceValue > 0
+        //     ? totalDistanceValue
+        //     : 0
+        // );
 
-        // ================= DRIVING / IDLING / STOPPAGE =================
+        // ================= DISTANCE / DRIVING / IDLING / STOPPAGE =================
 
         let drivingSeconds = 0;
         let idlingSeconds = 0;
         let stoppageSeconds = 0;
 
-        // Max allowed gap between records
-        // Ignore unrealistic GPS/data gaps
-        const MAX_GAP_SECONDS = 300; // 5 min
+        let totalDistanceValue = 0;
 
-        for (let i = 0; i < processedPath.length - 1; i++) {
+        let flag = false;
+
+        let sdist = 0;
+        let edist = 0;
+
+        for (let i = 0; i < processedPath.length; i++) {
           const current = processedPath[i];
           const next = processedPath[i + 1];
 
-          const diff = differenceInSeconds(
-            parseISO(next.timestamp),
-            parseISO(current.timestamp)
-          );
+          // ================= TIME CALCULATIONS =================
 
-          // Ignore invalid gaps
-          if (diff <= 0) continue;
+          if (next) {
+            const diff = differenceInSeconds(
+              parseISO(next.timestamp),
+              parseISO(current.timestamp)
+            );
 
-          // Ignore huge gaps
-          if (diff > MAX_GAP_SECONDS) continue;
+            if (diff > 0) {
+              const speed = Number(current.speed || 0);
+
+              const engineStatus = String(
+                current.engineStatus
+              ).toUpperCase();
+
+              // ================= DRIVING =================
+
+              if (speed > 0) {
+                drivingSeconds += diff;
+              }
+
+              // ================= IDLING =================
+
+              if (
+                speed === 0 &&
+                engineStatus === 'ON'
+              ) {
+                idlingSeconds += diff;
+              }
+
+              // ================= STOPPAGE =================
+
+              if (speed === 0) {
+                stoppageSeconds += diff;
+              }
+            }
+          }
+
+          // ================= C# DISTANCE LOGIC =================
 
           const speed = Number(current.speed || 0);
+          const currentDistance = Number(current.distance || 0);
 
-          const engineStatus =
-            String(current.engineStatus).toUpperCase();
+          // START MOVEMENT
+          if (speed > 0 && flag === false) {
+            if (i === 0) {
+              sdist = currentDistance;
+            } else {
+              sdist = Number(
+                processedPath[i - 1]?.distance || 0
+              );
+            }
 
-          // ================= DRIVING =================
-          // Vehicle moving
-
-          if (speed > 0) {
-            drivingSeconds += diff;
+            flag = true;
           }
 
-          // ================= IDLING =================
-          // Engine ON + vehicle not moving
-
-          if (
-            speed === 0 &&
-            engineStatus === 'ON'
-          ) {
-            idlingSeconds += diff;
+          // CONTINUE MOVEMENT
+          else if (speed > 0 && flag === true) {
+            edist = currentDistance;
           }
 
-          // ================= STOPPAGE =================
-          // Vehicle stopped
+          // STOP MOVEMENT
+          else if (speed <= 0 && flag === true) {
+            edist = currentDistance;
 
-          if (speed === 0) {
-            stoppageSeconds += diff;
+            const tripDistance = Number(
+              (edist - sdist).toFixed(1)
+            );
+
+            // Same as C#
+            if (
+              tripDistance > 0 &&
+              tripDistance < 500
+            ) {
+              totalDistanceValue += tripDistance;
+            }
+
+            flag = false;
           }
         }
 
-        // ================= CONVERT TO MINUTES =================
+        // HANDLE LAST RUNNING SESSION
+        if (flag === true) {
+          const tripDistance = Number(
+            (edist - sdist).toFixed(1)
+          );
+
+          if (
+            tripDistance > 0 &&
+            tripDistance < 500
+          ) {
+            totalDistanceValue += tripDistance;
+          }
+        }
+
+        // ================= FINAL VALUES =================
+
+        setTotalDistance(
+          totalDistanceValue > 0
+            ? Number(totalDistanceValue.toFixed(2))
+            : 0
+        );
 
         setDrivingTime(drivingSeconds / 60);
 
