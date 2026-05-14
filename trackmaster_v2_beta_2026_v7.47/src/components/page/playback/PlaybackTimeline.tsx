@@ -10,6 +10,7 @@ interface PlaybackTimelineProps {
   isPlaying: boolean;
   speed: number;
   currentData: any | null;
+  startDistance: number;
   onPlayPause: () => void;
   onSpeedChange: (speed: number) => void;
   onSliderChange: (value: number) => void;
@@ -22,6 +23,7 @@ const PlaybackTimeline = ({
   isPlaying,
   speed,
   currentData,
+  startDistance,
   onPlayPause,
   onSpeedChange,
   onSliderChange,
@@ -84,13 +86,8 @@ const PlaybackTimeline = ({
         </div>
         <div className="text-center w-16">
           <p className="text-xs text-muted-foreground">Distance</p>
-          <p className="text-lg font-bold">{(currentData?.distance || 0).toFixed(0)}</p>
+          <p className="text-lg font-bold"> {Math.max(0, (currentData?.distance || 0) - startDistance).toFixed(0)}</p>
           <p className="text-xs text-muted-foreground -mt-1">km</p>
-        </div>
-        <div className="text-center w-16">
-          <p className="text-xs text-muted-foreground">Fuel</p>
-          <p className="text-lg font-bold">{(currentData?.fuel || 0).toFixed(0)}</p>
-          <p className="text-xs text-muted-foreground -mt-1">Liter</p>
         </div>
       </div>
     </div>
