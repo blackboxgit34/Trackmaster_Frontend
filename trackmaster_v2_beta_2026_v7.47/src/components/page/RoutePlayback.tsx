@@ -53,6 +53,9 @@ const RoutePlayback = () => {
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
+  const [showIdleStops, setShowIdleStops] = useState(true);
+
+  const [showNormalStops, setShowNormalStops] = useState(true);
   const [playbackTime, setPlaybackTime] = useState(0);
 
   const animationFrameId = useRef<number>();
@@ -572,6 +575,7 @@ const RoutePlayback = () => {
             <>
               <PlaybackMap
                 tripPath={playbackData.movingPath}
+                fullPath={playbackData.path}
                 markerPosition={
                   currentDataPoint
                     ? {
@@ -585,6 +589,8 @@ const RoutePlayback = () => {
                 showPois={false}
                 showLabels={true}
                 showStoppages={true}
+                showIdleStops={showIdleStops}
+                showNormalStops={showNormalStops}
                 currentBearing={currentDataPoint?.bearing || 0}
                 isPlaying={isPlaying}
               />
@@ -602,6 +608,49 @@ const RoutePlayback = () => {
                 onSpeedChange={setPlaybackSpeed}
                 onSliderChange={handleSliderChange}
               />
+              <div className="absolute bottom-24 left-4 z-50 bg-white rounded-lg shadow-lg p-4 flex flex-col gap-3 min-w-[220px]">
+
+                {/* ================= IDLE STOPS ================= */}
+
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">
+                    Idle Stops
+                  </span>
+
+                  <button
+                    onClick={() =>
+                      setShowIdleStops(!showIdleStops)
+                    }
+                    className={`px-3 py-1 rounded text-white text-xs transition-all duration-200 ${showIdleStops
+                        ? 'bg-[#f97216]'
+                        : 'bg-gray-400'
+                      }`}
+                  >
+                    {showIdleStops ? 'ON' : 'OFF'}
+                  </button>
+                </div>
+
+                {/* ================= NORMAL STOPS ================= */}
+
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">
+                    Normal Stops
+                  </span>
+
+                  <button
+                    onClick={() =>
+                      setShowNormalStops(!showNormalStops)
+                    }
+                    className={`px-3 py-1 rounded text-white text-xs transition-all duration-200 ${showNormalStops
+                        ? 'bg-[#3b82f6]'
+                        : 'bg-gray-400'
+                      }`}
+                  >
+                    {showNormalStops ? 'ON' : 'OFF'}
+                  </button>
+                </div>
+
+              </div>
             </>
           ) : (
             <div className="flex items-center justify-cent  er h-full">
