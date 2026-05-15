@@ -94,6 +94,8 @@ const RoutePlayback = () => {
 
   // ================= PLAYBACK =================
 
+  // ================= PLAYBACK =================
+
   useEffect(() => {
     const loadPlaybackData = async () => {
       try {
@@ -127,6 +129,8 @@ const RoutePlayback = () => {
           return;
         }
 
+        // ================= FULL PATH =================
+
         const processedPath = data.data.map((item: any) => ({
           lat: Number(item.latitude),
           lng: Number(item.longitude),
@@ -139,6 +143,7 @@ const RoutePlayback = () => {
               : 'OFF',
           distance: Number(item.distance || 0),
         }));
+
         processedPath.sort(
           (
             a: (typeof processedPath)[0],
@@ -147,40 +152,30 @@ const RoutePlayback = () => {
             parseISO(a.timestamp).getTime() -
             parseISO(b.timestamp).getTime()
         );
-        const startTime = processedPath[0].timestamp;
 
-        const endTime =
-          processedPath[processedPath.length - 1].timestamp;
+        // ================= MOVING PATH =================
 
-        const duration = differenceInSeconds(
-          parseISO(endTime),
-          parseISO(startTime)
+        const processedMovingPath = data.movingData.map((item: any) => ({
+          lat: Number(item.latitude),
+          lng: Number(item.longitude),
+          location: item.location,
+          speed: Number(item.speed || 0),
+          timestamp: formatISO(new Date(item.datadate)),
+          engineStatus:
+            String(item.acignition).toUpperCase() === 'ON'
+              ? 'ON'
+              : 'OFF',
+          distance: Number(item.distance || 0),
+        }));
+
+        processedMovingPath.sort(
+          (
+            a: (typeof processedMovingPath)[0],
+            b: (typeof processedMovingPath)[0]
+          ) =>
+            parseISO(a.timestamp).getTime() -
+            parseISO(b.timestamp).getTime()
         );
-
-        setPlaybackData({
-          path: processedPath,
-          startTime,
-          endTime,
-          duration,
-        });
-
-        // // ================= DISTANCE =================
-        // // Last distance - First distance
-
-        // const firstDistance =
-        //   processedPath[0]?.distance || 0;
-
-        // const lastDistance =
-        //   processedPath[processedPath.length - 1]?.distance || 0;
-
-        // const totalDistanceValue =
-        //   lastDistance - firstDistance;
-
-        // setTotalDistance(
-        //   totalDistanceValue > 0
-        //     ? totalDistanceValue
-        //     : 0
-        // );
 
         // ================= DISTANCE / DRIVING / IDLING / STOPPAGE =================
 
@@ -237,12 +232,16 @@ const RoutePlayback = () => {
             }
           }
 
-          // ================= C# DISTANCE LOGIC =================
+          // ================= DISTANCE =================
 
           const speed = Number(current.speed || 0);
-          const currentDistance = Number(current.distance || 0);
+
+          const currentDistance = Number(
+            current.distance || 0
+          );
 
           // START MOVEMENT
+
           if (speed > 0 && flag === false) {
             if (i === 0) {
               sdist = currentDistance;
@@ -256,11 +255,13 @@ const RoutePlayback = () => {
           }
 
           // CONTINUE MOVEMENT
+
           else if (speed > 0 && flag === true) {
             edist = currentDistance;
           }
 
           // STOP MOVEMENT
+
           else if (speed <= 0 && flag === true) {
             edist = currentDistance;
 
@@ -268,7 +269,6 @@ const RoutePlayback = () => {
               (edist - sdist).toFixed(1)
             );
 
-            // Same as C#
             if (
               tripDistance > 0 &&
               tripDistance < 500
@@ -281,6 +281,7 @@ const RoutePlayback = () => {
         }
 
         // HANDLE LAST RUNNING SESSION
+
         if (flag === true) {
           const tripDistance = Number(
             (edist - sdist).toFixed(1)
@@ -308,7 +309,34 @@ const RoutePlayback = () => {
 
         setTotalStoppageTime(stoppageSeconds / 60);
 
+        // ================= PLAYBACK DATA =================
+        // TIMELINE SAME AS DRIVING TIME
+
+        const startTime =
+          processedMovingPath[0]?.timestamp ||
+          processedPath[0].timestamp;
+
+        const endTime =
+          processedMovingPath[
+            processedMovingPath.length - 1
+          ]?.timestamp ||
+          processedPath[processedPath.length - 1]
+            .timestamp;
+
+        const playbackDuration = drivingSeconds;
+
+        setPlaybackData({
+          path: processedPath,
+          movingPath: processedMovingPath,
+          startTime,
+          endTime,
+          duration: playbackDuration,
+        });
+
+        // ================= RESET =================
+
         setPlaybackTime(0);
+
         setIsPlaying(false);
 
         lastPausedTime.current = 0;
@@ -321,9 +349,13 @@ const RoutePlayback = () => {
 
     const resetPlaybackStats = () => {
       setPlaybackData(null);
+
       setTotalDistance(0);
+
       setDrivingTime(0);
+
       setTotalIdlingTime(0);
+
       setTotalStoppageTime(0);
     };
 
@@ -333,30 +365,54 @@ const RoutePlayback = () => {
   // ================= CURRENT POINT =================
 
   const currentDataPoint = useMemo(() => {
-    if (!playbackData) return null;
+    if (!playbackData?.movingPath?.length) return null;
 
-    const tripStart = parseISO(playbackData.path[0].timestamp).getTime();
+    let accumulated = 0;
 
-    const targetTime = tripStart + playbackTime * 1000;
-
-    for (let i = 0; i < playbackData.path.length - 1; i++) {
-      const p1 = playbackData.path[i];
-      const p2 = playbackData.path[i + 1];
+    for (let i = 0; i < playbackData.movingPath.length - 1; i++) {
+      const p1 = playbackData.movingPath[i];
+      const p2 = playbackData.movingPath[i + 1];
 
       const t1 = parseISO(p1.timestamp).getTime();
       const t2 = parseISO(p2.timestamp).getTime();
 
-      if (targetTime >= t1 && targetTime <= t2) {
-        const ratio =
-          t2 - t1 === 0 ? 0 : (targetTime - t1) / (t2 - t1);
+      const segmentSeconds = (t2 - t1) / 1000;
 
-        const interpolate = (key: keyof typeof p1) =>
+      // ONLY MOVING SEGMENTS
+      const isMovingSegment =
+        Number(p1.speed) > 0 &&
+        Number(p2.speed) > 0;
+
+      if (!isMovingSegment || segmentSeconds <= 0) {
+        continue;
+      }
+
+      // FOUND CURRENT PLAYBACK SEGMENT
+      if (
+        playbackTime >= accumulated &&
+        playbackTime <= accumulated + segmentSeconds
+      ) {
+        const localTime = playbackTime - accumulated;
+
+        const ratio =
+          segmentSeconds === 0
+            ? 0
+            : localTime / segmentSeconds;
+
+        const interpolate = (
+          key: keyof typeof p1
+        ) =>
           (p1[key] as number) +
-          ((p2[key] as number) - (p1[key] as number)) * ratio;
+          ((p2[key] as number) -
+            (p1[key] as number)) *
+          ratio;
 
         let bearing = 0;
 
-        if (p1.lat !== p2.lat || p1.lng !== p2.lng) {
+        if (
+          p1.lat !== p2.lat ||
+          p1.lng !== p2.lng
+        ) {
           bearing = calculateBearing(
             p1.lat,
             p1.lng,
@@ -374,11 +430,14 @@ const RoutePlayback = () => {
           bearing,
         };
       }
+
+      accumulated += segmentSeconds;
     }
 
-    return playbackData.path[playbackData.path.length - 1];
+    return playbackData.movingPath[
+      playbackData.movingPath.length - 1
+    ];
   }, [playbackData, playbackTime]);
-
   // ================= PLAYBACK CONTROLS =================
 
   const updatePosition = useCallback((time: number) => {
@@ -512,7 +571,7 @@ const RoutePlayback = () => {
           {playbackData ? (
             <>
               <PlaybackMap
-                tripPath={playbackData.path}
+                tripPath={playbackData.movingPath}
                 markerPosition={
                   currentDataPoint
                     ? {
@@ -531,13 +590,14 @@ const RoutePlayback = () => {
               />
 
               <PlaybackTimeline
-                startTime={playbackData.startTime}
-                endTime={playbackData.endTime}
+                duration={playbackData.duration}
                 currentTime={playbackTime}
                 isPlaying={isPlaying}
                 speed={playbackSpeed}
                 currentData={currentDataPoint}
-                startDistance={playbackData.path[0]?.distance || 0}
+                startDistance={
+                  playbackData.movingPath[0]?.distance || 0
+                }
                 onPlayPause={() => setIsPlaying(!isPlaying)}
                 onSpeedChange={setPlaybackSpeed}
                 onSliderChange={handleSliderChange}
