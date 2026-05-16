@@ -27,9 +27,8 @@ import { LoadScript } from '@react-google-maps/api';
 import { GOOGLE_MAPS_API_KEY } from '@/config/maps';
 import { useApi } from '@/hooks/useApi';
 import { getIconUrl } from '@/lib/map-utils';
-import { API_BASE_URL } from '@/config/Api';
 import type {LiveVehicleStatus,VehicleStatus} from '@/types';
-
+import { getVehicleStatusList } from '@/hooks/useApi';
 
 const VehicleOnMap = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -50,66 +49,26 @@ const VehicleOnMap = () => {
   // State for vehicle type filter search
   const [typeSearch, setTypeSearch] = useState('');
 
-
-const getLiveStatusData = useCallback(async (): Promise<LiveVehicleStatus[]> => {
+  // calling API to get vehicle on map
+  const getLiveStatusData = useCallback(async () => {
+    debugger
   const auth = JSON.parse(localStorage.getItem("trackmaster-auth") || "{}");
-
-  const custId = auth.custId;
-
-  const url = `${API_BASE_URL}/VehicleStatus/GetvehicleStatusList?userid=${custId}`;
-
-  const response = await fetch(url);
-
-  if (!response.ok) {
-    throw new Error('Failed to fetch vehicle data');
-  }
-
-  const result = await response.json();
-
-  return result.data.map((item: any) => ({
-    id: item.vehName,
-    vehicleNo: item.vehName,
-    type: item.type || 'Other',
-    model: item.model || '',
-    status: item.vehicleStatus as VehicleStatus,
-    lat: Number(item.lat),
-    lng: Number(item.lng),
-    speed: Number(item.speed),
-    location: item.location || '',
-    lastUpdated: item.lastUpdated || '',
-
-    workingHours: 0,
-    idlingHours: 0,
-    fuelConsumed: 0,
-    gsmSignal: 0,
-    deviceSignal: 0,
-    battery: 0,
-    gpsDeviceBattery: 0,
-    alerts: 0,
-    errors: 0,
-    alertDetails: [],
-    errorDetails: [],
-    distance: 0,
-    fuelLevel: 0,
-    fuelLiters: 0,
-    fuelTankCapacity: 0,
-    engineTemp: 0,
-    hydraulicTemp: 0,
-    acStatus: 'Off',
-    ignitionStatus: 'on',
-  }));
+  return await getVehicleStatusList({
+    pageName: 'vehonmap',
+    CustId: auth.custId,
+  });
 }, []);
+
   // Data fetching
   const { data: liveStatusData, loading, refetch} = useApi(getLiveStatusData);
-
   
-   //Auto-refresh logic
+//    //Auto-refresh logic
  useEffect(() => {
   if (!autoRefresh) return;
 
   const intervalId = setInterval(() => {
     refetch();
-  }, 30000);
+  }, 180000);
 
   return () => clearInterval(intervalId);
 }, [autoRefresh]);
@@ -336,7 +295,8 @@ const getLiveStatusData = useCallback(async (): Promise<LiveVehicleStatus[]> => 
                       />
                       <div className="flex-1">
                         <p className="font-semibold text-sm">{vehicle.vehicleNo}</p>
-                        <p className="text-xs text-muted-foreground">{vehicle.model} / {vehicle.type}</p>
+                        {/* <p className="text-xs text-muted-foreground">{vehicle.model} / {vehicle.type}</p> */}
+                        <p className="text-xs text-muted-foreground">{vehicle.type}</p>
                       </div>
                       <Badge className={cn('border-transparent', getStatusBadgeClasses(vehicle.status))}>{vehicle.status}</Badge>
                     </div>

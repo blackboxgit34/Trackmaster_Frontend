@@ -5,7 +5,6 @@ export interface DataTableRequestModel {
     sSearch?: string;
     sortColumn?: string;
     sortDirection?: "asc" | "desc";
-    userId: number;
     interval?: number;
     beginDate?: string;
     endDate?: string;
