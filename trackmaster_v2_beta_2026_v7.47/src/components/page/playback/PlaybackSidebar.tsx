@@ -22,6 +22,7 @@ interface PlaybackSidebarProps {
   totalIdling: number; // in minutes
   path: TripPoint[];
   onPrint: () => void;
+  onExportExcel: () => void;
 }
 
 const formatDuration = (minutes: number) => {
@@ -78,6 +79,7 @@ const PlaybackSidebar = ({
   totalIdling,
   path,
   onPrint,
+  onExportExcel
 }: PlaybackSidebarProps) => {
 
   // const { startEvent, intermediateEvents, endEvent } = useMemo(() => {
@@ -319,7 +321,9 @@ const PlaybackSidebar = ({
 
       <div className="p-3 border-t grid grid-cols-2 gap-2 shrink-0">
         <Button variant="outline" onClick={onPrint}><Printer className="h-4 w-4 mr-2" /> Print</Button>
-        <Button className="bg-brand-orange hover:bg-brand-orange/90"><Download className="h-4 w-4 mr-2" /> Export Excel</Button>
+        <Button className="bg-brand-orange hover:bg-brand-orange/90" onClick={onExportExcel}>
+          <Download className="h-4 w-4 mr-2" /> Export Excel
+        </Button>
       </div>
     </div>
   );
