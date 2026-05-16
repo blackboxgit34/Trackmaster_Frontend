@@ -31,11 +31,11 @@ type HeaderProps = {
 };
 
 // const Header = ({ setIsCustomizationSidebarOpen }: HeaderProps) => {previous
-const Header = ({ setIsCustomizationSidebarOpen ,onSearchChange,}: HeaderProps) => {
-// neha k
- const { theme, setTheme, menuPosition } = useTheme();
- const { user, logout } = useUser();
- const navigate = useNavigate();
+const Header = ({ setIsCustomizationSidebarOpen, onSearchChange, }: HeaderProps) => {
+  // neha k
+  const { theme, setTheme, menuPosition } = useTheme();
+  const { user, logout } = useUser();
+  const navigate = useNavigate();
   const { updateUser } = useUser();
 
   const handleGoBack = () => {
@@ -45,7 +45,7 @@ const Header = ({ setIsCustomizationSidebarOpen ,onSearchChange,}: HeaderProps) 
     navigate("/select-customer");
   };
   const canGoBack = localStorage.getItem("AccessToGoBackToCustomerSelect") === "true";
- return (
+  return (
     <header className={cn(
       "sticky top-0 z-30 bg-card",
       menuPosition === 'sidebar' && 'border-b'
@@ -64,7 +64,14 @@ const Header = ({ setIsCustomizationSidebarOpen ,onSearchChange,}: HeaderProps) 
           {canGoBack && (
             <button
               onClick={handleGoBack}
-              className="h-8 px-3 flex items-center gap-2 bg-gray-200 hover:bg-gray-300 rounded"
+              className="h-8 px-3 
+    flex items-center gap-2 
+    rounded-md
+    border
+    bg-background
+    hover:bg-accent
+    text-foreground
+    transition-colors"
             >
               <Users className="h-4 w-4" />
               Change Customer

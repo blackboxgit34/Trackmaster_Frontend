@@ -2,148 +2,446 @@ import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { LoadScript } from '@react-google-maps/api';
 import { GOOGLE_MAPS_API_KEY } from '@/config/maps';
-import { routeData } from '@/data/routeData';
-import { actualVehicles } from '@/data/mockData';
-import { parseISO, isWithinInterval, startOfDay, endOfDay, differenceInSeconds, parse, format } from 'date-fns';
-import { Loader } from 'lucide-react';
+import { parseISO, differenceInSeconds, parse, format } from 'date-fns';
+
+import { Loader, Calendar as CalendarIcon } from 'lucide-react';
+
 import PlaybackSidebar from './playback/PlaybackSidebar';
 import PlaybackMap from './playback/PlaybackMap';
 import PlaybackTimeline from './playback/PlaybackTimeline';
+
 import { calculateBearing } from '@/lib/map-utils';
-import { Calendar as CalendarIcon } from 'lucide-react';
+
 import { Button } from '../ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
+
 import { Calendar } from '../ui/calendar';
 import { VehicleCombobox } from '../VehicleCombobox';
 
+import { API_BASE_URL } from '@/config/Api';
+import { formatISO } from 'date-fns';
+import '@/css/print.css';
 const libraries: ('drawing' | 'places')[] = ['drawing', 'places'];
 
 const RoutePlayback = () => {
+  const [totalDistance, setTotalDistance] = useState(0);
+  const [totalIdlingTime, setTotalIdlingTime] = useState(0);
+  const [totalStoppageTime, setTotalStoppageTime] = useState(0);
+  const [drivingTime, setDrivingTime] = useState(0);
+
   const [searchParams] = useSearchParams();
+
   const vehicleFromUrl = searchParams.get('vehicle');
   const dateFromUrl = searchParams.get('date');
 
-  const [selectedVehicle, setSelectedVehicle] = useState<string | null>(vehicleFromUrl || actualVehicles[0]?.id || null);
+  const [vehicles, setVehicles] = useState<{ label: string; value: string }[]>([]);
+  const [selectedVehicle, setSelectedVehicle] = useState<string | null>(null);
+
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(() => {
     if (dateFromUrl) {
       try {
         return parse(dateFromUrl, 'yyyy-MM-dd', new Date());
-      } catch (e) { console.error("Invalid date in URL", e); }
+      } catch {
+        return new Date();
+      }
     }
+
     return new Date();
   });
-  
+
+  const [playbackData, setPlaybackData] = useState<any>(null);
+
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
+  const [showIdleStops, setShowIdleStops] = useState(true);
+
+  const [showNormalStops, setShowNormalStops] = useState(true);
   const [playbackTime, setPlaybackTime] = useState(0);
 
   const animationFrameId = useRef<number>();
   const playbackStartTime = useRef<number>(0);
   const lastPausedTime = useRef<number>(0);
 
-  const { playbackData, summary } = useMemo(() => {
-    if (!selectedVehicle || !selectedDate) return { playbackData: null, summary: null };
-    
-    const start = startOfDay(selectedDate);
-    const end = endOfDay(selectedDate);
+  // ================= VEHICLES =================
 
-    const tripsInRange = routeData
-        .filter(trip => trip.vehicleId === selectedVehicle && isWithinInterval(parseISO(trip.date), { start, end }))
-        .sort((a, b) => parseISO(a.path[0].timestamp).getTime() - parseISO(b.path[0].timestamp).getTime());
+  useEffect(() => {
+    const loadVehicles = async () => {
+      try {
+        const auth = JSON.parse(localStorage.getItem('trackmaster-auth') || '{}');
 
-    if (tripsInRange.length === 0) return { playbackData: null, summary: null };
+        const custId = auth.custId;
 
-    const vehicleInfo = actualVehicles.find(v => v.id === selectedVehicle);
-    const tankCapacity = vehicleInfo?.fuelTankCapacity || 300;
+        const response = await fetch(
+          `${API_BASE_URL}/Dashboard/GetAllVehicleListByCustId?userid=${custId}`
+        );
 
-    const combinedPath = tripsInRange.flatMap(trip => trip.path);
-    if (combinedPath.length === 0) return { playbackData: null, summary: null };
+        const data = await response.json();
 
-    let currentFuel = tankCapacity * 0.8;
-    let cumulativeDistance = 0;
-    const processedPath: any[] = [];
-    let totalStoppages = 0;
-    let totalIdlingSeconds = 0;
-    let totalStoppageSeconds = 0;
+        const formattedVehicles = (data.data || []).map((v: any) => ({
+          label: v.vehName,
+          value: v.bbid,
+        }));
 
-    for (let i = 0; i < combinedPath.length; i++) {
-      const point = combinedPath[i];
-      if (i > 0) {
-        const prevPoint = combinedPath[i-1];
-        const timeDeltaSeconds = differenceInSeconds(parseISO(point.timestamp), parseISO(prevPoint.timestamp));
-        const timeDeltaHours = timeDeltaSeconds / 3600;
-        if (prevPoint.speed > 0) {
-          cumulativeDistance += prevPoint.speed * timeDeltaHours;
-          const consumptionRate = 5 + (prevPoint.speed / 10);
-          currentFuel -= consumptionRate * timeDeltaHours;
+        setVehicles(formattedVehicles);
+
+        if (formattedVehicles.length > 0) {
+          setSelectedVehicle(vehicleFromUrl || formattedVehicles[0].value);
         }
-        if (prevPoint.speed === 0) {
-          totalStoppageSeconds += timeDeltaSeconds;
-          if (prevPoint.engineStatus === 'ON') {
-            totalIdlingSeconds += timeDeltaSeconds;
-          }
-          if (i > 1 && combinedPath[i-2].speed > 0) { // Start of a stop
-            totalStoppages++;
-          }
-        }
-      }
-      processedPath.push({
-        ...point,
-        distance: cumulativeDistance,
-        fuel: Math.max(0, currentFuel),
-        fuelPercentage: Math.round(Math.max(0, currentFuel) / tankCapacity * 100),
-      });
-    }
-
-    const startTime = processedPath[0].timestamp;
-    const endTime = processedPath[processedPath.length - 1].timestamp;
-    const duration = differenceInSeconds(parseISO(endTime), parseISO(startTime));
-    const drivingTimeSeconds = duration - totalStoppageSeconds;
-
-    return {
-      playbackData: { path: processedPath, startTime, endTime, duration },
-      summary: {
-        vehicleName: vehicleInfo?.name || selectedVehicle,
-        totalDistance: cumulativeDistance,
-        totalDuration: duration / 60, // in minutes
-        totalStoppages,
-        totalIdling: totalIdlingSeconds / 60, // in minutes
-        totalStoppageTime: totalStoppageSeconds / 60,
-        drivingTime: drivingTimeSeconds / 60,
+      } catch (error) {
+        console.error('Vehicle API Error', error);
       }
     };
-  }, [selectedVehicle, selectedDate]);
+
+    loadVehicles();
+  }, []);
+
+  // ================= PLAYBACK =================
+
+  // ================= PLAYBACK =================
+
+  useEffect(() => {
+    const loadPlaybackData = async () => {
+      try {
+        if (!selectedVehicle || !selectedDate) return;
+
+        const date = format(selectedDate, 'yyyy-MM-dd');
+
+        const url = `${API_BASE_URL}/VehicleStatus/GetPlaybackData?bbid=${selectedVehicle}&date=${date}`;
+
+        console.log('Playback API URL:', url);
+
+        const response = await fetch(url);
+
+        if (!response.ok) {
+          throw new Error(
+            `HTTP Error: ${response.status} ${response.statusText}`
+          );
+        }
+
+        const text = await response.text();
+
+        const data = text ? JSON.parse(text) : null;
+
+        if (!data || !data.data || !Array.isArray(data.data)) {
+          resetPlaybackStats();
+          return;
+        }
+
+        if (data.data.length === 0) {
+          resetPlaybackStats();
+          return;
+        }
+
+        // ================= FULL PATH =================
+
+        const processedPath = data.data.map((item: any) => ({
+          lat: Number(item.latitude),
+          lng: Number(item.longitude),
+          location: item.location,
+          speed: Number(item.speed || 0),
+          timestamp: formatISO(new Date(item.datadate)),
+          engineStatus:
+            String(item.acignition).toUpperCase() === 'ON'
+              ? 'ON'
+              : 'OFF',
+          distance: Number(item.distance || 0),
+        }));
+
+        processedPath.sort(
+          (
+            a: (typeof processedPath)[0],
+            b: (typeof processedPath)[0]
+          ) =>
+            parseISO(a.timestamp).getTime() -
+            parseISO(b.timestamp).getTime()
+        );
+
+        // ================= MOVING PATH =================
+
+        const processedMovingPath = data.movingData.map((item: any) => ({
+          lat: Number(item.latitude),
+          lng: Number(item.longitude),
+          location: item.location,
+          speed: Number(item.speed || 0),
+          timestamp: formatISO(new Date(item.datadate)),
+          engineStatus:
+            String(item.acignition).toUpperCase() === 'ON'
+              ? 'ON'
+              : 'OFF',
+          distance: Number(item.distance || 0),
+        }));
+
+        processedMovingPath.sort(
+          (
+            a: (typeof processedMovingPath)[0],
+            b: (typeof processedMovingPath)[0]
+          ) =>
+            parseISO(a.timestamp).getTime() -
+            parseISO(b.timestamp).getTime()
+        );
+
+        // ================= DISTANCE / DRIVING / IDLING / STOPPAGE =================
+
+        let drivingSeconds = 0;
+        let idlingSeconds = 0;
+        let stoppageSeconds = 0;
+
+        let totalDistanceValue = 0;
+
+        let flag = false;
+
+        let sdist = 0;
+        let edist = 0;
+
+        for (let i = 0; i < processedPath.length; i++) {
+          const current = processedPath[i];
+          const next = processedPath[i + 1];
+
+          // ================= TIME CALCULATIONS =================
+
+          if (next) {
+            const diff = differenceInSeconds(
+              parseISO(next.timestamp),
+              parseISO(current.timestamp)
+            );
+
+            if (diff > 0) {
+              const speed = Number(current.speed || 0);
+
+              const engineStatus = String(
+                current.engineStatus
+              ).toUpperCase();
+
+              // ================= DRIVING =================
+
+              if (speed > 0) {
+                drivingSeconds += diff;
+              }
+
+              // ================= IDLING =================
+
+              if (
+                speed === 0 &&
+                engineStatus === 'ON'
+              ) {
+                idlingSeconds += diff;
+              }
+
+              // ================= STOPPAGE =================
+
+              if (speed === 0) {
+                stoppageSeconds += diff;
+              }
+            }
+          }
+
+          // ================= DISTANCE =================
+
+          const speed = Number(current.speed || 0);
+
+          const currentDistance = Number(
+            current.distance || 0
+          );
+
+          // START MOVEMENT
+
+          if (speed > 0 && flag === false) {
+            if (i === 0) {
+              sdist = currentDistance;
+            } else {
+              sdist = Number(
+                processedPath[i - 1]?.distance || 0
+              );
+            }
+
+            flag = true;
+          }
+
+          // CONTINUE MOVEMENT
+
+          else if (speed > 0 && flag === true) {
+            edist = currentDistance;
+          }
+
+          // STOP MOVEMENT
+
+          else if (speed <= 0 && flag === true) {
+            edist = currentDistance;
+
+            const tripDistance = Number(
+              (edist - sdist).toFixed(1)
+            );
+
+            if (
+              tripDistance > 0 &&
+              tripDistance < 500
+            ) {
+              totalDistanceValue += tripDistance;
+            }
+
+            flag = false;
+          }
+        }
+
+        // HANDLE LAST RUNNING SESSION
+
+        if (flag === true) {
+          const tripDistance = Number(
+            (edist - sdist).toFixed(1)
+          );
+
+          if (
+            tripDistance > 0 &&
+            tripDistance < 500
+          ) {
+            totalDistanceValue += tripDistance;
+          }
+        }
+
+        // ================= FINAL VALUES =================
+
+        setTotalDistance(
+          totalDistanceValue > 0
+            ? Number(totalDistanceValue.toFixed(2))
+            : 0
+        );
+
+        setDrivingTime(drivingSeconds / 60);
+
+        setTotalIdlingTime(idlingSeconds / 60);
+
+        setTotalStoppageTime(stoppageSeconds / 60);
+
+        // ================= PLAYBACK DATA =================
+        // TIMELINE SAME AS DRIVING TIME
+
+        const startTime =
+          processedMovingPath[0]?.timestamp ||
+          processedPath[0].timestamp;
+
+        const endTime =
+          processedMovingPath[
+            processedMovingPath.length - 1
+          ]?.timestamp ||
+          processedPath[processedPath.length - 1]
+            .timestamp;
+
+        const playbackDuration = drivingSeconds;
+
+        setPlaybackData({
+          path: processedPath,
+          movingPath: processedMovingPath,
+          startTime,
+          endTime,
+          duration: playbackDuration,
+        });
+
+        // ================= RESET =================
+
+        setPlaybackTime(0);
+
+        setIsPlaying(false);
+
+        lastPausedTime.current = 0;
+      } catch (error) {
+        console.error('Playback API Error:', error);
+
+        resetPlaybackStats();
+      }
+    };
+
+    const resetPlaybackStats = () => {
+      setPlaybackData(null);
+
+      setTotalDistance(0);
+
+      setDrivingTime(0);
+
+      setTotalIdlingTime(0);
+
+      setTotalStoppageTime(0);
+    };
+
+    loadPlaybackData();
+  }, [selectedVehicle, selectedDate, vehicles]);
+
+  // ================= CURRENT POINT =================
 
   const currentDataPoint = useMemo(() => {
-    if (!playbackData) return null;
-    const tripStart = parseISO(playbackData.path[0].timestamp).getTime();
-    const targetTime = tripStart + playbackTime * 1000;
+    if (!playbackData?.movingPath?.length) return null;
 
-    for (let i = 0; i < playbackData.path.length - 1; i++) {
-      const p1 = playbackData.path[i];
-      const p2 = playbackData.path[i + 1];
+    let accumulated = 0;
+
+    for (let i = 0; i < playbackData.movingPath.length - 1; i++) {
+      const p1 = playbackData.movingPath[i];
+      const p2 = playbackData.movingPath[i + 1];
+
       const t1 = parseISO(p1.timestamp).getTime();
       const t2 = parseISO(p2.timestamp).getTime();
 
-      if (targetTime >= t1 && targetTime <= t2) {
-        const ratio = (t2 - t1) === 0 ? 0 : (targetTime - t1) / (t2 - t1);
-        const interpolate = (key: keyof typeof p1) => (p1[key] as number) + ((p2[key] as number) - (p1[key] as number)) * ratio;
-        
+      const segmentSeconds = (t2 - t1) / 1000;
+
+      // ONLY MOVING SEGMENTS
+      const isMovingSegment =
+        Number(p1.speed) > 0 &&
+        Number(p2.speed) > 0;
+
+      if (!isMovingSegment || segmentSeconds <= 0) {
+        continue;
+      }
+
+      // FOUND CURRENT PLAYBACK SEGMENT
+      if (
+        playbackTime >= accumulated &&
+        playbackTime <= accumulated + segmentSeconds
+      ) {
+        const localTime = playbackTime - accumulated;
+
+        const ratio =
+          segmentSeconds === 0
+            ? 0
+            : localTime / segmentSeconds;
+
+        const interpolate = (
+          key: keyof typeof p1
+        ) =>
+          (p1[key] as number) +
+          ((p2[key] as number) -
+            (p1[key] as number)) *
+          ratio;
+
         let bearing = 0;
-        if (p1.lat !== p2.lat || p1.lng !== p2.lng) {
-            bearing = calculateBearing(p1.lat, p1.lng, p2.lat, p2.lng);
-        } else if (i > 0) {
-            const prevP1 = playbackData.path[i-1];
-            if (prevP1.lat !== p1.lat || prevP1.lng !== p1.lng) {
-                bearing = calculateBearing(prevP1.lat, prevP1.lng, p1.lat, p1.lng);
-            }
+
+        if (
+          p1.lat !== p2.lat ||
+          p1.lng !== p2.lng
+        ) {
+          bearing = calculateBearing(
+            p1.lat,
+            p1.lng,
+            p2.lat,
+            p2.lng
+          );
         }
 
-        return { ...p1, lat: interpolate('lat'), lng: interpolate('lng'), speed: interpolate('speed'), fuel: interpolate('fuel'), fuelPercentage: interpolate('fuelPercentage'), bearing, distance: interpolate('distance') };
+        return {
+          ...p1,
+          lat: interpolate('lat'),
+          lng: interpolate('lng'),
+          speed: interpolate('speed'),
+          distance: interpolate('distance'),
+          bearing,
+        };
       }
+
+      accumulated += segmentSeconds;
     }
-    return playbackData.path[playbackData.path.length - 1];
+
+    return playbackData.movingPath[
+      playbackData.movingPath.length - 1
+    ];
   }, [playbackData, playbackTime]);
+  // ================= PLAYBACK CONTROLS =================
 
   const updatePosition = useCallback((time: number) => {
     setPlaybackTime(time);
@@ -151,34 +449,47 @@ const RoutePlayback = () => {
 
   const animate = useCallback(() => {
     const now = performance.now();
-    const elapsedTime = (now - playbackStartTime.current) / 1000;
-    const newPlaybackTime = lastPausedTime.current + elapsedTime * playbackSpeed;
-    
+
+    const elapsedTime =
+      (now - playbackStartTime.current) / 1000;
+
+    const newPlaybackTime =
+      lastPausedTime.current + elapsedTime * playbackSpeed;
+
     if (!playbackData || newPlaybackTime > playbackData.duration) {
       setIsPlaying(false);
+
       updatePosition(playbackData?.duration || 0);
+
       return;
     }
+
     updatePosition(newPlaybackTime);
-    animationFrameId.current = requestAnimationFrame(animate);
+
+    animationFrameId.current =
+      requestAnimationFrame(animate);
   }, [playbackSpeed, playbackData, updatePosition]);
 
   useEffect(() => {
     if (isPlaying) {
       lastPausedTime.current = playbackTime;
-      playbackStartTime.current = performance.now();
-      animationFrameId.current = requestAnimationFrame(animate);
-    } else {
-      if (animationFrameId.current) cancelAnimationFrame(animationFrameId.current);
-    }
-    return () => { if (animationFrameId.current) cancelAnimationFrame(animationFrameId.current); };
-  }, [isPlaying, animate]);
 
-  useEffect(() => {
-    setIsPlaying(false);
-    setPlaybackTime(0);
-    lastPausedTime.current = 0;
-  }, [playbackData]);
+      playbackStartTime.current = performance.now();
+
+      animationFrameId.current =
+        requestAnimationFrame(animate);
+    } else {
+      if (animationFrameId.current) {
+        cancelAnimationFrame(animationFrameId.current);
+      }
+    }
+
+    return () => {
+      if (animationFrameId.current) {
+        cancelAnimationFrame(animationFrameId.current);
+      }
+    };
+  }, [isPlaying, animate]);
 
   const handleSliderChange = (time: number) => {
     setIsPlaying(false);
@@ -186,83 +497,208 @@ const RoutePlayback = () => {
   };
 
   const vehicleType = useMemo(() => {
-    if (!selectedVehicle) return 'mini-excavator';
-    const vehicle = actualVehicles.find(m => m.id === selectedVehicle);
-    return vehicle?.type.toLowerCase().replace(/\s+/g, '-') || 'mini-excavator';
-  }, [selectedVehicle]);
+    return 'car';
+  }, []);
 
+const handlePrint = () => {
+
+  const appSidebar =
+    document.querySelector('aside');
+
+  const appHeader =
+    document.querySelector('header');
+
+  if (appSidebar) {
+    (appSidebar as HTMLElement).style.display =
+      'none';
+  }
+
+  if (appHeader) {
+    (appHeader as HTMLElement).style.display =
+      'none';
+  }
+
+  document.body.classList.add('printing');
+
+  setTimeout(() => {
+
+    window.print();
+
+    document.body.classList.remove('printing');
+
+    if (appSidebar) {
+      (appSidebar as HTMLElement).style.display =
+        '';
+    }
+
+    if (appHeader) {
+      (appHeader as HTMLElement).style.display =
+        '';
+    }
+
+  }, 500);
+};
   return (
     <LoadScript
       googleMapsApiKey={GOOGLE_MAPS_API_KEY}
       libraries={libraries}
-      loadingElement={<div className="flex items-center justify-center h-full"><Loader className="animate-spin" /></div>}
+      loadingElement={
+        <div className="flex items-center justify-center h-full">
+          <Loader className="animate-spin" />
+        </div>
+      }
     >
-      <div className="flex h-full w-full bg-muted/40">
-        {summary && playbackData ? (
+      <div className="flex h-full w-full bg-muted/40 print-area">
+        {playbackData ? (
           <PlaybackSidebar
+            vehicles={vehicles}
             selectedVehicle={selectedVehicle}
             onVehicleChange={setSelectedVehicle}
             selectedDate={selectedDate}
             onDateChange={setSelectedDate}
-            vehicleName={summary.vehicleName}
-            totalDistance={summary.totalDistance}
-            drivingTime={summary.drivingTime}
-            totalStoppageTime={summary.totalStoppageTime}
-            totalIdling={summary.totalIdling}
+            vehicleName={
+              vehicles.find(v => v.value === selectedVehicle)?.label ||
+              selectedVehicle ||
+              ''
+            }
+            totalDistance={totalDistance}
+            drivingTime={drivingTime}
+            totalStoppageTime={totalStoppageTime}
+            totalIdling={totalIdlingTime}
             path={playbackData.path}
+            onPrint={handlePrint}
           />
         ) : (
           <div className="w-[350px] flex-shrink-0 bg-card border-r flex flex-col h-full overflow-hidden p-4">
             <div className="flex items-center gap-2">
-              <VehicleCombobox vehicles={actualVehicles.map(v => ({id: v.id, name: v.name}))} value={selectedVehicle || ''} onChange={setSelectedVehicle} className="w-full" />
+              <VehicleCombobox
+                vehicles={vehicles}
+                value={selectedVehicle || ''}
+                onChange={setSelectedVehicle}
+                className="w-full"
+              />
+
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" className="w-full justify-start text-left font-normal">
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-left font-normal"
+                  >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {selectedDate ? format(selectedDate, 'dd MMM yyyy') : 'Select Date'}
+
+                    {selectedDate
+                      ? format(selectedDate, 'dd MMM yyyy')
+                      : 'Select Date'}
                   </Button>
                 </PopoverTrigger>
+
                 <PopoverContent className="w-auto p-0">
-                  <Calendar mode="single" selected={selectedDate} onSelect={setSelectedDate} initialFocus />
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={setSelectedDate}
+                    initialFocus
+                  />
                 </PopoverContent>
               </Popover>
             </div>
+
             <div className="flex-1 flex items-center justify-center text-center text-muted-foreground">
               <p>No trip data found for the selected vehicle and date.</p>
             </div>
           </div>
         )}
+
         <div className="flex-1 relative bg-muted">
           {playbackData ? (
             <>
               <PlaybackMap
-                tripPath={playbackData.path}
-                markerPosition={currentDataPoint ? { lat: currentDataPoint.lat, lng: currentDataPoint.lng } : null}
+                tripPath={playbackData.movingPath}
+                fullPath={playbackData.path}
+                markerPosition={
+                  currentDataPoint
+                    ? {
+                      lat: currentDataPoint.lat,
+                      lng: currentDataPoint.lng,
+                    }
+                    : null
+                }
                 vehicleType={vehicleType}
                 showFences={false}
                 showPois={false}
                 showLabels={true}
                 showStoppages={true}
+                showIdleStops={showIdleStops}
+                showNormalStops={showNormalStops}
                 currentBearing={currentDataPoint?.bearing || 0}
                 isPlaying={isPlaying}
               />
+
               <PlaybackTimeline
-                startTime={playbackData.startTime}
-                endTime={playbackData.endTime}
+                duration={playbackData.duration}
                 currentTime={playbackTime}
                 isPlaying={isPlaying}
                 speed={playbackSpeed}
                 currentData={currentDataPoint}
+                startDistance={
+                  playbackData.movingPath[0]?.distance || 0
+                }
                 onPlayPause={() => setIsPlaying(!isPlaying)}
                 onSpeedChange={setPlaybackSpeed}
                 onSliderChange={handleSliderChange}
               />
+              <div className="absolute bottom-24 left-4 z-50 bg-white rounded-lg shadow-lg p-4 flex flex-col gap-3 min-w-[220px]">
+
+                {/* ================= IDLE STOPS ================= */}
+
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">
+                    Idle Stops
+                  </span>
+
+                  <button
+                    onClick={() =>
+                      setShowIdleStops(!showIdleStops)
+                    }
+                    className={`px-3 py-1 rounded text-white text-xs transition-all duration-200 ${showIdleStops
+                        ? 'bg-[#f97216]'
+                        : 'bg-gray-400'
+                      }`}
+                  >
+                    {showIdleStops ? 'ON' : 'OFF'}
+                  </button>
+                </div>
+
+                {/* ================= NORMAL STOPS ================= */}
+
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">
+                    Normal Stops
+                  </span>
+
+                  <button
+                    onClick={() =>
+                      setShowNormalStops(!showNormalStops)
+                    }
+                    className={`px-3 py-1 rounded text-white text-xs transition-all duration-200 ${showNormalStops
+                        ? 'bg-[#3b82f6]'
+                        : 'bg-gray-400'
+                      }`}
+                  >
+                    {showNormalStops ? 'ON' : 'OFF'}
+                  </button>
+                </div>
+
+              </div>
             </>
           ) : (
-            <div className="flex items-center justify-center h-full">
+            <div className="flex items-center justify-cent  er h-full">
               <div className="text-center text-muted-foreground">
                 <h3 className="text-lg font-semibold">No Trip Data</h3>
-                <p>No trips recorded for this vehicle on the selected date.</p>
+
+                <p>
+                  No trips recorded for this vehicle on the selected date.
+                </p>
               </div>
             </div>
           )}

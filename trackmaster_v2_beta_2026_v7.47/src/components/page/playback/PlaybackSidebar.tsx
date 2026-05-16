@@ -5,13 +5,12 @@ import { Calendar as CalendarIcon, Download, Printer, Milestone, Clock, Ban, Hou
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { VehicleCombobox } from '@/components/VehicleCombobox';
-import { actualVehicles } from '@/data/mockData';
 import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
 import PlaybackStatCard from './PlaybackStatCard';
 import type { TripPoint } from '@/data/routeData';
 
 interface PlaybackSidebarProps {
+  vehicles: { label: string; value: string }[];
   selectedVehicle: string | null;
   onVehicleChange: (vehicleId: string) => void;
   selectedDate: Date | undefined;
@@ -22,6 +21,7 @@ interface PlaybackSidebarProps {
   totalStoppageTime: number; // in minutes
   totalIdling: number; // in minutes
   path: TripPoint[];
+  onPrint: () => void;
 }
 
 const formatDuration = (minutes: number) => {
@@ -31,11 +31,23 @@ const formatDuration = (minutes: number) => {
   return `${h}h ${m}m`;
 };
 
-const TimelineEvent = ({ type, location, time, speed, distance }: { type: 'start' | 'stop' | 'end'; location: string; time: string; speed?: number; distance?: number }) => {
+const TimelineEvent = ({ type, location, time, speed, distance }: { type: 'start' | 'stop' | 'moving' | 'end'; location: string; time: string; speed?: number; distance?: number }) => {
   const icons = {
-    start: <div className="h-3.5 w-3.5 rounded-full bg-green-500 border-2 border-card ring-1 ring-green-500" />,
-    stop: <div className="h-3.5 w-3.5 rounded-full bg-blue-500 border-2 border-card ring-1 ring-blue-500" />,
-    end: <div className="h-3.5 w-3.5 rounded-full bg-red-500 border-2 border-card ring-1 ring-red-500" />,
+    start: (
+      <div className="h-3.5 w-3.5 rounded-full bg-green-500 border-2 border-card ring-1 ring-green-500" />
+    ),
+
+    moving: (
+      <div className="h-3.5 w-3.5 rounded-full bg-blue-500 border-2 border-card ring-1 ring-blue-500" />
+    ),
+
+    stop: (
+      <div className="h-3.5 w-3.5 rounded-full bg-yellow-500 border-2 border-card ring-1 ring-yellow-500" />
+    ),
+
+    end: (
+      <div className="h-3.5 w-3.5 rounded-full bg-red-500 border-2 border-card ring-1 ring-red-500" />
+    ),
   };
 
   return (
@@ -46,7 +58,7 @@ const TimelineEvent = ({ type, location, time, speed, distance }: { type: 'start
           <p className="font-semibold text-sm">{type === 'start' ? 'Start Location' : type === 'end' ? 'End Location' : location}</p>
           <span className="text-xs text-muted-foreground">{time}</span>
         </div>
-        <p className="text-xs text-muted-foreground">{type !== 'start' && type !== 'end' ? `${distance?.toFixed(1)} Km from Anantapur` : location}</p>
+        <p className="text-xs text-muted-foreground">{type !== 'start' && type !== 'end' ? `` : location}</p>
         {speed !== undefined && <p className="text-xs text-muted-foreground">@ {speed}kmph</p>}
       </div>
     </div>
@@ -54,6 +66,7 @@ const TimelineEvent = ({ type, location, time, speed, distance }: { type: 'start
 };
 
 const PlaybackSidebar = ({
+  vehicles,
   selectedVehicle,
   onVehicleChange,
   selectedDate,
@@ -64,66 +77,195 @@ const PlaybackSidebar = ({
   totalStoppageTime,
   totalIdling,
   path,
+  onPrint,
 }: PlaybackSidebarProps) => {
-  const vehiclesForFilter = actualVehicles.map(v => ({ id: v.id, name: v.name }));
 
+  // const { startEvent, intermediateEvents, endEvent } = useMemo(() => {
+  //   if (path.length === 0) return { startEvent: null, intermediateEvents: [], endEvent: null };
+
+  //   const events = [];
+  //   // Start
+  //   events.push({
+  //     type: 'start' as const,
+  //     location: path[0].location || 'Start Point',
+  //     time: format(new Date(path[0].timestamp), 'p'),
+  //   });
+
+  //   // Intermediate stops
+  //   let stopStart: TripPoint | null = null;
+  //   for (let i = 1; i < path.length; i++) {
+  //     if (path[i].speed === 0 && path[i-1].speed > 0) {
+  //       stopStart = path[i];
+  //     }
+  //     if (stopStart) {
+  //       const stopDuration = (new Date(path[i-1].timestamp).getTime() - new Date(stopStart.timestamp).getTime()) / 1000 / 60;
+  //       if (stopDuration > 1) { // Only show stops longer than 1 minute
+  //         events.push({
+  //           type: 'stop' as const,
+  //           location: stopStart.location || 'Stop',
+  //           time: format(new Date(stopStart.timestamp), 'p'),
+  //           speed: path[i-1].speed,
+  //           distance: (path[i-1] as any).distance,
+  //         });
+  //       }
+  //       stopStart = null;
+  //     }
+  //   }
+
+  //   // End
+  //   if (path.length > 1) {
+  //     events.push({
+  //       type: 'end' as const,
+  //       location: path[path.length - 1].location || 'End Point',
+  //       time: format(new Date(path[path.length - 1].timestamp), 'p'),
+  //     });
+  //   }
+
+  //   if (events.length < 2) {
+  //       return { startEvent: events[0] || null, intermediateEvents: [], endEvent: null };
+  //   }
+
+  //   return {
+  //     startEvent: events[0],
+  //     intermediateEvents: events.slice(1, -1),
+  //     endEvent: events[events.length - 1]
+  //   };
+  // }, [path]);
   const { startEvent, intermediateEvents, endEvent } = useMemo(() => {
-    if (path.length === 0) return { startEvent: null, intermediateEvents: [], endEvent: null };
-    
-    const events = [];
-    // Start
-    events.push({
-      type: 'start' as const,
-      location: path[0].location || 'Start Point',
-      time: format(new Date(path[0].timestamp), 'p'),
-    });
+    if (!path || path.length === 0) {
+      return {
+        startEvent: null,
+        intermediateEvents: [],
+        endEvent: null,
+      };
+    }
 
-    // Intermediate stops
-    let stopStart: TripPoint | null = null;
-    for (let i = 1; i < path.length; i++) {
-      if (path[i].speed === 0 && path[i-1].speed > 0) {
-        stopStart = path[i];
+    // FIRST MOVING POINT
+    const startIndex = path.findIndex(
+      (p) => Number(p.speed) > 0
+    );
+
+    if (startIndex === -1) {
+      return {
+        startEvent: null,
+        intermediateEvents: [],
+        endEvent: null,
+      };
+    }
+
+    // LAST MOVING POINT
+    let lastMovingIndex = -1;
+
+    for (let i = path.length - 1; i >= 0; i--) {
+      if (Number(path[i].speed) > 0) {
+        lastMovingIndex = i;
+        break;
       }
-      if (path[i].speed > 0 && stopStart) {
-        const stopDuration = (new Date(path[i-1].timestamp).getTime() - new Date(stopStart.timestamp).getTime()) / 1000 / 60;
-        if (stopDuration > 1) { // Only show stops longer than 1 minute
-          events.push({
+    }
+
+    // FIRST STOP AFTER LAST MOVING POINT
+    let endIndex = lastMovingIndex;
+
+    for (let i = lastMovingIndex + 1; i < path.length; i++) {
+      if (Number(path[i].speed) === 0) {
+        endIndex = i;
+        break;
+      }
+    }
+
+    // START EVENT
+    const startPoint = path[startIndex];
+
+    const startEvent = {
+      type: 'start' as const,
+      location: startPoint.location || 'Start Point',
+      time: format(new Date(startPoint.timestamp), 'p'),
+      speed: startPoint.speed,
+      distance: (startPoint as any).distance,
+    };
+
+    // INTERMEDIATE EVENTS
+    const intermediateEvents = [];
+
+    let stopStartIndex: number | null = null;
+
+    for (let i = startIndex + 1; i < endIndex; i++) {
+      const current = path[i];
+      const previous = path[i - 1];
+
+      // STOP START
+      if (
+        Number(current.speed) === 0 &&
+        Number(previous.speed) > 0
+      ) {
+        stopStartIndex = i;
+      }
+
+      // STOP END
+      if (
+        stopStartIndex !== null &&
+        (
+          Number(current.speed) > 0 ||
+          i === endIndex - 1
+        )
+      ) {
+        const stopStartPoint = path[stopStartIndex];
+        const stopEndPoint = path[i];
+
+        const stopDuration =
+          (new Date(stopEndPoint.timestamp).getTime() -
+            new Date(stopStartPoint.timestamp).getTime()) /
+          1000 /
+          60;
+
+        // SHOW STOP ONLY IF > 1 MIN
+        if (stopDuration > 1) {
+          intermediateEvents.push({
             type: 'stop' as const,
-            location: stopStart.location || 'Stop',
-            time: format(new Date(stopStart.timestamp), 'p'),
-            speed: path[i-1].speed,
-            distance: (path[i-1] as any).distance,
+            location: stopStartPoint.location || 'Stop Point',
+            time: format(new Date(stopStartPoint.timestamp), 'p'),
+            speed: 0,
+            distance: (stopStartPoint as any).distance,
           });
         }
-        stopStart = null;
+
+        stopStartIndex = null;
+      }
+
+      // MOVING POINTS
+      if (Number(current.speed) > 0) {
+        intermediateEvents.push({
+          type: 'moving' as const,
+          location: current.location || 'Intermediate Point',
+          time: format(new Date(current.timestamp), 'p'),
+          speed: current.speed,
+          distance: (current as any).distance,
+        });
       }
     }
 
-    // End
-    if (path.length > 1) {
-      events.push({
-        type: 'end' as const,
-        location: path[path.length - 1].location || 'End Point',
-        time: format(new Date(path[path.length - 1].timestamp), 'p'),
-      });
-    }
-    
-    if (events.length < 2) {
-        return { startEvent: events[0] || null, intermediateEvents: [], endEvent: null };
-    }
+    // END EVENT
+    const endPoint = path[endIndex];
+
+    const endEvent = {
+      type: 'end' as const,
+      location: endPoint.location || 'End Point',
+      time: format(new Date(endPoint.timestamp), 'p'),
+      speed: endPoint.speed,
+      distance: (endPoint as any).distance,
+    };
 
     return {
-      startEvent: events[0],
-      intermediateEvents: events.slice(1, -1),
-      endEvent: events[events.length - 1]
+      startEvent,
+      intermediateEvents,
+      endEvent,
     };
   }, [path]);
-
   return (
     <div className="w-[350px] flex-shrink-0 bg-card border-r flex flex-col h-full overflow-hidden">
       <div className="p-3 border-b shrink-0 space-y-3">
         <div className="flex items-center gap-2">
-          <VehicleCombobox vehicles={vehiclesForFilter} value={selectedVehicle || ''} onChange={onVehicleChange} className="w-full h-9" />
+          <VehicleCombobox vehicles={vehicles} value={selectedVehicle || ''} onChange={onVehicleChange} className="w-full h-9" />
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="outline" className="w-full h-9 justify-start text-left font-normal">
@@ -152,13 +294,13 @@ const PlaybackSidebar = ({
       <div className="flex-1 flex flex-col overflow-hidden p-3">
         <div className="relative flex flex-col h-full">
           <div className="absolute left-[7px] top-3 bottom-3 w-px bg-border" />
-          
+
           {startEvent && (
             <div className="pb-4 shrink-0">
               <TimelineEvent {...startEvent} />
             </div>
           )}
-          
+
           <ScrollArea className="flex-1">
             <div className="space-y-4">
               {intermediateEvents.map((event, index) => (
@@ -176,7 +318,7 @@ const PlaybackSidebar = ({
       </div>
 
       <div className="p-3 border-t grid grid-cols-2 gap-2 shrink-0">
-        <Button variant="outline"><Printer className="h-4 w-4 mr-2" /> Print</Button>
+        <Button variant="outline" onClick={onPrint}><Printer className="h-4 w-4 mr-2" /> Print</Button>
         <Button className="bg-brand-orange hover:bg-brand-orange/90"><Download className="h-4 w-4 mr-2" /> Export Excel</Button>
       </div>
     </div>
