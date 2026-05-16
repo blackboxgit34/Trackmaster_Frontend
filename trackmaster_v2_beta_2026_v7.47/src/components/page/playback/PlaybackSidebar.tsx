@@ -21,6 +21,7 @@ interface PlaybackSidebarProps {
   totalStoppageTime: number; // in minutes
   totalIdling: number; // in minutes
   path: TripPoint[];
+  onPrint: () => void;
 }
 
 const formatDuration = (minutes: number) => {
@@ -76,6 +77,7 @@ const PlaybackSidebar = ({
   totalStoppageTime,
   totalIdling,
   path,
+  onPrint,
 }: PlaybackSidebarProps) => {
 
   // const { startEvent, intermediateEvents, endEvent } = useMemo(() => {
@@ -316,7 +318,7 @@ const PlaybackSidebar = ({
       </div>
 
       <div className="p-3 border-t grid grid-cols-2 gap-2 shrink-0">
-        <Button variant="outline"><Printer className="h-4 w-4 mr-2" /> Print</Button>
+        <Button variant="outline" onClick={onPrint}><Printer className="h-4 w-4 mr-2" /> Print</Button>
         <Button className="bg-brand-orange hover:bg-brand-orange/90"><Download className="h-4 w-4 mr-2" /> Export Excel</Button>
       </div>
     </div>

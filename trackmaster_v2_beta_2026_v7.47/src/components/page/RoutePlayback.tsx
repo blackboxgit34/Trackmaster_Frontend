@@ -20,7 +20,7 @@ import { VehicleCombobox } from '../VehicleCombobox';
 
 import { API_BASE_URL } from '@/config/Api';
 import { formatISO } from 'date-fns';
-
+import '@/css/print.css';
 const libraries: ('drawing' | 'places')[] = ['drawing', 'places'];
 
 const RoutePlayback = () => {
@@ -500,6 +500,44 @@ const RoutePlayback = () => {
     return 'car';
   }, []);
 
+const handlePrint = () => {
+
+  const appSidebar =
+    document.querySelector('aside');
+
+  const appHeader =
+    document.querySelector('header');
+
+  if (appSidebar) {
+    (appSidebar as HTMLElement).style.display =
+      'none';
+  }
+
+  if (appHeader) {
+    (appHeader as HTMLElement).style.display =
+      'none';
+  }
+
+  document.body.classList.add('printing');
+
+  setTimeout(() => {
+
+    window.print();
+
+    document.body.classList.remove('printing');
+
+    if (appSidebar) {
+      (appSidebar as HTMLElement).style.display =
+        '';
+    }
+
+    if (appHeader) {
+      (appHeader as HTMLElement).style.display =
+        '';
+    }
+
+  }, 500);
+};
   return (
     <LoadScript
       googleMapsApiKey={GOOGLE_MAPS_API_KEY}
@@ -510,7 +548,7 @@ const RoutePlayback = () => {
         </div>
       }
     >
-      <div className="flex h-full w-full bg-muted/40">
+      <div className="flex h-full w-full bg-muted/40 print-area">
         {playbackData ? (
           <PlaybackSidebar
             vehicles={vehicles}
@@ -528,6 +566,7 @@ const RoutePlayback = () => {
             totalStoppageTime={totalStoppageTime}
             totalIdling={totalIdlingTime}
             path={playbackData.path}
+            onPrint={handlePrint}
           />
         ) : (
           <div className="w-[350px] flex-shrink-0 bg-card border-r flex flex-col h-full overflow-hidden p-4">
