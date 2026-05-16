@@ -1,5 +1,6 @@
 export interface DataTableRequestModel {
     CustId: number;
+    sEcho?: number;
     iDisplayStart?: number;
     iDisplayLength?: number;
     sSearch?: string;
