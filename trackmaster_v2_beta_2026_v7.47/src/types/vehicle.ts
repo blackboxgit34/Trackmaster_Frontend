@@ -10,27 +10,29 @@ export interface LiveVehicleStatus {
   location: string;
   lat: number;
   lng: number;
+  bbid: string;
   workingHours?: number;
   idlingHours?: number;
   fuelConsumed?: number;
-  gsmSignal?: number;
-  deviceSignal?: number;
-  battery?: number;
-  gpsDeviceBattery?: number;
-  alerts?: number;
-  errors?: number;
-  alertDetails?: string[];
-  errorDetails?: string[];
-  speed?: number;
-  distance?: number;
-  fuelLevel?: number;
-  fuelLiters?: number;
-  fuelTankCapacity?: number;
-  engineTemp?: number;
-  hydraulicTemp?: number;
-  sensorStatus?: 'ok' | 'disconnected' | 'dirt_error';
-  acStatus?: 'On' | 'Off';
-  ignitionStatus?: 'On' | 'Off';
+  gsmSignal: number;
+  deviceSignal: number;
+  GPSFix: number;
+  battery: number;
+  gpsDeviceBattery: number;
+  alerts: number;
+  errors: number;
+  alertDetails: string[];
+  errorDetails: string[];
+  speed: number;
+  distance: number;
+  fuelLevel: number;
+  fuelLiters: number;
+  fuelTankCapacity: number;
+  engineTemp: number;
+  hydraulicTemp: number;
+  sensorStatus: 'ok' | 'disconnected' | 'dirt_error';
+  acStatus: 'On' | 'Off';
+  ignitionStatus: 'On' | 'Off';
 }
 
 export interface Vehicle {

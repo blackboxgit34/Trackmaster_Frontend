@@ -23,44 +23,249 @@ import { format, parse } from 'date-fns';
 import BlackboxSignalIcon from '../icons/BlackboxSignalIcon';
 import SpeedGauge from './SpeedGauge';
 
-const DeviceSignalIcon = ({ signal }: { signal: number }) => {
-  let text, color;
-  switch (signal) {
-    case 0: text = 'Disconnected'; color = 'text-red-500'; break;
-    case 1: case 2: text = 'Low'; color = 'text-yellow-500'; break;
-    case 3: text = 'Normal'; color = 'text-lime-500'; break;
-    case 4: text = 'Excellent'; color = 'text-green-500'; break;
-    default: text = 'Unknown'; color = 'text-muted-foreground';
+
+const DeviceSignalIcon = ({
+  
+  gpsAntConStatus,
+  GPSFix,
+}: {
+  gpsAntConStatus: number | null;
+  GPSFix: number | null;
+}) => {
+  debugger
+  let text = 'Unknown';
+  let color = 'text-muted-foreground';
+  let Icon;
+  switch (true) {
+    case gpsAntConStatus === 1 && GPSFix === 2:
+      Icon = Signal;
+      text = 'Full GPS Signal';
+      color = 'text-green-500';
+      break;
+
+    case gpsAntConStatus === 1 && GPSFix === 1:
+      Icon = SignalMedium;
+      text = 'Low GPS Signal';
+      color = 'text-yellow-500';
+      break;
+
+    case gpsAntConStatus === 1 && GPSFix === 0:
+      Icon = SignalZero;
+      text = 'GPS Antena Connected But No GPS Signal';
+      color = 'text-red-500';
+      break;
+
+    case gpsAntConStatus === 0:
+      Icon = TriangleAlert;
+      text = 'GPS Antena Disconnected';
+      color = 'text-gray-500';
+      break;
+
+    default:
+      Icon = TriangleAlert;
+      text = 'Unknown';
+      color = 'text-muted-foreground';
+      break;
   }
+
   return (
-    <TooltipProvider><Tooltip><TooltipTrigger asChild><button><BlackboxSignalIcon className={cn('h-5 w-5', color)} /></button></TooltipTrigger><TooltipContent><p>GPS Signal: {text}</p></TooltipContent></Tooltip></TooltipProvider>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button>
+            <BlackboxSignalIcon className={cn('h-5 w-5', color)} />
+          </button>
+        </TooltipTrigger>
+
+        <TooltipContent>
+          <p>{text}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 };
-
 const GsmSignalIcon = ({ signal }: { signal: number }) => {
   let Icon, text, color;
-  switch (signal) {
-    case 0: Icon = TriangleAlert; text = 'No Signal'; color = 'text-red-500'; break;
-    case 1: case 2: Icon = SignalMedium; text = 'Low'; color = 'text-yellow-500'; break;
-    case 3: Icon = SignalHigh; text = 'Normal'; color = 'text-lime-500'; break;
-    case 4: Icon = Signal; text = 'Excellent'; color = 'text-green-500'; break;
-    default: Icon = SignalZero; text = 'Unknown'; color = 'text-muted-foreground';
+
+  switch (true) {
+    case signal == null:
+      Icon = TriangleAlert;
+      text = 'Unknown';
+      color = 'text-muted-foreground';
+      break;
+    // No GSM Signal
+    case signal > 31:
+      Icon = SignalZero;
+      text = 'No GSM Signal';
+      color = 'text-red-500';
+      break;
+
+    // Excellent GSM Signal
+    case signal < 32 && signal >= 25:
+      Icon = Signal;
+      text = 'Full GSM Signal';
+      color = 'text-green-500';
+      break;
+
+    // Good GSM Signal
+    case signal < 25 && signal >= 20:
+      Icon = SignalHigh;
+      text = 'Low GSM Signal';
+      color = 'text-lime-500';
+      break;
+
+    // InSufficient GSM Signal
+    case signal < 20 && signal >= 10:
+      Icon = SignalMedium;
+      text = 'Very Low GSM Signal';
+      color = 'text-yellow-500';
+      break;
+
+    // GSM Signal Very Low
+    case signal < 10:
+      Icon = SignalZero;
+      text = 'No GSM Signal';
+      color = 'text-orange-500';
+      break;
+
+    // Default
+    default:
+      Icon = TriangleAlert;
+      text = 'Unknown';
+      color = 'text-muted-foreground';
+      break;
   }
+
   return (
-    <TooltipProvider><Tooltip><TooltipTrigger asChild><button><Icon className={cn('h-5 w-5', color)} /></button></TooltipTrigger><TooltipContent><p>GSM Signal: {text}</p></TooltipContent></Tooltip></TooltipProvider>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button>
+            <Icon className={cn('h-5 w-5', color)} />
+          </button>
+        </TooltipTrigger>
+
+        <TooltipContent className="bg-black text-white border-black">
+          <p>{text}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 };
 
-const BatteryIcon = ({ level, tooltipLabel }: { level: number; tooltipLabel: string }) => {
+const BatteryIcon = ({ battery, tooltipLabel }: { battery: number; tooltipLabel: string }) => {
+    let Icon, text, color;
+  switch (true) {
+    case battery == null:
+      Icon = TriangleAlert;
+      text = 'Battery Disconnected';
+      color = 'text-muted-foreground';
+      break;
+    
+    case battery >= 12.5:
+      Icon = BatteryFull;
+      text = 'High';
+      color = 'text-green-500';
+      break;
+
+    
+    case battery < 12.5 && battery >= 10:
+      Icon = BatteryMedium;
+      text = 'Low';
+      color = 'text-lime-500';
+      break;
+
+    
+    case battery < 10 && battery >= 5:
+      Icon = BatteryLow;
+      text = 'Very Low';
+      color = 'text-yellow-500';
+      break;
+
+    
+    case battery < 5:
+      Icon = TriangleAlert;
+      text = 'Battery Disconnected';
+      color = 'text-muted-foreground';
+      break;
+
+    default:
+      Icon = TriangleAlert;
+      text = 'Unknown';
+      color = 'text-muted-foreground';
+  }
+return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button>
+            <Icon className={cn('h-5 w-5', color)} />
+          </button>
+        </TooltipTrigger>
+
+        <TooltipContent className="bg-black text-white border-black">
+          <p>
+            {tooltipLabel}: {text} ({battery}%)
+          </p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+  
+};
+
+const BatteryIconDevice = ({ deviceBattery, tooltipLabel }: { deviceBattery: number; tooltipLabel: string }) => {
   let Icon, text, color;
-  if (level > 70) { Icon = BatteryFull; text = 'High'; color = 'text-green-500'; }
-  else if (level > 30) { Icon = BatteryMedium; text = 'Medium'; color = 'text-yellow-500'; }
-  else { Icon = BatteryLow; text = 'Low'; color = 'text-red-500'; }
-  return (
-    <TooltipProvider><Tooltip><TooltipTrigger asChild><button><Icon className={cn('h-5 w-5', color)} /></button></TooltipTrigger><TooltipContent><p>{tooltipLabel}: {text} ({level}%)</p></TooltipContent></Tooltip></TooltipProvider>
+  debugger
+  switch (true) {
+    case deviceBattery == null:
+      Icon = TriangleAlert;
+      text = 'Battery Disconnected';
+      color = 'text-muted-foreground';
+      break;
+    
+    case deviceBattery == 3:
+      Icon = BatteryFull;
+      text = 'High';
+      color = 'text-green-500';
+      break;
+
+    
+    case deviceBattery == 2:
+      Icon = BatteryMedium;
+      text = 'Low';
+      color = 'text-lime-500';
+      break;
+    
+    case deviceBattery == 1:
+      Icon = BatteryLow;
+      text = 'Very Low';
+      color = 'text-yellow-500';
+      break;
+    
+    default:
+      Icon = TriangleAlert;
+      text = 'Unknown';
+      color = 'text-muted-foreground';
+  }
+return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button>
+            <Icon className={cn('h-5 w-5', color)} />
+          </button>
+        </TooltipTrigger>
+
+        <TooltipContent className="bg-black text-white border-black">
+          <p>
+            {tooltipLabel}: {text} ({deviceBattery}%)
+          </p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 };
-
 const DistanceDisplay = ({ distance }: { distance: number }) => {
   // Format to have up to 4 integer digits and 1 decimal digit.
   const distanceString = distance.toFixed(1);
@@ -193,14 +398,14 @@ const VehicleDataSidebar = ({ machine: vehicle, onRecenter }: VehicleDataSidebar
                     {vehicle.status}
                   </span>
                 </div>
-                <p className="text-sm text-muted-foreground">Model: {vehicle.model}</p>
+                {/* <p className="text-sm text-muted-foreground">Model: {vehicle.model}</p> */}
                 <p className="text-sm text-muted-foreground">Type: {vehicle.type}</p>
                 <div className="text-xs text-muted-foreground flex items-center gap-2 mt-1">
                   Vehicle ID: {vehicle.id}
                   <Copy className="h-3 w-3 cursor-pointer hover:text-foreground" onClick={() => handleCopy(vehicle.id, 'Vehicle ID')} />
                 </div>
                 <div className="text-xs text-muted-foreground flex items-center gap-2">
-                  BBID: 559493339504954
+                  BBID: {vehicle.bbid}
                   <Copy className="h-3 w-3 cursor-pointer hover:text-foreground" onClick={() => handleCopy('559493339504954', 'BBID')} />
                 </div>
               </div>
@@ -325,15 +530,18 @@ const VehicleDataSidebar = ({ machine: vehicle, onRecenter }: VehicleDataSidebar
               </div>
               <div className="flex justify-between items-center text-sm">
                 <span className="text-muted-foreground">GPS Signal</span>
-                <DeviceSignalIcon signal={vehicle.deviceSignal} />
+                <DeviceSignalIcon
+                  gpsAntConStatus={vehicle.deviceSignal}
+                  GPSFix={vehicle.GPSFix}
+                />
               </div>
               <div className="flex justify-between items-center text-sm">
                 <span className="text-muted-foreground">Vehicle Battery</span>
-                <BatteryIcon level={vehicle.battery} tooltipLabel="Vehicle Battery" />
+                <BatteryIcon battery={vehicle.battery} tooltipLabel="Vehicle Battery" />
               </div>
               <div className="flex justify-between items-center text-sm">
                 <span className="text-muted-foreground">Blackbox Battery</span>
-                <BatteryIcon level={vehicle.gpsDeviceBattery} tooltipLabel="Blackbox Battery" />
+                <BatteryIconDevice deviceBattery={vehicle.gpsDeviceBattery} tooltipLabel="Blackbox Battery" />
               </div>
             </div>
 
