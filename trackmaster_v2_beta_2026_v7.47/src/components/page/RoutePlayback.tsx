@@ -20,7 +20,7 @@ import { VehicleCombobox } from '../VehicleCombobox';
 
 import { API_BASE_URL } from '@/config/Api';
 import { formatISO } from 'date-fns';
-
+import '@/css/print.css';
 const libraries: ('drawing' | 'places')[] = ['drawing', 'places'];
 
 const RoutePlayback = () => {
@@ -53,6 +53,9 @@ const RoutePlayback = () => {
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
+  const [showIdleStops, setShowIdleStops] = useState(true);
+
+  const [showNormalStops, setShowNormalStops] = useState(true);
   const [playbackTime, setPlaybackTime] = useState(0);
 
   const animationFrameId = useRef<number>();
@@ -94,6 +97,8 @@ const RoutePlayback = () => {
 
   // ================= PLAYBACK =================
 
+  // ================= PLAYBACK =================
+
   useEffect(() => {
     const loadPlaybackData = async () => {
       try {
@@ -127,6 +132,8 @@ const RoutePlayback = () => {
           return;
         }
 
+        // ================= FULL PATH =================
+
         const processedPath = data.data.map((item: any) => ({
           lat: Number(item.latitude),
           lng: Number(item.longitude),
@@ -139,6 +146,7 @@ const RoutePlayback = () => {
               : 'OFF',
           distance: Number(item.distance || 0),
         }));
+
         processedPath.sort(
           (
             a: (typeof processedPath)[0],
@@ -147,97 +155,156 @@ const RoutePlayback = () => {
             parseISO(a.timestamp).getTime() -
             parseISO(b.timestamp).getTime()
         );
-        const startTime = processedPath[0].timestamp;
 
-        const endTime =
-          processedPath[processedPath.length - 1].timestamp;
+        // ================= MOVING PATH =================
 
-        const duration = differenceInSeconds(
-          parseISO(endTime),
-          parseISO(startTime)
+        const processedMovingPath = data.movingData.map((item: any) => ({
+          lat: Number(item.latitude),
+          lng: Number(item.longitude),
+          location: item.location,
+          speed: Number(item.speed || 0),
+          timestamp: formatISO(new Date(item.datadate)),
+          engineStatus:
+            String(item.acignition).toUpperCase() === 'ON'
+              ? 'ON'
+              : 'OFF',
+          distance: Number(item.distance || 0),
+        }));
+
+        processedMovingPath.sort(
+          (
+            a: (typeof processedMovingPath)[0],
+            b: (typeof processedMovingPath)[0]
+          ) =>
+            parseISO(a.timestamp).getTime() -
+            parseISO(b.timestamp).getTime()
         );
 
-        setPlaybackData({
-          path: processedPath,
-          startTime,
-          endTime,
-          duration,
-        });
-
-        // ================= DISTANCE =================
-        // Last distance - First distance
-
-        const firstDistance =
-          processedPath[0]?.distance || 0;
-
-        const lastDistance =
-          processedPath[processedPath.length - 1]?.distance || 0;
-
-        const totalDistanceValue =
-          lastDistance - firstDistance;
-
-        setTotalDistance(
-          totalDistanceValue > 0
-            ? totalDistanceValue
-            : 0
-        );
-
-        // ================= DRIVING / IDLING / STOPPAGE =================
+        // ================= DISTANCE / DRIVING / IDLING / STOPPAGE =================
 
         let drivingSeconds = 0;
         let idlingSeconds = 0;
         let stoppageSeconds = 0;
 
-        // Max allowed gap between records
-        // Ignore unrealistic GPS/data gaps
-        const MAX_GAP_SECONDS = 300; // 5 min
+        let totalDistanceValue = 0;
 
-        for (let i = 0; i < processedPath.length - 1; i++) {
+        let flag = false;
+
+        let sdist = 0;
+        let edist = 0;
+
+        for (let i = 0; i < processedPath.length; i++) {
           const current = processedPath[i];
           const next = processedPath[i + 1];
 
-          const diff = differenceInSeconds(
-            parseISO(next.timestamp),
-            parseISO(current.timestamp)
-          );
+          // ================= TIME CALCULATIONS =================
 
-          // Ignore invalid gaps
-          if (diff <= 0) continue;
+          if (next) {
+            const diff = differenceInSeconds(
+              parseISO(next.timestamp),
+              parseISO(current.timestamp)
+            );
 
-          // Ignore huge gaps
-          if (diff > MAX_GAP_SECONDS) continue;
+            if (diff > 0) {
+              const speed = Number(current.speed || 0);
+
+              const engineStatus = String(
+                current.engineStatus
+              ).toUpperCase();
+
+              // ================= DRIVING =================
+
+              if (speed > 0) {
+                drivingSeconds += diff;
+              }
+
+              // ================= IDLING =================
+
+              if (
+                speed === 0 &&
+                engineStatus === 'ON'
+              ) {
+                idlingSeconds += diff;
+              }
+
+              // ================= STOPPAGE =================
+
+              if (speed === 0) {
+                stoppageSeconds += diff;
+              }
+            }
+          }
+
+          // ================= DISTANCE =================
 
           const speed = Number(current.speed || 0);
 
-          const engineStatus =
-            String(current.engineStatus).toUpperCase();
+          const currentDistance = Number(
+            current.distance || 0
+          );
 
-          // ================= DRIVING =================
-          // Vehicle moving
+          // START MOVEMENT
 
-          if (speed > 0) {
-            drivingSeconds += diff;
+          if (speed > 0 && flag === false) {
+            if (i === 0) {
+              sdist = currentDistance;
+            } else {
+              sdist = Number(
+                processedPath[i - 1]?.distance || 0
+              );
+            }
+
+            flag = true;
           }
 
-          // ================= IDLING =================
-          // Engine ON + vehicle not moving
+          // CONTINUE MOVEMENT
 
-          if (
-            speed === 0 &&
-            engineStatus === 'ON'
-          ) {
-            idlingSeconds += diff;
+          else if (speed > 0 && flag === true) {
+            edist = currentDistance;
           }
 
-          // ================= STOPPAGE =================
-          // Vehicle stopped
+          // STOP MOVEMENT
 
-          if (speed === 0) {
-            stoppageSeconds += diff;
+          else if (speed <= 0 && flag === true) {
+            edist = currentDistance;
+
+            const tripDistance = Number(
+              (edist - sdist).toFixed(1)
+            );
+
+            if (
+              tripDistance > 0 &&
+              tripDistance < 500
+            ) {
+              totalDistanceValue += tripDistance;
+            }
+
+            flag = false;
           }
         }
 
-        // ================= CONVERT TO MINUTES =================
+        // HANDLE LAST RUNNING SESSION
+
+        if (flag === true) {
+          const tripDistance = Number(
+            (edist - sdist).toFixed(1)
+          );
+
+          if (
+            tripDistance > 0 &&
+            tripDistance < 500
+          ) {
+            totalDistanceValue += tripDistance;
+          }
+        }
+
+        // ================= FINAL VALUES =================
+
+        setTotalDistance(
+          totalDistanceValue > 0
+            ? Number(totalDistanceValue.toFixed(2))
+            : 0
+        );
 
         setDrivingTime(drivingSeconds / 60);
 
@@ -245,7 +312,34 @@ const RoutePlayback = () => {
 
         setTotalStoppageTime(stoppageSeconds / 60);
 
+        // ================= PLAYBACK DATA =================
+        // TIMELINE SAME AS DRIVING TIME
+
+        const startTime =
+          processedMovingPath[0]?.timestamp ||
+          processedPath[0].timestamp;
+
+        const endTime =
+          processedMovingPath[
+            processedMovingPath.length - 1
+          ]?.timestamp ||
+          processedPath[processedPath.length - 1]
+            .timestamp;
+
+        const playbackDuration = drivingSeconds;
+
+        setPlaybackData({
+          path: processedPath,
+          movingPath: processedMovingPath,
+          startTime,
+          endTime,
+          duration: playbackDuration,
+        });
+
+        // ================= RESET =================
+
         setPlaybackTime(0);
+
         setIsPlaying(false);
 
         lastPausedTime.current = 0;
@@ -258,9 +352,13 @@ const RoutePlayback = () => {
 
     const resetPlaybackStats = () => {
       setPlaybackData(null);
+
       setTotalDistance(0);
+
       setDrivingTime(0);
+
       setTotalIdlingTime(0);
+
       setTotalStoppageTime(0);
     };
 
@@ -270,30 +368,54 @@ const RoutePlayback = () => {
   // ================= CURRENT POINT =================
 
   const currentDataPoint = useMemo(() => {
-    if (!playbackData) return null;
+    if (!playbackData?.movingPath?.length) return null;
 
-    const tripStart = parseISO(playbackData.path[0].timestamp).getTime();
+    let accumulated = 0;
 
-    const targetTime = tripStart + playbackTime * 1000;
-
-    for (let i = 0; i < playbackData.path.length - 1; i++) {
-      const p1 = playbackData.path[i];
-      const p2 = playbackData.path[i + 1];
+    for (let i = 0; i < playbackData.movingPath.length - 1; i++) {
+      const p1 = playbackData.movingPath[i];
+      const p2 = playbackData.movingPath[i + 1];
 
       const t1 = parseISO(p1.timestamp).getTime();
       const t2 = parseISO(p2.timestamp).getTime();
 
-      if (targetTime >= t1 && targetTime <= t2) {
-        const ratio =
-          t2 - t1 === 0 ? 0 : (targetTime - t1) / (t2 - t1);
+      const segmentSeconds = (t2 - t1) / 1000;
 
-        const interpolate = (key: keyof typeof p1) =>
+      // ONLY MOVING SEGMENTS
+      const isMovingSegment =
+        Number(p1.speed) > 0 &&
+        Number(p2.speed) > 0;
+
+      if (!isMovingSegment || segmentSeconds <= 0) {
+        continue;
+      }
+
+      // FOUND CURRENT PLAYBACK SEGMENT
+      if (
+        playbackTime >= accumulated &&
+        playbackTime <= accumulated + segmentSeconds
+      ) {
+        const localTime = playbackTime - accumulated;
+
+        const ratio =
+          segmentSeconds === 0
+            ? 0
+            : localTime / segmentSeconds;
+
+        const interpolate = (
+          key: keyof typeof p1
+        ) =>
           (p1[key] as number) +
-          ((p2[key] as number) - (p1[key] as number)) * ratio;
+          ((p2[key] as number) -
+            (p1[key] as number)) *
+          ratio;
 
         let bearing = 0;
 
-        if (p1.lat !== p2.lat || p1.lng !== p2.lng) {
+        if (
+          p1.lat !== p2.lat ||
+          p1.lng !== p2.lng
+        ) {
           bearing = calculateBearing(
             p1.lat,
             p1.lng,
@@ -311,11 +433,14 @@ const RoutePlayback = () => {
           bearing,
         };
       }
+
+      accumulated += segmentSeconds;
     }
 
-    return playbackData.path[playbackData.path.length - 1];
+    return playbackData.movingPath[
+      playbackData.movingPath.length - 1
+    ];
   }, [playbackData, playbackTime]);
-
   // ================= PLAYBACK CONTROLS =================
 
   const updatePosition = useCallback((time: number) => {
@@ -375,6 +500,44 @@ const RoutePlayback = () => {
     return 'car';
   }, []);
 
+const handlePrint = () => {
+
+  const appSidebar =
+    document.querySelector('aside');
+
+  const appHeader =
+    document.querySelector('header');
+
+  if (appSidebar) {
+    (appSidebar as HTMLElement).style.display =
+      'none';
+  }
+
+  if (appHeader) {
+    (appHeader as HTMLElement).style.display =
+      'none';
+  }
+
+  document.body.classList.add('printing');
+
+  setTimeout(() => {
+
+    window.print();
+
+    document.body.classList.remove('printing');
+
+    if (appSidebar) {
+      (appSidebar as HTMLElement).style.display =
+        '';
+    }
+
+    if (appHeader) {
+      (appHeader as HTMLElement).style.display =
+        '';
+    }
+
+  }, 500);
+};
   return (
     <LoadScript
       googleMapsApiKey={GOOGLE_MAPS_API_KEY}
@@ -385,7 +548,7 @@ const RoutePlayback = () => {
         </div>
       }
     >
-      <div className="flex h-full w-full bg-muted/40">
+      <div className="flex h-full w-full bg-muted/40 print-area">
         {playbackData ? (
           <PlaybackSidebar
             vehicles={vehicles}
@@ -403,6 +566,7 @@ const RoutePlayback = () => {
             totalStoppageTime={totalStoppageTime}
             totalIdling={totalIdlingTime}
             path={playbackData.path}
+            onPrint={handlePrint}
           />
         ) : (
           <div className="w-[350px] flex-shrink-0 bg-card border-r flex flex-col h-full overflow-hidden p-4">
@@ -449,7 +613,8 @@ const RoutePlayback = () => {
           {playbackData ? (
             <>
               <PlaybackMap
-                tripPath={playbackData.path}
+                tripPath={playbackData.movingPath}
+                fullPath={playbackData.path}
                 markerPosition={
                   currentDataPoint
                     ? {
@@ -463,22 +628,68 @@ const RoutePlayback = () => {
                 showPois={false}
                 showLabels={true}
                 showStoppages={true}
+                showIdleStops={showIdleStops}
+                showNormalStops={showNormalStops}
                 currentBearing={currentDataPoint?.bearing || 0}
                 isPlaying={isPlaying}
               />
 
               <PlaybackTimeline
-                startTime={playbackData.startTime}
-                endTime={playbackData.endTime}
+                duration={playbackData.duration}
                 currentTime={playbackTime}
                 isPlaying={isPlaying}
                 speed={playbackSpeed}
                 currentData={currentDataPoint}
-                startDistance={playbackData.path[0]?.distance || 0}
+                startDistance={
+                  playbackData.movingPath[0]?.distance || 0
+                }
                 onPlayPause={() => setIsPlaying(!isPlaying)}
                 onSpeedChange={setPlaybackSpeed}
                 onSliderChange={handleSliderChange}
               />
+              <div className="absolute bottom-24 left-4 z-50 bg-white rounded-lg shadow-lg p-4 flex flex-col gap-3 min-w-[220px]">
+
+                {/* ================= IDLE STOPS ================= */}
+
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">
+                    Idle Stops
+                  </span>
+
+                  <button
+                    onClick={() =>
+                      setShowIdleStops(!showIdleStops)
+                    }
+                    className={`px-3 py-1 rounded text-white text-xs transition-all duration-200 ${showIdleStops
+                        ? 'bg-[#f97216]'
+                        : 'bg-gray-400'
+                      }`}
+                  >
+                    {showIdleStops ? 'ON' : 'OFF'}
+                  </button>
+                </div>
+
+                {/* ================= NORMAL STOPS ================= */}
+
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">
+                    Normal Stops
+                  </span>
+
+                  <button
+                    onClick={() =>
+                      setShowNormalStops(!showNormalStops)
+                    }
+                    className={`px-3 py-1 rounded text-white text-xs transition-all duration-200 ${showNormalStops
+                        ? 'bg-[#3b82f6]'
+                        : 'bg-gray-400'
+                      }`}
+                  >
+                    {showNormalStops ? 'ON' : 'OFF'}
+                  </button>
+                </div>
+
+              </div>
             </>
           ) : (
             <div className="flex items-center justify-cent  er h-full">
