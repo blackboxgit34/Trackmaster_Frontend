@@ -97,8 +97,6 @@ const RoutePlayback = () => {
 
   // ================= PLAYBACK =================
 
-  // ================= PLAYBACK =================
-
   useEffect(() => {
     const loadPlaybackData = async () => {
       try {
@@ -500,44 +498,91 @@ const RoutePlayback = () => {
     return 'car';
   }, []);
 
-const handlePrint = () => {
+  const handlePrint = () => {
 
-  const appSidebar =
-    document.querySelector('aside');
+    const appSidebar =
+      document.querySelector('aside');
 
-  const appHeader =
-    document.querySelector('header');
-
-  if (appSidebar) {
-    (appSidebar as HTMLElement).style.display =
-      'none';
-  }
-
-  if (appHeader) {
-    (appHeader as HTMLElement).style.display =
-      'none';
-  }
-
-  document.body.classList.add('printing');
-
-  setTimeout(() => {
-
-    window.print();
-
-    document.body.classList.remove('printing');
+    const appHeader =
+      document.querySelector('header');
 
     if (appSidebar) {
       (appSidebar as HTMLElement).style.display =
-        '';
+        'none';
     }
 
     if (appHeader) {
       (appHeader as HTMLElement).style.display =
-        '';
+        'none';
     }
 
-  }, 500);
-};
+    document.body.classList.add('printing');
+
+    setTimeout(() => {
+
+      window.print();
+
+      document.body.classList.remove('printing');
+
+      if (appSidebar) {
+        (appSidebar as HTMLElement).style.display =
+          '';
+      }
+
+      if (appHeader) {
+        (appHeader as HTMLElement).style.display =
+          '';
+      }
+
+    }, 500);
+  };
+  const handleExportExcel = async () => {
+    try {
+      if (!selectedVehicle || !selectedDate) return;
+
+      const date = format(selectedDate, 'yyyy-MM-dd');
+
+      const url =
+        `${API_BASE_URL}/VehicleStatus/GetPlaybackData` +
+        `?bbid=${selectedVehicle}` +
+        `&date=${date}` +
+        `&downloadType=Excel`;
+
+      const response = await fetch(url, {
+        method: 'GET',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to download excel');
+      }
+
+      // Convert response to blob
+      const blob = await response.blob();
+
+      // Create download url
+      const downloadUrl = window.URL.createObjectURL(blob);
+
+      // Create temp anchor
+      const link = document.createElement('a');
+
+      link.href = downloadUrl;
+
+      link.download =
+        `RoutePlayback_${selectedVehicle}_${date}.xlsx`;
+
+      document.body.appendChild(link);
+
+      // Trigger download
+      link.click();
+
+      // Cleanup
+      link.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+
+    } catch (error) {
+      console.error('Export Excel Error:', error);
+    }
+  };
   return (
     <LoadScript
       googleMapsApiKey={GOOGLE_MAPS_API_KEY}
@@ -567,6 +612,7 @@ const handlePrint = () => {
             totalIdling={totalIdlingTime}
             path={playbackData.path}
             onPrint={handlePrint}
+            onExportExcel={handleExportExcel}
           />
         ) : (
           <div className="w-[350px] flex-shrink-0 bg-card border-r flex flex-col h-full overflow-hidden p-4">
@@ -661,8 +707,8 @@ const handlePrint = () => {
                       setShowIdleStops(!showIdleStops)
                     }
                     className={`px-3 py-1 rounded text-white text-xs transition-all duration-200 ${showIdleStops
-                        ? 'bg-[#f97216]'
-                        : 'bg-gray-400'
+                      ? 'bg-[#f97216]'
+                      : 'bg-gray-400'
                       }`}
                   >
                     {showIdleStops ? 'ON' : 'OFF'}
@@ -681,8 +727,8 @@ const handlePrint = () => {
                       setShowNormalStops(!showNormalStops)
                     }
                     className={`px-3 py-1 rounded text-white text-xs transition-all duration-200 ${showNormalStops
-                        ? 'bg-[#3b82f6]'
-                        : 'bg-gray-400'
+                      ? 'bg-[#3b82f6]'
+                      : 'bg-gray-400'
                       }`}
                   >
                     {showNormalStops ? 'ON' : 'OFF'}

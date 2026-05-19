@@ -83,7 +83,9 @@ type GetVehicleStatusParams = {
   pageName: string;
   CustId?: number;
   requestModel?: DataTableRequestModel;
+  Status?: string | null;
 };
+
 export const getVehicleStatusList = async ({
   pageName,
   CustId,
@@ -149,6 +151,8 @@ export const getVehicleStatusList = async ({
     hydraulicTemp: 0,
     acStatus: 'Off',
     ignitionStatus: item.IgnitionStatus,
+    totalRecords: item.totalRecords || 0,
+
   }));
 };
 

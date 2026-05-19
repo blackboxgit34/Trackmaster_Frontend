@@ -9,4 +9,5 @@ export interface DataTableRequestModel {
     interval?: number;
     beginDate?: string;
     endDate?: string;
+     Status?: string | null; 
 }
