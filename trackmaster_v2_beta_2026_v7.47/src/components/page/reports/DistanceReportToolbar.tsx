@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,7 +14,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import WhatsappPopup from '../../WhatsappPopup';
 import { VehicleCombobox } from '../../VehicleCombobox';
-import { vehicles } from '@/data/mockData';
+import { API_BASE_URL } from '@/config/Api';
+import { useSearchParams } from 'react-router-dom';
 
 const timeRanges = [
   { label: 'Today', value: 'today' },
@@ -57,7 +58,45 @@ const DistanceReportToolbar = ({
     setDateRange({ from: fromDate, to: toDate });
     setIsCalendarOpen(false);
   };
+  const [vehicles, setVehicles] = useState<{ label: string; value: string }[]>([]);
+  const [searchParams] = useSearchParams();
+  const vehicleFromUrl = searchParams.get('vehicle');
+  useEffect(() => {
+    const loadVehicles = async () => {
+      try {
+        const auth = JSON.parse(localStorage.getItem('trackmaster-auth') || '{}');
 
+        const custId = auth.custId;
+
+        const response = await fetch(
+          `${API_BASE_URL}/Dashboard/GetAllVehicleListByCustId?userid=${custId}`
+        );
+
+        const data = await response.json();
+
+        const formattedVehicles = [
+          {
+            label: 'All Vehicles',
+            value: '',
+          },
+          ...(data.data || []).map((v: any) => ({
+            label: v.vehName,
+            value: v.bbid,
+          })),
+        ];
+
+        setVehicles(formattedVehicles);
+
+        if (formattedVehicles.length > 0) {
+          setSelectedVehicle(vehicleFromUrl || formattedVehicles[0].value);
+        }
+      } catch (error) {
+        console.error('Vehicle API Error', error);
+      }
+    };
+
+    loadVehicles();
+  }, []);
   return (
     <div className="flex items-center gap-2 flex-wrap justify-start sm:justify-end">
       <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
