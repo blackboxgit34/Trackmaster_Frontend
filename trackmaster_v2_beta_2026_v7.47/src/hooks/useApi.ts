@@ -79,7 +79,9 @@ type GetVehicleStatusParams = {
   pageName: string;
   CustId?: number;
   requestModel?: DataTableRequestModel;
+  Status?: string | null;
 };
+
 export const getVehicleStatusList = async ({
   pageName,
   CustId,
@@ -111,7 +113,7 @@ export const getVehicleStatusList = async ({
   }
 
   const result = await response.json();
-debugger
+
   return result.data.map((item: any) => ({
     
     id: item.vehName,
@@ -145,6 +147,8 @@ debugger
     hydraulicTemp: 0,
     acStatus: 'Off',
     ignitionStatus: item.IgnitionStatus,
+    totalRecords: item.totalRecords || 0,
+
   }));
 };
 
