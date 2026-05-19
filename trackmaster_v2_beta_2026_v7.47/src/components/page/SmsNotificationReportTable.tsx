@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Table,
   TableBody,
@@ -23,7 +23,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { notificationData, messageTypes, notificationTypes, type NotificationData } from '@/data/notificationData';
-import { vehicles } from '@/data/mockData';
 import {
   ArrowUp,
   ArrowDown,
@@ -54,8 +53,21 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import Papa from 'papaparse';
+import { API_BASE_URL } from '@/config/Api';
+
+//========== searchable dropdown ==================//
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+  Command,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from '@/components/ui/command';
+import { Check} from 'lucide-react';
+//========== searchable dropdown ==================//
 
 type ReportDataKey = keyof NotificationData;
+const custId = JSON.parse(localStorage.getItem("trackmaster-auth") ?? "{}")?.custId; // get custid
 
 const headers: { key: ReportDataKey; label: string }[] = [
   { key: 'vehicleName', label: 'Vehicle No' },
@@ -99,6 +111,10 @@ const StatusBadge = ({ status }: { status: string }) => {
 };
 
 const SmsNotificationReportTable = () => {
+
+  const [vehicleList, setVehicleList] = useState<any[]>([]); // neha k 
+  const [messageTypeList, setMessageTypeList] = useState<any[]>([]); // neha k
+
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [sortConfig, setSortConfig] = useState<{ key: ReportDataKey; direction: 'asc' | 'desc'; }>({ key: 'messageDate', direction: 'desc' });
@@ -190,6 +206,57 @@ const SmsNotificationReportTable = () => {
     document.body.removeChild(link);
   };
 
+  //neha k  get vehicle
+  useEffect(() => {
+    if (!custId) return;
+    fetch(`${API_BASE_URL}/Dashboard/GetAllVehicleListByCustId?userid=${custId}`)
+      .then(async (res) => {
+        const text = await res.text();
+        if (!text) {
+          console.warn("Empty response");
+          return [];
+        }
+        return JSON.parse(text);
+      })
+      .then(data => {
+        const vehicles = data?.data || [];
+        const formatted = [
+          { label: 'All', value: 'all' }, 
+          ...vehicles.map((v: any) => ({
+            label: v.vehName,          
+            value: String(v.bbid)     
+          }))
+        ];
+        setVehicleList(formatted);
+      })
+      .catch(err => console.error("Vehicle API error:", err));
+  }, []);
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/Reports/GetMessageType`)
+      .then(async (res) => {
+        const text = await res.text();
+        if (!text) {
+          console.warn("Empty response");
+          return [];
+        }
+        return JSON.parse(text);
+      })
+      .then(data => {
+        const messageTypes = data?.data || data || [];
+        const formatted = [
+          { label: 'All Message Types', value: 'all' },
+
+          ...messageTypes.map((item: any) => ({
+            label: item.name,
+            value: String(item.value)
+          }))
+        ];
+        setMessageTypeList(formatted);
+      })
+      .catch(err => console.error("Message Type API error:", err));
+
+  }, []);
+
   const paginatedData = sortedData.slice(page * rowsPerPage, (page + 1) * rowsPerPage);
   const totalPages = Math.ceil(sortedData.length / rowsPerPage);
 
@@ -202,16 +269,52 @@ const SmsNotificationReportTable = () => {
         </div>
         <div className="flex items-center gap-2 flex-wrap justify-start sm:justify-end">
           <DateRangePicker date={date} setDate={setDate} />
-          <VehicleCombobox vehicles={vehicles} value={selectedVehicle} onChange={setSelectedVehicle} className="w-full sm:w-[180px]" />
-          <Select value={messageTypeFilter} onValueChange={setMessageTypeFilter}>
-            <SelectTrigger className="w-full sm:w-[180px]"><SelectValue placeholder="Message Type" /></SelectTrigger>
-            <SelectContent>
-              <ScrollArea className="h-72">
-                <SelectItem value="all">All Message Types</SelectItem>
-                {messageTypes.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}
-              </ScrollArea>
-            </SelectContent>
-          </Select>
+          <VehicleCombobox vehicles={vehicleList} value={selectedVehicle} onChange={setSelectedVehicle} className="w-full sm:w-[180px]" />
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                className="w-full sm:w-[220px] justify-between"
+              >
+                {messageTypeFilter === "all"
+                  ? "All Message Types"
+                  : messageTypeList.find(
+                    (item) => item.value === messageTypeFilter
+                  )?.label}
+
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent
+              className="p-0 w-[220px]"
+              align="start"
+            >
+              <Command>
+                <CommandInput placeholder="Search message type..." />
+
+                <CommandGroup className="max-h-64 overflow-y-auto">
+                  {messageTypeList.map((item) => (
+                    <CommandItem
+                      key={item.value}
+                      value={item.label}
+                      onSelect={() => {
+                        setMessageTypeFilter(item.value);
+                      }}
+                    >
+                      <Check className={`mr-2 h-4 w-4 ${messageTypeFilter === item.value
+                            ? "opacity-100"
+                            : "opacity-0"
+                          }`}
+                      />
+                      {item.label}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </Command>
+            </PopoverContent>
+          </Popover>
+
           <Select value={notificationTypeFilter} onValueChange={setNotificationTypeFilter}>
             <SelectTrigger className="w-full sm:w-[180px]"><SelectValue placeholder="Notification Type" /></SelectTrigger>
             <SelectContent>
