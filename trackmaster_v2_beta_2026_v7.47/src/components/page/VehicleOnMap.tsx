@@ -29,8 +29,11 @@ import { useApi } from '@/hooks/useApi';
 import { getIconUrl } from '@/lib/map-utils';
 import type {LiveVehicleStatus,VehicleStatus} from '@/types';
 import { getVehicleStatusList } from '@/hooks/useApi';
+import { API_BASE_URL } from '@/config/Api';
 
 const VehicleOnMap = () => {
+  
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
   const [isDataSidebarOpen, setIsDataSidebarOpen] = useState(false);
@@ -61,6 +64,8 @@ const VehicleOnMap = () => {
 
   // Data fetching
   const { data: liveStatusData, loading, refetch} = useApi(getLiveStatusData);
+  
+
   
 //    //Auto-refresh logic
  useEffect(() => {
@@ -110,10 +115,15 @@ const VehicleOnMap = () => {
     return liveStatusData.find(m => m.id === selectedVehicleId);
   }, [selectedVehicleId, liveStatusData]);
 
-  const handleSelectVehicle = (vehicleId: string) => {
-    setSelectedVehicleId(vehicleId);
-    setIsDataSidebarOpen(true);
-  };
+  // const handleSelectVehicle = (vehicleId: string) => {
+  //   setSelectedVehicleId(vehicleId);
+  //   setIsDataSidebarOpen(true);
+  // };
+  
+  const handleSelectVehicle = async (vehicleId: string) => {
+  setSelectedVehicleId(vehicleId);
+  setIsDataSidebarOpen(true);
+};
 
   const handleStatusChange = (status: VehicleStatus) => {
     setSelectedStatuses(prev => {
@@ -280,7 +290,9 @@ const VehicleOnMap = () => {
                     </div>
                   )}
                   {filteredVehicles.map(vehicle => (
+                    
                     <div
+                    
                       key={vehicle.id}
                       onClick={() => handleSelectVehicle(vehicle.id)}
                       className={cn(
@@ -341,7 +353,11 @@ const VehicleOnMap = () => {
           )}>
             <div className="w-[300px] flex-shrink-0 h-full">
               {selectedVehicle ? (
-                <VehicleDataSidebar machine={selectedVehicle} onRecenter={handleRecenter} />
+                // <VehicleDataSidebar machine={selectedVehicle} onRecenter={handleRecenter} />
+                <VehicleDataSidebar
+                  machine={selectedVehicle}
+                  onRecenter={handleRecenter}
+                />
               ) : (
                 <div className="flex items-center justify-center h-full p-4 text-center w-full">
                   <div>

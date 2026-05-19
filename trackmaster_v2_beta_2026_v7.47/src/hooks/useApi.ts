@@ -75,11 +75,17 @@ export function useVehicleList() {
   return useApi<VehicleOption[]>(apiCall);
 }
 
+// ==============================
+// VEHICLE STATUS & LIVE STATUS HOOK
+// ==============================
+
 type GetVehicleStatusParams = {
   pageName: string;
   CustId?: number;
   requestModel?: DataTableRequestModel;
+  Status?: string | null;
 };
+
 export const getVehicleStatusList = async ({
   pageName,
   CustId,
@@ -111,10 +117,10 @@ export const getVehicleStatusList = async ({
   }
 
   const result = await response.json();
-debugger
+
   return result.data.map((item: any) => ({
     
-    id: item.vehName,
+    id: item.bbid,
     vehicleNo: item.vehName,
     type: item.type || 'Other',
     model: item.model || '',
@@ -145,6 +151,44 @@ debugger
     hydraulicTemp: 0,
     acStatus: 'Off',
     ignitionStatus: item.IgnitionStatus,
+    totalRecords: item.totalRecords || 0,
+
   }));
 };
 
+// ==============================
+// DISTANCE API HOOK
+// ==============================
+
+export const getVehicleDetailsByBbid = async (
+  bbid: string
+): Promise<Partial<LiveVehicleStatus>> => {
+debugger
+  const response = await fetch(
+    `${API_BASE_URL}/Dashboard/GetAllVehicleListByCustId?bbid=${bbid}`
+  );
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch vehicle details');
+  }
+
+  const result = await response.json();
+
+  const item = result.data?.[0];
+
+  if (!item) {
+    return {};
+  }
+
+  return {
+    distance: Number(item.distance || 0),
+    fuelLevel: Number(item.fuelLevel || 0),
+    fuelConsumed: Number(item.fuelConsumed || 0),
+    fuelLiters: Number(item.fuelLiters || 0),
+    fuelTankCapacity: Number(item.fuelTankCapacity || 0),
+    engineTemp: Number(item.engineTemp || 0),
+    hydraulicTemp: Number(item.hydraulicTemp || 0),
+    battery: Number(item.battery || 0),
+    gpsDeviceBattery: Number(item.gpsDeviceBattery || 0),
+  };
+};
