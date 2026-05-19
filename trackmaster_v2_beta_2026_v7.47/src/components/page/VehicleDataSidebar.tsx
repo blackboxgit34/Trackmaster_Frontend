@@ -19,7 +19,7 @@ import type { LiveVehicleStatus, VehicleStatus } from '@/types';
 import FuelGauge from './FuelGauge';
 import { useToast } from '@/hooks/use-toast';
 import ShareLocationDialog from './ShareLocationDialog';
-import { format, parse } from 'date-fns';
+import { format, parse , isValid } from 'date-fns';
 import BlackboxSignalIcon from '../icons/BlackboxSignalIcon';
 import SpeedGauge from './SpeedGauge';
 
@@ -32,7 +32,7 @@ const DeviceSignalIcon = ({
   gpsAntConStatus: number | null;
   GPSFix: number | null;
 }) => {
-  debugger
+  
   let text = 'Unknown';
   let color = 'text-muted-foreground';
   let Icon;
@@ -152,7 +152,6 @@ const GsmSignalIcon = ({ signal }: { signal: number }) => {
     </TooltipProvider>
   );
 };
-
 const BatteryIcon = ({ battery, tooltipLabel }: { battery: number; tooltipLabel: string }) => {
     let Icon, text, color;
   switch (true) {
@@ -213,10 +212,9 @@ return (
   );
   
 };
-
 const BatteryIconDevice = ({ deviceBattery, tooltipLabel }: { deviceBattery: number; tooltipLabel: string }) => {
   let Icon, text, color;
-  debugger
+  
   switch (true) {
     case deviceBattery == null:
       Icon = TriangleAlert;
@@ -293,7 +291,6 @@ const DistanceDisplay = ({ distance }: { distance: number }) => {
     </div>
   );
 };
-
 const formatHoursMinutes = (hoursDecimal: number, format: 'short' | 'long' = 'short') => {
   const hours = Math.floor(hoursDecimal);
   const minutes = Math.round((hoursDecimal - hours) * 60);
@@ -366,15 +363,25 @@ const VehicleDataSidebar = ({ machine: vehicle, onRecenter }: VehicleDataSidebar
 
   const todayStr = format(new Date(), 'yyyy-MM-dd');
 
-  const playbackDate = useMemo(() => {
-    try {
-      const parsedDate = parse(vehicle.lastUpdated, 'dd-MMM-yyyy hh:mm:ss a', new Date());
-      return format(parsedDate, 'yyyy-MM-dd');
-    } catch (e) {
-      console.error("Failed to parse date for playback link:", e);
-      return format(new Date(), 'yyyy-MM-dd'); // Fallback to today
+const playbackDate = useMemo(() => {
+  try {
+    const parsedDate = parse(
+      vehicle.lastUpdated,
+      'M/d/yyyy hh:mm:ss a',
+      new Date()
+    );
+
+    if (!isValid(parsedDate)) {
+      console.error('Invalid date:', vehicle.lastUpdated);
+      return todayStr;
     }
-  }, [vehicle.lastUpdated]);
+
+    return format(parsedDate, 'yyyy-MM-dd');
+  } catch (e) {
+    console.error('Failed to parse date for playback link:', e);
+    return todayStr;
+  }
+}, [vehicle.lastUpdated, todayStr]);
 
   const stopTimeHours = Math.floor(vehicle.idlingHours);
   const stopTimeMinutes = Math.round((vehicle.idlingHours - stopTimeHours) * 60);
@@ -545,36 +552,45 @@ const VehicleDataSidebar = ({ machine: vehicle, onRecenter }: VehicleDataSidebar
               </div>
             </div>
 
-            <Card>
-              <CardHeader className="p-4 pb-2">
-                <CardTitle className="text-base">Alerts</CardTitle>
-              </CardHeader>
-              <CardContent className="p-2">
-                <div className="space-y-1">
-                  {Object.entries(alertIcons).map(([name, { icon: Icon, color, slug }]) => {
-                    const count = alertCounts[name as keyof typeof alertCounts] || 0;
-                    return (
-                      <Link
-                        key={name}
-                        to={`/alerts/${slug}?vehicle=${vehicle.vehicleNo}&from=${todayStr}&to=${todayStr}`}
-                        className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50"
-                      >
-                        <div className="flex items-center gap-3">
-                          <Icon className={cn("h-5 w-5", color)} />
-                          <span className="text-sm font-medium">{name}</span>
-                        </div>
-                        <div className={cn(
-                          "flex items-center justify-center h-6 min-w-[24px] px-1 rounded-full text-xs font-bold",
-                          count > 0 ? 'bg-red-500 text-white' : 'bg-muted text-muted-foreground'
-                        )}>
-                          {count}
-                        </div>
-                      </Link>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
+            {false && (
+              <Card>
+                <CardHeader className="p-4 pb-2">
+                  <CardTitle className="text-base">Alerts</CardTitle>
+                </CardHeader>
+
+                <CardContent className="p-2">
+                  <div className="space-y-1">
+                    {Object.entries(alertIcons).map(([name, { icon: Icon, color, slug }]) => {
+                      const count = alertCounts[name as keyof typeof alertCounts] || 0;
+
+                      return (
+                        <Link
+                          key={name}
+                          to={`/alerts/${slug}?vehicle=${vehicle.vehicleNo}&from=${todayStr}&to=${todayStr}`}
+                          className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50"
+                        >
+                          <div className="flex items-center gap-3">
+                            <Icon className={cn("h-5 w-5", color)} />
+                            <span className="text-sm font-medium">{name}</span>
+                          </div>
+
+                          <div
+                            className={cn(
+                              "flex items-center justify-center h-6 min-w-[24px] px-1 rounded-full text-xs font-bold",
+                              count > 0
+                                ? "bg-red-500 text-white"
+                                : "bg-muted text-muted-foreground"
+                            )}
+                          >
+                            {count}
+                          </div>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </ScrollArea>
         {/* Footer Actions */}
