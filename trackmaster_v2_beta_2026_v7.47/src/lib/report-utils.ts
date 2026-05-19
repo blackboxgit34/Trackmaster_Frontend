@@ -1,6 +1,6 @@
 import { isWithinInterval, parseISO, startOfDay, endOfDay } from 'date-fns';
 import { DateRange } from 'react-day-picker';
-import type { ReportRow, DetailRow, ReportSortKey, DetailSortKey } from '@/types/report-types';
+import type { ReportRow, DetailRow, ReportSortKey, DetailSortKey, BaseDetailData } from '@/types/report-types';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import Papa from 'papaparse';
@@ -47,17 +47,19 @@ export const sortReportData = (data: ReportRow[], sortConfig: { key: ReportSortK
 export const sortAndCalculateDetails = (details: BaseDetailData[], totalDistance: number, sortConfig: { key: DetailSortKey; direction: 'asc' | 'desc' }): DetailRow[] => {
   const totalDuration = details.reduce((sum, d) => sum + d.duration, 0);
 
-  // Step 1: Initial calculation (chronological)
   const chronologicallyCalculated = [...details]
     .sort((a, b) => a.startTime.localeCompare(b.startTime))
     .map(detail => {
-      // NOTE: This is placeholder logic for mock data as pointed out.
-      // In a real scenario, this would come from actual trip segment data.
-      const sessionDistance = totalDuration > 0 ? (detail.duration / totalDuration) * totalDistance : 0;
+      const explicitDistance = (detail as any).sessionDistance;
+      const sessionDistance = typeof explicitDistance === 'number' && !Number.isNaN(explicitDistance)
+        ? explicitDistance
+        : totalDuration > 0
+          ? (detail.duration / totalDuration) * totalDistance
+          : 0;
+
       return { ...detail, sessionDistance, cumulativeDistance: 0 };
     });
 
-  // Step 2: Sort based on user's choice
   const sorted = [...chronologicallyCalculated].sort((a, b) => {
     const aValue = a[sortConfig.key];
     const bValue = b[sortConfig.key];
@@ -66,7 +68,6 @@ export const sortAndCalculateDetails = (details: BaseDetailData[], totalDistance
     return 0;
   });
 
-  // Step 3: Recalculate cumulative distance based on the final sorted order
   let cumulativeDistance = 0;
   return sorted.map(detail => {
     cumulativeDistance += detail.sessionDistance;

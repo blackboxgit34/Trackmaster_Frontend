@@ -87,8 +87,14 @@ const DistanceReportToolbar = ({
 
         setVehicles(formattedVehicles);
 
+        // Only set selected vehicle if parent hasn't provided one yet
         if (formattedVehicles.length > 0) {
-          setSelectedVehicle(vehicleFromUrl || formattedVehicles[0].value);
+          // If a vehicle is provided in URL, prefer that. Otherwise only set when selectedVehicle is falsy.
+          if (vehicleFromUrl) {
+            setSelectedVehicle(vehicleFromUrl);
+          } else if (!selectedVehicle) {
+            setSelectedVehicle(formattedVehicles[0].value);
+          }
         }
       } catch (error) {
         console.error('Vehicle API Error', error);
@@ -138,7 +144,37 @@ const DistanceReportToolbar = ({
             mode="range"
             defaultMonth={dateRange?.from}
             selected={dateRange}
-            onSelect={setDateRange}
+            onSelect={(val) => {
+              // Normalize single-date selection so both from and to are set
+              if (!val) {
+                setDateRange(undefined);
+                return;
+              }
+
+              // val might be a Date or a DateRange object depending on picker
+              const maybeAny: any = val;
+              if (maybeAny instanceof Date) {
+                setDateRange({ from: maybeAny, to: maybeAny });
+                return;
+              }
+
+              // Range: ensure to is set; if only from present, set to = from
+              if (maybeAny.from && !maybeAny.to) {
+                setDateRange({ from: maybeAny.from, to: maybeAny.from });
+                return;
+              }
+
+              if (maybeAny.from && maybeAny.to) {
+                const from = maybeAny.from as Date;
+                const to = maybeAny.to as Date;
+                if (from > to) {
+                  setDateRange({ from: to, to: from });
+                  return;
+                }
+              }
+
+              setDateRange(maybeAny as any);
+            }}
             numberOfMonths={1}
           />
         </PopoverContent>
