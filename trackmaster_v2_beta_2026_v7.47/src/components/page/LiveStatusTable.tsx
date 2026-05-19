@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import {
   Table,
   TableBody,
@@ -64,25 +64,16 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
-
 import VehicleDetailDialog from './VehicleDetailDialog';
 import LiveLocationDialog from './LiveLocationDialog';
-
 import { Skeleton } from '@/components/ui/skeleton';
 import CarBatteryIcon from '../icons/CarBatteryIcon';
 import { Badge } from '@/components/ui/badge';
 import BlackboxSignalIcon from '../icons/BlackboxSignalIcon';
-
-import { API_BASE_URL } from '@/config/Api';
+import { getVehicleStatusList } from '@/hooks/useApi';
 import { DataTableRequestModel } from '@/hooks/DataTableRequestModel';
+import type { VehicleStatus, LiveVehicleStatus } from '@/types';
 
-type VehicleStatus =
-  | 'Moving'
-  | 'Parked'
-  | 'IgnitionOn'
-  | 'Stopped'
-  | 'Breakdown'
-  | 'Idle';
 
 const StatusBadge = ({ status }: { status: string }) => {
   const styles: Record<string, string> = {
@@ -125,7 +116,6 @@ const DeviceSignalIcon = ({
   gpsAntConStatus: number | null;
   GPSFix: number | null;
 }) => {
-  debugger
   let text = 'Unknown';
   let color = 'text-muted-foreground';
   let Icon;
@@ -290,7 +280,6 @@ const GsmSignalIcon = ({ signal }: { signal: number }) => {
 //   );
 // };
 const BatteryIcon = ({ battery, tooltipLabel }: { battery: number; tooltipLabel: string }) => {
-  debugger
   let Icon, text, color;
   switch (true) {
     case battery == null:
@@ -351,9 +340,6 @@ const BatteryIcon = ({ battery, tooltipLabel }: { battery: number; tooltipLabel:
 
 };
 
-
-
-// const VehicleBatteryIcon = ({
 //   level,
 //   tooltipLabel,
 // }: {
@@ -500,7 +486,7 @@ const LiveStatusTable = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [pagination, setPagination] = useState({
     pageIndex: 0,
-    pageSize: 20,
+    pageSize: 10,
   });
 
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -516,15 +502,17 @@ const LiveStatusTable = () => {
   const [loading, setLoading] = useState(false);
   const [totalRecords, setTotalRecords] = useState(0);
 
-  // const custId =
-  //   JSON.parse(localStorage.getItem('trackmaster-auth') ?? '{}')
-  //     ?.custId;
-
-  const vehicletype = 0;
+  const latestRequestRef  = useRef(0);
 
   const getLiveStatusData = async () => {
+    const requestId = ++latestRequestRef.current;
+
     try {
       setLoading(true);
+
+      // CLEAR OLD DATA IMMEDIATELY
+      setLiveStatus([]);
+      setTotalRecords(0);
 
       const authData = JSON.parse(
         localStorage.getItem('trackmaster-auth') || '{}'
@@ -543,50 +531,40 @@ const LiveStatusTable = () => {
         sortDirection: 'desc',
 
         interval: 0,
+
+        Status: statusFromUrl || null,
       };
-      const queryParams = new URLSearchParams();
 
-      Object.entries(requestModel).forEach(
-        ([key, value]) => {
-          if (
-            value !== undefined &&
-            value !== null
-          ) {
-            queryParams.append(key, String(value));
-          }
-        }
-      );
+      const response = await getVehicleStatusList({
+        pageName: 'livestatus',
+        CustId: authData?.custId || 0,
+        requestModel,
+      });
 
-      queryParams.append(
-        'pagename',
-        'livestatus'
-      );
+      // IGNORE OLD API RESPONSES
+      if (requestId !== latestRequestRef.current) {
+        return;
+      }
 
-      const response = await fetch(
-        `${API_BASE_URL}/VehicleStatus/GetvehicleStatusList?${queryParams}`,
-        {
-          method: 'GET',
-        }
-      );
+      if (response) {
+        setLiveStatus(response);
 
-      const result = await response.json();
-
-      if (result.success) {
-        const responseData = result.data || [];
-
-        setLiveStatus(responseData);
-
-        // GET TOTAL RECORDS FROM API
         setTotalRecords(
-          responseData.length > 0
-            ? responseData[0].totalRecords
+          response.length > 0
+            ? (response[0] as any).totalRecords || 0
             : 0
         );
       }
     } catch (error) {
       console.error('API ERROR:', error);
+
+      setLiveStatus([]);
+      setTotalRecords(0);
     } finally {
-      setLoading(false);
+      // ONLY HIDE LOADER FOR LATEST REQUEST
+      if (requestId === latestRequestRef.current) {
+        setLoading(false);
+      }
     }
   };
 
@@ -630,6 +608,17 @@ const LiveStatusTable = () => {
   return (
     <>
       <Card>
+        {loading && (
+          <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/70 dark:bg-black/50 rounded-xl">
+            <div className="flex items-center gap-3 bg-white dark:bg-zinc-900 px-5 py-3 rounded-lg shadow-lg border">
+              <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
+
+              <span className="text-sm font-medium text-foreground">
+                Please wait...
+              </span>
+            </div>
+          </div>
+        )}
         <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 px-6 py-4">
           <div>
             <CardTitle className="text-xl font-bold text-foreground">
@@ -743,18 +732,18 @@ const LiveStatusTable = () => {
                           <div className="flex items-center gap-4">
                             <img
                               src={`/icons/${row.type}.png`}
-                              alt={row.vehName}
+                              alt={row.vehicleNo}
                               className="h-12 w-12 object-contain"
                             />
 
                             <div>
                               <div className="font-semibold">
-                                {row.vehName}
+                                {row.vehicleNo}
                               </div>
 
-                              <div className="text-sm text-muted-foreground">
+                              {/* <div className="text-sm text-muted-foreground">
                                 {row.type}
-                              </div>
+                              </div> */}
 
                               <div className="text-xs text-muted-foreground">
                                 {row.bbid}
@@ -765,7 +754,7 @@ const LiveStatusTable = () => {
 
                         <TableCell className="px-6 py-4 whitespace-nowrap">
                           <StatusBadge
-                            status={row.vehicleStatus}
+                            status={row.status}
                           />
                         </TableCell>
 
@@ -834,18 +823,18 @@ const LiveStatusTable = () => {
                           <div className="flex items-center gap-3">
                             {/* GPS SIGNAL */}
                             <DeviceSignalIcon
-                              gpsAntConStatus={row.gpsAntConStatus}
-                              GPSFix={row.gpsFix}
+                              gpsAntConStatus={row.deviceSignal}
+                              GPSFix={row.GPSFix}
                             />
 
                             <GsmSignalIcon signal={row.gsmSignal} />
 
                             <BatteryIcon
-                              battery={row.vehicleBattery}
+                              battery={row.battery}
                               tooltipLabel="Vehicle Battery"
                             />
                             <BatteryIconDevice
-                              deviceBattery={80}
+                              deviceBattery={row.gpsDeviceBattery}
                               tooltipLabel="Blackbox Battery"
                             />
                           </div>
@@ -963,287 +952,6 @@ const LiveStatusTable = () => {
                     );
                   })}
                 </TableBody>
-
-                // <TableBody>
-                //   {paginatedData.map((row) => {
-                //     const alertCounts = (
-                //       row.alertDetails || []
-                //     ).reduce((acc: any, alert: any) => {
-                //       acc[alert] = (acc[alert] || 0) + 1;
-                //       return acc;
-                //     }, {});
-
-                //     return (
-                //       <TableRow
-                //         key={row.bbid}
-                //         className="border-b hover:bg-muted/50"
-                //       >
-                //         <TableCell className="px-6 py-4 whitespace-nowrap">
-                //           <div className="flex items-center gap-4">
-                //             <img
-                //               src={row.status?.replace('~/', '/')}
-                //               alt={row.vehicleName}
-                //               className="h-12 w-12 object-contain"
-                //             />
-
-                //             <div>
-                //               <div className="font-semibold">
-                //                 {row.vehicleName}
-                //               </div>
-
-                //               <div className="text-sm text-muted-foreground">
-                //                 {row.vsnAme}
-                //               </div>
-
-                //               <div className="text-xs text-muted-foreground">
-                //                 {row.bbid}
-                //               </div>
-                //             </div>
-                //           </div>
-                //         </TableCell>
-
-                //         <TableCell className="px-6 py-4 whitespace-nowrap">
-                //           <StatusBadge
-                //             status={row.progressStatus}
-                //           />
-                //         </TableCell>
-
-                //         <TableCell className="px-6 py-4 whitespace-nowrap">
-                //           <div
-                //             className="font-medium text-brand-blue dark:text-blue-400 cursor-pointer hover:underline truncate max-w-xs"
-                //             onClick={() =>
-                //               handleOpenLiveLocation(row)
-                //             }
-                //           >
-                //             <div
-                //               dangerouslySetInnerHTML={{
-                //                 __html: row.location,
-                //               }}
-                //             />
-                //           </div>
-
-                //           <div className="text-xs text-muted-foreground">
-                //             Updated: {row.dateTime}
-                //           </div>
-                //         </TableCell>
-
-                //         <TableCell className="px-6 py-4 whitespace-nowrap">
-                //           <div className="text-sm">
-                //             <span className="text-muted-foreground">
-                //               Distance:
-                //             </span>
-
-                //             <span className="font-semibold">
-                //               {' '}
-                //               {Number(
-                //                 row.distance || 0
-                //               ).toFixed(1)}{' '}
-                //               km
-                //             </span>
-                //           </div>
-
-                //           <div className="text-sm">
-                //             <span className="text-muted-foreground">
-                //               Speed:
-                //             </span>
-
-                //             <span className="font-semibold">
-                //               {' '}
-                //               {row.speed} km/h
-                //             </span>
-                //           </div>
-                //         </TableCell>
-
-                //         <TableCell className="px-6 py-4 whitespace-nowrap">
-                //           <div className="text-sm">
-                //             <span className="text-muted-foreground">
-                //               Fuel Level:
-                //             </span>
-
-                //             <span className="font-semibold">
-                //               {' '}
-                //               {row.curentFuelLevel} L
-                //             </span>
-                //           </div>
-                //         </TableCell>
-
-                //         <TableCell className="px-6 py-4 whitespace-nowrap">
-                //           <div className="flex items-center gap-3">
-                //             <DeviceSignalIcon
-                //               signal={
-                //                 row.gpsTooltip?.includes(
-                //                   'Excellent'
-                //                 )
-                //                   ? 4
-                //                   : row.gpsTooltip?.includes(
-                //                       'Normal'
-                //                     )
-                //                   ? 3
-                //                   : row.gpsTooltip?.includes(
-                //                       'Low'
-                //                     )
-                //                   ? 1
-                //                   : 0
-                //               }
-                //             />
-
-                //             <GsmSignalIcon
-                //               signal={
-                //                 row.antenaTooltip?.includes(
-                //                   'Excellent'
-                //                 )
-                //                   ? 4
-                //                   : row.antenaTooltip?.includes(
-                //                       'Normal'
-                //                     )
-                //                   ? 3
-                //                   : row.antenaTooltip?.includes(
-                //                       'InSufficient'
-                //                     )
-                //                   ? 2
-                //                   : 0
-                //               }
-                //             />
-
-                //             <VehicleBatteryIcon
-                //               level={
-                //                 row.batteryTooltip?.includes(
-                //                   'Normal'
-                //                 )
-                //                   ? 80
-                //                   : 20
-                //               }
-                //               tooltipLabel={
-                //                 row.batteryTooltip
-                //               }
-                //             />
-
-                //             <BatteryIcon
-                //               level={
-                //                 row.gpsTooltip?.includes(
-                //                   'Excellent'
-                //                 )
-                //                   ? 80
-                //                   : row.gpsTooltip?.includes(
-                //                       'Low'
-                //                     )
-                //                   ? 30
-                //                   : 10
-                //               }
-                //               tooltipLabel="Blackbox Battery"
-                //             />
-                //           </div>
-                //         </TableCell>
-
-                //         <TableCell className="px-6 py-4 whitespace-nowrap">
-                //           <TooltipProvider>
-                //             <Tooltip>
-                //               <TooltipTrigger asChild>
-                //                 <div className="flex items-baseline gap-1 cursor-pointer">
-                //                   <span
-                //                     className={cn(
-                //                       'text-3xl font-bold',
-                //                       row.alerts > 0
-                //                         ? 'text-red-500'
-                //                         : 'text-muted-foreground'
-                //                     )}
-                //                   >
-                //                     {row.alerts}
-                //                   </span>
-
-                //                   <span className="text-sm text-muted-foreground">
-                //                     Alerts
-                //                   </span>
-                //                 </div>
-                //               </TooltipTrigger>
-
-                //               {row.alertDetails &&
-                //                 row.alertDetails.length >
-                //                   0 && (
-                //                   <TooltipContent className="bg-black text-white border-black">
-                //                     <div className="p-1">
-                //                       <p className="font-semibold mb-1">
-                //                         Alerts:
-                //                       </p>
-
-                //                       <ul className="text-xs space-y-1">
-                //                         {Object.entries(
-                //                           alertCounts
-                //                         ).map(
-                //                           ([
-                //                             alert,
-                //                             count,
-                //                           ]) => (
-                //                             <li key={alert}>
-                //                               {alert} -{' '}
-                //                               {String(
-                //                                 count
-                //                               )}
-                //                             </li>
-                //                           )
-                //                         )}
-                //                       </ul>
-                //                     </div>
-                //                   </TooltipContent>
-                //                 )}
-                //             </Tooltip>
-                //           </TooltipProvider>
-                //         </TableCell>
-
-                //         <TableCell className="px-6 py-4 whitespace-nowrap text-center">
-                //           <DropdownMenu>
-                //             <DropdownMenuTrigger asChild>
-                //               <Button
-                //                 variant="ghost"
-                //                 size="icon"
-                //               >
-                //                 <MoreHorizontal className="h-5 w-5" />
-                //               </Button>
-                //             </DropdownMenuTrigger>
-
-                //             <DropdownMenuContent align="end">
-                //               <DropdownMenuItem asChild>
-                //                 <Link
-                //                   to={`/vehicle-status/route-playback?vehicle=${row.vehicleName}`}
-                //                 >
-                //                   Route Playback
-                //                 </Link>
-                //               </DropdownMenuItem>
-
-                //               <DropdownMenuItem asChild>
-                //                 <Link
-                //                   to={`/reports/speed-driving/speed-analysis?vehicle=${row.vehicleName}`}
-                //                 >
-                //                   Speed Analysis
-                //                 </Link>
-                //               </DropdownMenuItem>
-
-                //               <DropdownMenuItem asChild>
-                //                 <Link
-                //                   to={`/reports/trip-distance/distance?vehicle=${row.vehicleName}`}
-                //                 >
-                //                   Distance Report
-                //                 </Link>
-                //               </DropdownMenuItem>
-                //             </DropdownMenuContent>
-                //           </DropdownMenu>
-                //         </TableCell>
-
-                //         <TableCell className="px-6 py-4 whitespace-nowrap text-center">
-                //           <Button
-                //             variant="ghost"
-                //             size="icon"
-                //             onClick={() =>
-                //               handleOpenDetail(row)
-                //             }
-                //           >
-                //             <ExternalLink className="h-5 w-5 text-muted-foreground" />
-                //           </Button>
-                //         </TableCell>
-                //       </TableRow>
-                //     );
-                //   })}
-                // </TableBody>
               )}
             </Table>
           </div>
