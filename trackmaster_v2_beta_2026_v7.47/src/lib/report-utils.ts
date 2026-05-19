@@ -47,32 +47,49 @@ export const sortReportData = (data: ReportRow[], sortConfig: { key: ReportSortK
 export const sortAndCalculateDetails = (details: BaseDetailData[], totalDistance: number, sortConfig: { key: DetailSortKey; direction: 'asc' | 'desc' }): DetailRow[] => {
   const totalDuration = details.reduce((sum, d) => sum + d.duration, 0);
 
-  const chronologicallyCalculated = [...details]
-    .sort((a, b) => a.startTime.localeCompare(b.startTime))
-    .map(detail => {
-      const explicitDistance = (detail as any).sessionDistance;
-      const sessionDistance = typeof explicitDistance === 'number' && !Number.isNaN(explicitDistance)
-        ? explicitDistance
-        : totalDuration > 0
-          ? (detail.duration / totalDuration) * totalDistance
-          : 0;
+  // First, compute sessionDistance for each detail
+  const withSession = details.map(detail => {
+    const explicitDistance = (detail as any).sessionDistance;
+    const sessionDistance = typeof explicitDistance === 'number' && !Number.isNaN(explicitDistance)
+      ? explicitDistance
+      : totalDuration > 0
+        ? (detail.duration / totalDuration) * totalDistance
+        : 0;
+    return { ...detail, sessionDistance };
+  });
 
-      return { ...detail, sessionDistance, cumulativeDistance: 0 };
-    });
+  // Compute cumulativeDistance in chronological order (based on startTime)
+  const chronological = [...withSession].sort((a, b) => a.startTime.localeCompare(b.startTime));
+  let cumulative = 0;
+  const withCumulative = chronological.map(d => {
+    cumulative += d.sessionDistance;
+    return { ...d, cumulativeDistance: cumulative };
+  });
 
-  const sorted = [...chronologicallyCalculated].sort((a, b) => {
-    const aValue = a[sortConfig.key];
-    const bValue = b[sortConfig.key];
-    if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
-    if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+  // Now sort the final array based on the requested key. Sorting uses the already-computed cumulativeDistance when requested.
+  const sorted = [...withCumulative].sort((a, b) => {
+    const aValue = a[sortConfig.key as keyof typeof a];
+    const bValue = b[sortConfig.key as keyof typeof b];
+
+    // Handle undefined/null gracefully
+    if (aValue == null && bValue == null) return 0;
+    if (aValue == null) return sortConfig.direction === 'asc' ? -1 : 1;
+    if (bValue == null) return sortConfig.direction === 'asc' ? 1 : -1;
+
+    // If values are numbers, compare numerically
+    if (typeof aValue === 'number' && typeof bValue === 'number') {
+      return sortConfig.direction === 'asc' ? aValue - bValue : bValue - aValue;
+    }
+
+    // Fallback to string compare
+    const aStr = String(aValue);
+    const bStr = String(bValue);
+    if (aStr < bStr) return sortConfig.direction === 'asc' ? -1 : 1;
+    if (aStr > bStr) return sortConfig.direction === 'asc' ? 1 : -1;
     return 0;
   });
 
-  let cumulativeDistance = 0;
-  return sorted.map(detail => {
-    cumulativeDistance += detail.sessionDistance;
-    return { ...detail, cumulativeDistance };
-  });
+  return sorted;
 };
 
 const generateExportData = (data: ReportRow[]) => {

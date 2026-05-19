@@ -145,32 +145,31 @@ const DistanceReportToolbar = ({
             defaultMonth={dateRange?.from}
             selected={dateRange}
             onSelect={(val) => {
-              // Normalize single-date selection so both from and to are set
+              // If cleared
               if (!val) {
                 setDateRange(undefined);
                 return;
               }
 
-              // val might be a Date or a DateRange object depending on picker
               const maybeAny: any = val;
+
+              // If a single Date is returned, treat it as the start (from) and wait for the user to pick end
               if (maybeAny instanceof Date) {
-                setDateRange({ from: maybeAny, to: maybeAny });
+                setDateRange({ from: maybeAny, to: undefined });
                 return;
               }
 
-              // Range: ensure to is set; if only from present, set to = from
+              // If only from present (user clicked first date), set from and wait for end (do not auto-set to same day)
               if (maybeAny.from && !maybeAny.to) {
-                setDateRange({ from: maybeAny.from, to: maybeAny.from });
+                setDateRange({ from: maybeAny.from, to: undefined });
                 return;
               }
 
+              // If both from and to present, respect user's click order: first click becomes `from`, second becomes `to`.
+              // Do NOT automatically swap — this preserves the user's selection flow (start then end).
               if (maybeAny.from && maybeAny.to) {
-                const from = maybeAny.from as Date;
-                const to = maybeAny.to as Date;
-                if (from > to) {
-                  setDateRange({ from: to, to: from });
-                  return;
-                }
+                setDateRange({ from: maybeAny.from as Date, to: maybeAny.to as Date });
+                return;
               }
 
               setDateRange(maybeAny as any);
