@@ -124,7 +124,7 @@ const VehicleDetailDialog = ({ open, onOpenChange, vehicle }: VehicleDetailDialo
               <DetailItem label="RC Renewal Date" value="-" />
               <DetailItem label="Engine No" value="-" />
               <DetailItem label="Chassis No" value="-" />
-              <DetailItem label="Device ID" value="CMA077067951652" />
+              <DetailItem label="Device ID" value={vehicle.id} />
               <DetailItem label="Installation Date" value="-" />
               <DetailItem label="Good Tax Amount" value="-" />
               <DetailItem label="Token Tax Amount" value="-" />
@@ -157,10 +157,10 @@ const VehicleDetailDialog = ({ open, onOpenChange, vehicle }: VehicleDetailDialo
                     </div>
                 </div>
                 <div className="space-y-2 pt-4 border-t">
-                    <DailyStatusItem label="BBID" value="C868477067851652" />
+                    <DailyStatusItem label="BBID" value={vehicle.id} />
                     <DailyStatusItem label="Driver Name" value={vehicleDetails?.driver} />
                     <DailyStatusItem label="Driver Mobile" value={null} />
-                    <DailyStatusItem label="Coordinates" value="30.92, 76.83" />
+                    <DailyStatusItem label="Coordinates" value={`${vehicle.lat}, ${vehicle.lng}`} />
                     <DailyStatusItem label="Two Way Comms" value="5754160173629" />
                 </div>
             </CardContent>
