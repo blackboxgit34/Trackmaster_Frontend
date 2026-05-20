@@ -9,7 +9,7 @@ export const messageTypes = [
   'Over-speed', 'OverStoppage', 'Stoppage', 'Idling'
 ] as const;
 
-export const notificationTypes = ['SMS', 'In-App'] as const;
+export const notificationTypes = ['SMS', 'Notification'] as const;
 export const deliveryStatuses = ['Sent', 'Delivered', 'Failed', 'Read'] as const;
 
 export interface NotificationData {

@@ -44,6 +44,15 @@ interface TripDetailsTableProps {
 const TripDetailsTable = ({ details, totalDistance }: TripDetailsTableProps) => {
   const [sortConfig, setSortConfig] = useState<{ key: DetailSortKey; direction: 'asc' | 'desc' }>({ key: 'startTime', direction: 'asc' });
 
+  const handleSort = (key: DetailSortKey) => {
+    setSortConfig(prev => {
+      if (prev.key === key) {
+        return { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' };
+      }
+      return { key, direction: 'asc' };
+    });
+  };
+
   const sortedAndCalculatedDetails = useMemo(() => {
     return sortAndCalculateDetails(details, totalDistance, sortConfig);
   }, [details, totalDistance, sortConfig]);
@@ -63,12 +72,12 @@ const TripDetailsTable = ({ details, totalDistance }: TripDetailsTableProps) => 
           <Table>
             <TableHeader>
               <TableRow>
-                <SortableHeader sortKey="startTime" currentSort={sortConfig} onSort={setSortConfig}>Start Time</SortableHeader>
-                <SortableHeader sortKey="endTime" currentSort={sortConfig} onSort={setSortConfig}>End Time</SortableHeader>
-                <SortableHeader sortKey="duration" currentSort={sortConfig} onSort={setSortConfig}>Duration (hrs)</SortableHeader>
-                <SortableHeader sortKey="sessionDistance" currentSort={sortConfig} onSort={setSortConfig}>Est. Distance (km)</SortableHeader>
-                <SortableHeader sortKey="cumulativeDistance" currentSort={sortConfig} onSort={setSortConfig}>Est. Cumulative (km)</SortableHeader>
-                <SortableHeader sortKey="location" currentSort={sortConfig} onSort={setSortConfig}>Start Location</SortableHeader>
+                <SortableHeader sortKey="startTime" currentSort={sortConfig} onSort={handleSort}>Start Time</SortableHeader>
+                <SortableHeader sortKey="endTime" currentSort={sortConfig} onSort={handleSort}>End Time</SortableHeader>
+                <SortableHeader sortKey="duration" currentSort={sortConfig} onSort={handleSort}>Duration (hrs)</SortableHeader>
+                <SortableHeader sortKey="sessionDistance" currentSort={sortConfig} onSort={handleSort}>Est. Distance (km)</SortableHeader>
+                <SortableHeader sortKey="cumulativeDistance" currentSort={sortConfig} onSort={handleSort}>Est. Cumulative (km)</SortableHeader>
+                <SortableHeader sortKey="location" currentSort={sortConfig} onSort={handleSort}>Start Location</SortableHeader>
               </TableRow>
             </TableHeader>
             <TableBody>
