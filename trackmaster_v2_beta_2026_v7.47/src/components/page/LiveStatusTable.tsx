@@ -72,8 +72,7 @@ import { Badge } from '@/components/ui/badge';
 import BlackboxSignalIcon from '../icons/BlackboxSignalIcon';
 import { getVehicleStatusList } from '@/hooks/useApi';
 import { DataTableRequestModel } from '@/hooks/DataTableRequestModel';
-import type { VehicleStatus, LiveVehicleStatus } from '@/types';
-
+import { API_BASE_URL } from '@/config/Api';
 
 const StatusBadge = ({ status }: { status: string }) => {
   const styles: Record<string, string> = {
@@ -237,48 +236,6 @@ const GsmSignalIcon = ({ signal }: { signal: number }) => {
   );
 };
 
-
-// const BatteryIcon = ({
-//   level,
-//   tooltipLabel,
-// }: {
-//   level: number;
-//   tooltipLabel: string;
-// }) => {
-//   let Icon, text, color;
-
-//   if (level > 70) {
-//     Icon = BatteryFull;
-//     text = 'High';
-//     color = 'text-green-500';
-//   } else if (level > 30) {
-//     Icon = BatteryMedium;
-//     text = 'Medium';
-//     color = 'text-yellow-500';
-//   } else {
-//     Icon = BatteryLow;
-//     text = 'Low';
-//     color = 'text-red-500';
-//   }
-
-//   return (
-//     <TooltipProvider>
-//       <Tooltip>
-//         <TooltipTrigger asChild>
-//           <button>
-//             <Icon className={cn('h-5 w-5', color)} />
-//           </button>
-//         </TooltipTrigger>
-
-//         <TooltipContent className="bg-black text-white border-black">
-//           <p>
-//             {tooltipLabel}: {text} ({level}%)
-//           </p>
-//         </TooltipContent>
-//       </Tooltip>
-//     </TooltipProvider>
-//   );
-// };
 const BatteryIcon = ({ battery, tooltipLabel }: { battery: number; tooltipLabel: string }) => {
   let Icon, text, color;
   switch (true) {
@@ -480,30 +437,18 @@ const TableSkeleton = () => (
 const LiveStatusTable = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-
   const statusFromUrl = searchParams.get('status');
-
   const [searchTerm, setSearchTerm] = useState('');
-  const [pagination, setPagination] = useState({
-    pageIndex: 0,
-    pageSize: 10,
-  });
-
+  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10, });
   const [isDetailOpen, setIsDetailOpen] = useState(false);
-  const [selectedVehicleForDetail, setSelectedVehicleForDetail] =
-    useState<any | null>(null);
-
+  const [selectedVehicleForDetail, setSelectedVehicleForDetail] = useState<any | null>(null);
   const [isLiveLocationOpen, setIsLiveLocationOpen] = useState(false);
-
-  const [selectedVehicleForLive, setSelectedVehicleForLive] =
-    useState<any | null>(null);
-
+  const [selectedVehicleForLive, setSelectedVehicleForLive] = useState<any | null>(null);
   const [liveStatus, setLiveStatus] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [totalRecords, setTotalRecords] = useState(0);
-
-  const latestRequestRef  = useRef(0);
-
+  const latestRequestRef = useRef(0);
+  const [fuelMap, setFuelMap] = useState<any>({});
   const getLiveStatusData = async () => {
     const requestId = ++latestRequestRef.current;
 
@@ -594,7 +539,6 @@ const LiveStatusTable = () => {
   const pageCount = Math.ceil(
     totalRecords / pagination.pageSize
   );
-
   const paginatedData = liveStatus;
 
   const firstRowIndex =
@@ -604,6 +548,49 @@ const LiveStatusTable = () => {
     (pagination.pageIndex + 1) * pagination.pageSize,
     totalRecords
   );
+
+  useEffect(() => {
+    if (paginatedData.length === 0)
+      return;
+
+    const bbids =
+      paginatedData.map(x => x.bbid);
+
+     fetch(`${API_BASE_URL}/VehicleStatus/GetFuelLevels`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        bbids
+      })
+    })
+      .then(res => res.json())
+      .then(result => {
+
+        if (!result.success)
+          return;
+
+        const fuelObj =
+          result.data.reduce(
+            (acc: any, item: any) => {
+
+              acc[item.bbid] = item;
+
+              return acc;
+
+            }, {});
+
+        setFuelMap(fuelObj);
+
+      })
+      .catch(err => {
+
+        console.log(err);
+
+      });
+
+  }, [paginatedData]);
 
   return (
     <>
@@ -812,8 +799,12 @@ const LiveStatusTable = () => {
                             </span>
 
                             <span className="font-semibold">
-                              {' '}
-                              {row.curentFuelLevel || 0} L
+                              {/* {' '}
+                              {row.curentFuelLevel || 0} L */}
+                              {
+                                fuelMap[row.bbid]
+                                  ?.remainingFuelLevel || 0
+                              } L
                             </span>
                           </div>
                         </TableCell>
