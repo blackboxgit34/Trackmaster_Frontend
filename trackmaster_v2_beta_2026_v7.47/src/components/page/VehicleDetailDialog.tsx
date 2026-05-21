@@ -42,6 +42,7 @@ const mapOptions = {
 };
 
 const VehicleDetailDialog = ({ open, onOpenChange, vehicle }: VehicleDetailDialogProps) => {
+  debugger
   if (!vehicle) return null;
 
   const vehicleDetails = actualVehicles.find(m => m.id === vehicle.vehicleNo);
@@ -158,8 +159,8 @@ const VehicleDetailDialog = ({ open, onOpenChange, vehicle }: VehicleDetailDialo
                 </div>
                 <div className="space-y-2 pt-4 border-t">
                     <DailyStatusItem label="BBID" value={vehicle.id} />
-                    <DailyStatusItem label="Driver Name" value={vehicleDetails?.driver} />
-                    <DailyStatusItem label="Driver Mobile" value={null} />
+                    <DailyStatusItem label="Driver Name" value={vehicle.driverName} />
+                    <DailyStatusItem label="Driver Mobile" value={vehicle.mob_no} />
                     <DailyStatusItem label="Coordinates" value={`${vehicle.lat}, ${vehicle.lng}`} />
                     <DailyStatusItem label="Two Way Comms" value="5754160173629" />
                 </div>

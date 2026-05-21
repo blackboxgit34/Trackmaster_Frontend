@@ -152,6 +152,8 @@ export const getVehicleStatusList = async ({
     acStatus: 'Off',
     ignitionStatus: item.IgnitionStatus,
     totalRecords: item.totalRecords || 0,
+    driverName:item.driverName || '',
+    mob_no:item.mob_no||'',
 
   }));
 };

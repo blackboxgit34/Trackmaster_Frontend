@@ -33,6 +33,8 @@ export interface LiveVehicleStatus {
   sensorStatus: 'ok' | 'disconnected' | 'dirt_error';
   acStatus: 'On' | 'Off';
   ignitionStatus: 'On' | 'Off';
+  driverName: string;
+  mob_no: string;
 }
 
 export interface Vehicle {
