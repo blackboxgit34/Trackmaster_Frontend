@@ -22,7 +22,7 @@ import ShareLocationDialog from './ShareLocationDialog';
 import { format, parse , isValid } from 'date-fns';
 import BlackboxSignalIcon from '../icons/BlackboxSignalIcon';
 import SpeedGauge from './SpeedGauge';
-
+import { getIconUrl } from '@/lib/map-utils';
 
 const DeviceSignalIcon = ({
   
@@ -265,6 +265,8 @@ return (
   );
 };
 const DistanceDisplay = ({ distance }: { distance: number }) => {
+
+  
   // Format to have up to 4 integer digits and 1 decimal digit.
   const distanceString = distance.toFixed(1);
   const [integerPart, decimalPart] = distanceString.split('.');
@@ -363,6 +365,13 @@ const VehicleDataSidebar = ({ machine: vehicle, onRecenter }: VehicleDataSidebar
 
   const todayStr = format(new Date(), 'yyyy-MM-dd');
 
+const formatDuration = (minutes: number) => {
+  if (isNaN(minutes) || minutes < 0) return '0h 0m';
+  const h = Math.floor(minutes / 60);
+  const m = Math.round(minutes % 60);
+  return `${h}h ${m}m`;
+};
+
 const playbackDate = useMemo(() => {
   try {
     const parsedDate = parse(
@@ -383,7 +392,7 @@ const playbackDate = useMemo(() => {
   }
 }, [vehicle.lastUpdated, todayStr]);
 
-  const stopTimeHours = Math.floor(vehicle.idlingHours);
+  const stopTimeHours = Math.floor(vehicle.stoppageTime);
   const stopTimeMinutes = Math.round((vehicle.idlingHours - stopTimeHours) * 60);
 
   return (
@@ -394,7 +403,8 @@ const playbackDate = useMemo(() => {
             {/* Header */}
             <div className="flex items-start gap-4">
               <img
-                src="https://www.yanmar.com/ltc/global/construction/products/excavator/vio20/img/e666979970/img_mainvisual_top_01_sp.jpg"
+               src={getIconUrl(vehicle.type, vehicle.status)}
+                // src="https://www.yanmar.com/ltc/global/construction/products/excavator/vio20/img/e666979970/img_mainvisual_top_01_sp.jpg"
                 alt={vehicle.type}
                 className="h-16 w-16 object-contain"
               />
@@ -452,11 +462,11 @@ const playbackDate = useMemo(() => {
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-100 dark:bg-orange-900/30 mb-2">
                   <Clock className="h-5 w-5 text-orange-500 dark:text-orange-400" />
                 </div>
-                <p className="text-xs text-muted-foreground uppercase">Stop Time</p>
+                <p className="text-xs text-muted-foreground uppercase">Stoppage Time</p>
                 <p className="text-xl font-bold">
-                  {stopTimeHours}
-                  <span className="text-sm font-medium text-muted-foreground">h</span> {stopTimeMinutes}
-                  <span className="text-sm font-medium text-muted-foreground">m</span>
+                  {formatDuration(stopTimeHours)}
+                  {/* <span className="text-sm font-medium text-muted-foreground">h</span> {stopTimeMinutes}
+                  <span className="text-sm font-medium text-muted-foreground">m</span> */}
                 </p>
               </div>
             </div>
@@ -470,12 +480,12 @@ const playbackDate = useMemo(() => {
                             </div>
                             <div>
                                 <p className="text-xs font-semibold text-muted-foreground">PARKING STATUS</p>
-                                <p className="text-xs text-muted-foreground">Last: 0h 10m</p>
+                                {/* <p className="text-xs text-muted-foreground">{formatDuration(vehicle.idlingHours)}</p> */}
                             </div>
                         </div>
                         <div className="text-right">
                             <p className="text-xs text-muted-foreground">TOTAL TODAY</p>
-                            <p className="text-xl font-bold">{formatHoursMinutes(vehicle.idlingHours)}</p>
+                            <p className="text-xl font-bold">{formatDuration(vehicle.idlingHours)}</p>
                         </div>
                     </div>
                 </Card>
@@ -487,12 +497,12 @@ const playbackDate = useMemo(() => {
                             </div>
                             <div>
                                 <p className="text-xs font-semibold text-muted-foreground">MOVING STATUS</p>
-                                <p className="text-xs text-muted-foreground">Last: 0h 8m</p>
+                                {/* <p className="text-xs text-muted-foreground">{formatDuration(vehicle.workingHours)}</p> */}
                             </div>
                         </div>
                         <div className="text-right">
                             <p className="text-xs text-muted-foreground">TOTAL TODAY</p>
-                            <p className="text-xl font-bold text-green-500">{formatHoursMinutes(vehicle.workingHours - vehicle.idlingHours)}</p>
+                            <p className="text-xl font-bold text-green-500">{formatDuration(vehicle.workingHours)}</p>
                         </div>
                     </div>
                 </Card>

@@ -11,8 +11,9 @@ export interface LiveVehicleStatus {
   lat: number;
   lng: number;
   bbid: string;
-  workingHours?: number;
-  idlingHours?: number;
+  workingHours: number;
+  idlingHours: number;
+  stoppageTime: number;
   fuelConsumed?: number;
   gsmSignal: number;
   deviceSignal: number;
