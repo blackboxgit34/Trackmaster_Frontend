@@ -45,6 +45,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { API_BASE_URL } from '@/config/Api';
+import { DataTableRequestModel } from '@/hooks/DataTableRequestModel';
 
 
 type StoppageReportData = {
@@ -285,73 +286,91 @@ const StoppageAnalysisTable = () => {
     (page + 1) * rowsPerPage,
     totalRecords
   );
+  const buildRequestModel = (): DataTableRequestModel => {
+  const start = date?.from;
+  const end = date?.to;
+
+  return {
+    CustId: custId,
+
+    sEcho: 1,
+
+    iDisplayStart: page * rowsPerPage,
+
+    iDisplayLength: rowsPerPage,
+
+    sSearch:
+      selectedVehicle === ""
+        ? ""
+        : selectedVehicle || "",
+
+    sortColumn: "0",
+
+    sortDirection:
+      (sortConfig?.direction?.toLowerCase() as "asc" | "desc") || "asc",
+
+    interval: intervalFilter || undefined,
+
+    beginDate: start
+      ? new Date(
+          new Date(start).setHours(0, 0, 0, 0)
+        ).toISOString()
+      : "",
+
+    endDate: end
+      ? new Date(
+          new Date(end).setHours(23, 59, 59, 999)
+        ).toISOString()
+      : "",
+  };
+};
   // ================= API CALL =================
-const [loading, setLoading] = useState(true);
-  const fetchStoppageReport = useCallback(async () => {
-    setLoading(true);
-    try {
-       const start = date?.from;
-      const end = date?.to;
+  const [loading, setLoading] = useState(true);
 
-      // const beginDate = start
-      //   ? new Date(start.setHours(0, 0, 0, 0)).toString()
-      //   : "";
+const fetchStoppageReport = useCallback(async () => {
+  setLoading(true);
 
-      // const endDate = end
-      //   ? new Date(end.setHours(23, 59, 59, 999)).toString()
-      //   : "";
-    
-const beginDate = start
-  ? new Date(
-      new Date(start).setHours(0, 0, 0, 0)
-    ).toISOString()
-  : "";
-const endDate = end
-  ? new Date(
-      new Date(end).setHours(23, 59, 59, 999)
-    ).toISOString()
-  : "";
-      const params = new URLSearchParams({
-       beginDate,
-     endDate,
-        CustId: custId,
-        interval: intervalFilter || "",
-        downloadType: "",
-        reportName: "",
-        sEcho: "1",
-        iDisplayStart: String(page * rowsPerPage),
-        iDisplayLength: String(rowsPerPage),
-        sSearch: selectedVehicle === "" ? "" : selectedVehicle || "",
-        iSortCol_0: "0",
-        sSortDir_0: sortConfig?.direction?.toUpperCase() || "ASC",
-      });
+  try {
+    const requestModel = buildRequestModel();
 
-      const url = `${API_BASE_URL}/Reports/GetAllStoppageReport?${params.toString()}`;
+    const params = new URLSearchParams(
+      Object.entries(requestModel).reduce(
+        (acc, [key, value]) => {
+          if (value !== undefined && value !== null) {
+            acc[key] = String(value);
+          }
+          return acc;
+        },
+        {} as Record<string, string>
+      )
+    );
 
-      const res = await fetch(url);
+    const url = `${API_BASE_URL}/Reports/GetAllStoppageReport?${params.toString()}`;
 
-      const json = await res.json();
+    const res = await fetch(url);
 
-      console.log(json);
+    const json = await res.json();
 
-      setApiData(json.aaData || []);
+    console.log(json);
 
-      setTotalRecords(json.iTotalRecords || json.aaData.length || 0);
+    setApiData(json.data || []);
 
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  }, [
-    date,
-    intervalFilter,
-    page,
-    rowsPerPage,
-    selectedVehicle,
-    sortConfig,
-  ]);
-
+    setTotalRecords(
+      json.iTotalRecords || json.data?.length || 0
+    );
+  } catch (err) {
+    console.error(err);
+  } finally {
+    setLoading(false);
+  }
+}, [
+  date,
+  intervalFilter,
+  page,
+  rowsPerPage,
+  selectedVehicle,
+  sortConfig,
+]);
   useEffect(() => {
     fetchStoppageReport();
   }, [fetchStoppageReport]);
@@ -562,11 +581,11 @@ const endDate = end
                                       (detail: any, index: number) => (
                                         <TableRow key={index}>
                                           <TableCell>
-                                            {detail.stopDate}
+                                            {detail.stopDateAndTime}
                                           </TableCell>
 
                                           <TableCell>
-                                            {detail.stopLocation}
+                                            {detail.location}
                                           </TableCell>
 
                                           <TableCell>
@@ -613,96 +632,6 @@ const endDate = end
                 </TableRow>
               )}
             </TableBody>
-
-
-            {/* <TableBody>
-              {paginatedData.map((row) => {
-                const isExpanded = expandedRows.has(row.vehicleId);
-                const sortedDetails = [...row.details].sort((a, b) => {
-                  const key = detailsSortConfig.key as keyof typeof a;
-                  let aValue = a[key];
-                  let bValue = b[key];
-                  if (typeof aValue === 'string' && typeof bValue === 'string') {
-                    return detailsSortConfig.direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
-                  }
-                  if (typeof aValue === 'number' && typeof bValue === 'number') {
-                    return detailsSortConfig.direction === 'asc' ? aValue - bValue : bValue - aValue;
-                  }
-                  return 0;
-                });
-
-                return (
-                  <React.Fragment key={row.vehicleId}>
-                    <TableRow className="bg-card hover:bg-muted/50 border-b">
-                      <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-foreground">{row.vehicleName}</TableCell>
-                      <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{row.driverName || 'N/A'}</TableCell>
-                      <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{row.stoppageCount}</TableCell>
-                      <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{formatDurationForReport(row.totalStoppageTime)}</TableCell>
-                      <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-right">
-                        <Button variant="link" onClick={() => toggleRow(row.vehicleId)} className="font-medium text-brand-blue dark:text-blue-400 p-0 h-auto flex items-center gap-1">
-                          Details <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                    {isExpanded && (
-                      <TableRow className="bg-muted/20 hover:bg-muted/20">
-                        <TableCell colSpan={headers.length + 1} className="p-0">
-                          <div className="bg-muted/50 p-8">
-                            <div className="bg-card rounded-lg shadow-sm h-full flex flex-col overflow-hidden">
-                              <div className="p-6 border-b">
-                                <h5 className="text-lg font-semibold text-foreground">Stoppage Log for {row.vehicleName}</h5>
-                                <p className="text-sm text-muted-foreground">Detailed stoppage breakdown for the selected period.</p>
-                              </div>
-                              <div className="p-6">
-                                <ScrollArea className="h-[240px] pr-4">
-                                  <Table>
-                                    <TableHeader>
-                                      <TableRow>
-                                        <SortableHeader onClick={() => handleDetailsSort('stopDate')} isSorted={detailsSortConfig.key === 'stopDate'} sortDirection={detailsSortConfig.direction}>Stop date & time</SortableHeader>
-                                        <SortableHeader onClick={() => handleDetailsSort('location')} isSorted={detailsSortConfig.key === 'location'} sortDirection={detailsSortConfig.direction}>Location</SortableHeader>
-                                        <SortableHeader onClick={() => handleDetailsSort('duration')} isSorted={detailsSortConfig.key === 'duration'} sortDirection={detailsSortConfig.direction}>Duration</SortableHeader>
-                                        <SortableHeader onClick={() => handleDetailsSort('ignitionOn')} isSorted={detailsSortConfig.key === 'ignitionOn'} sortDirection={detailsSortConfig.direction}>Ignition</SortableHeader>
-                                        <TableHead>Add POI</TableHead>
-                                        <TableHead>POI Location</TableHead>
-                                      </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                      {sortedDetails.length > 0 ? (
-                                        sortedDetails.map(detail => (
-                                          <TableRow key={detail.id}>
-                                            <TableCell className="font-mono text-sm">{detail.stopDate}</TableCell>
-                                            <TableCell className="text-sm truncate">{detail.location}</TableCell>
-                                            <TableCell className="text-sm">{formatDurationForReport(detail.duration)}</TableCell>
-                                            <TableCell className="text-sm">{detail.ignitionOn ? 'On' : 'Off'}</TableCell>
-                                            <TableCell>
-                                              <Button variant="outline" size="sm">
-                                                <PlusCircle className="h-4 w-4 mr-2" />
-                                                Add POI
-                                              </Button>
-                                            </TableCell>
-                                            <TableCell className="text-sm">{detail.poiLocation || 'N/A'}</TableCell>
-                                          </TableRow>
-                                        ))
-                                      ) : (
-                                        <TableRow>
-                                          <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
-                                            No stoppage details available for this period.
-                                          </TableCell>
-                                        </TableRow>
-                                      )}
-                                    </TableBody>
-                                  </Table>
-                                </ScrollArea>
-                              </div>
-                            </div>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </React.Fragment>
-                );
-              })}
-            </TableBody> */}
           </Table>
         </div>
       </CardContent>
