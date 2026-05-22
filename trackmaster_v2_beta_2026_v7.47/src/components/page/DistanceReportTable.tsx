@@ -24,7 +24,6 @@ import DistanceReportRows from './reports/DistanceReportRows';
 import ReportPagination from './reports/ReportPagination';
 
 const headers: { key: ReportSortKey; label: string }[] = [
-  { key: 'date', label: 'Date' },
   { key: 'vehicleId', label: 'Vehicle ID' },
   { key: 'vehicleName', label: 'Vehicle Name' },
   { key: 'distance', label: 'Distance (km)' },
@@ -60,7 +59,7 @@ const SortableHeader = ({ children, sortKey, currentSort, onSort }: { children: 
 const DistanceReportTable = () => {
   const [dateRange, setDateRange] = useState<DateRange | undefined>({ from: subWeeks(new Date(), 1), to: new Date() });
   const [selectedVehicle, setSelectedVehicle] = useState('');
-  const [sortConfig, setSortConfig] = useState<{ key: ReportSortKey; direction: 'asc' | 'desc' }>({ key: 'date', direction: 'desc' });
+  const [sortConfig, setSortConfig] = useState<{ key: ReportSortKey; direction: 'asc' | 'desc' }>({ key: 'BBID', direction: 'asc' });
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
@@ -99,9 +98,12 @@ const DistanceReportTable = () => {
     });
   };
 
-  if (isLoading) {
-    return <div>Loading...</div>;
-  }
+   if (isLoading) return <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+    <div className="bg-white p-4 rounded-lg flex items-center gap-3 shadow-lg">
+      <div className="animate-spin h-5 w-5 border-2 border-black border-t-transparent rounded-full"></div>
+      <span>Please wait...</span>
+    </div>
+  </div>;
 
   return (
     <Card className="shadow-sm overflow-hidden">

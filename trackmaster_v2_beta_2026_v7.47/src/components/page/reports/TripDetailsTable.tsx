@@ -64,7 +64,7 @@ const TripDetailsTable = ({ details, totalDistance }: TripDetailsTableProps) => 
           Trip Details
         </h5>
         <p className="text-sm text-muted-foreground">
-          Detailed trip breakdown for the selected day.
+          Detailed trip breakdown for the selected date range.
         </p>
       </div>
       <div className="p-6">

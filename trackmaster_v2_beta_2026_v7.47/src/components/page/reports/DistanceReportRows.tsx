@@ -46,7 +46,6 @@ const DistanceReportRows = ({
         return (
           <React.Fragment key={row.id}>
             <TableRow className="bg-card hover:bg-muted/50 border-b">
-              <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{row.date}</TableCell>
               <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{row.vehicleId}</TableCell>
               <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-foreground font-semibold">{row.vehicleName}</TableCell>
               <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{row.distance.toFixed(1)}</TableCell>

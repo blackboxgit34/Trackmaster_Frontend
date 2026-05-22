@@ -74,8 +74,6 @@ export const useDistanceReportData = ({
 
         const mapSortKeyToApiColumn = (key: string): string => {
           switch (key) {
-            case 'date':
-              return 'Date';
             case 'vehicleId':
               return 'BBID';
             case 'vehicleName':
@@ -83,7 +81,7 @@ export const useDistanceReportData = ({
             case 'distance':
               return 'Distance';
             default:
-              return 'Date';
+              return 'BBID'; // Default sort column
           }
         };
 
@@ -126,14 +124,10 @@ export const useDistanceReportData = ({
         };
 
         const rows: ReportRow[] = data.map((item: any, index: number) => {
-          const rawDate = getProp(item, 'Date');
-          const date = rawDate ? new Date(rawDate) : new Date();
-          const formattedDate = format(date, 'yyyy-MM-dd');
           const distanceValue = parseNumber(getProp(item, 'Distance'));
 
           return {
-            id: `${getProp(item, 'BBID') ?? 'unknown'}-${formattedDate}-${index}`,
-            date: formattedDate,
+            id: `${getProp(item, 'BBID') ?? 'unknown'}-${index}`,
             vehicleId: getProp(item, 'BBID') ?? '',
             vehicleName: getProp(item, 'VehName') ?? '',
             distance: distanceValue,
@@ -141,18 +135,14 @@ export const useDistanceReportData = ({
         });
 
         const details: BaseDetailData[] = data.flatMap((item: any, rowIndex: number) => {
-          const rawDate = getProp(item, 'Date');
-          const date = rawDate ? new Date(rawDate) : new Date();
-          const formattedDate = format(date, 'yyyy-MM-dd');
           const vehicleId = getProp(item, 'BBID') ?? '';
           const tripDetailsRaw = getProp(item, '_distanceReportSubDataModel') ?? [];
 
           const tripDetails = Array.isArray(tripDetailsRaw) ? tripDetailsRaw : [];
 
           return tripDetails.map((sub: any, detailIndex: number) => ({
-            id: `${vehicleId}-${formattedDate}-${rowIndex}-${detailIndex}`,
+            id: `${vehicleId}-${rowIndex}-${detailIndex}`,
             vehicleId,
-            date: formattedDate,
             startTime: sub.StartTime ?? sub.startTime ?? '',
             endTime: sub.EndTime ?? sub.endTime ?? '',
             duration: parseDurationToHours(sub.Duration ?? sub.duration),
