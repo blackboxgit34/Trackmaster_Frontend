@@ -393,7 +393,7 @@ const playbackDate = useMemo(() => {
 }, [vehicle.lastUpdated, todayStr]);
 
   const stopTimeHours = Math.floor(vehicle.stoppageTime);
-  const stopTimeMinutes = Math.round((vehicle.idlingHours - stopTimeHours) * 60);
+  // const stopTimeMinutes = Math.round((vehicle.idlingHours - stopTimeHours) * 60);
 
   return (
     <>
@@ -610,7 +610,9 @@ const playbackDate = useMemo(() => {
             <span className="text-xs">Recenter</span>
           </Button>
           <Button asChild variant="outline" className="flex flex-col h-16 gap-1">
-            <Link to={`/vehicle-status/route-playback?vehicle=${vehicle.vehicleNo}&date=${playbackDate}`}>
+            <Link
+              to={`/vehicle-status/route-playback?vehicle=${vehicle.bbid}&date=${playbackDate}`}
+            >
               <Play className="h-5 w-5" />
               <span className="text-xs">Playback</span>
             </Link>

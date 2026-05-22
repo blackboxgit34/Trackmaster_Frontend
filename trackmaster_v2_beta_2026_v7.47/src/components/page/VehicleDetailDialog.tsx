@@ -42,7 +42,6 @@ const mapOptions = {
 };
 
 const VehicleDetailDialog = ({ open, onOpenChange, vehicle }: VehicleDetailDialogProps) => {
-  debugger
   if (!vehicle) return null;
 
   const vehicleDetails = actualVehicles.find(m => m.id === vehicle.vehicleNo);

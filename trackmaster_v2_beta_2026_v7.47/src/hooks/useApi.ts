@@ -61,14 +61,10 @@ export function useVehicleList() {
 
     const vehicles = data?.data || [];
 
-    return [
-      { label: 'All', value: 'all' },
-
-      ...vehicles.map((v: any) => ({
-        label: v.vehName,
-        value: v.bbid
-      }))
-    ];
+    return vehicles.map((v: any) => ({
+      label: v.vehName,
+      value: v.bbid,
+    }));
 
   }, [custId]);
 

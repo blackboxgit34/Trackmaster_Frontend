@@ -61,17 +61,67 @@ import { fetchAndCalculatePlaybackData } from '@/lib/playback-utils';
 
   // Data fetching
   const { data: liveStatusData, loading, refetch} = useApi(getLiveStatusData);
+  const selectedVehicle = useMemo(() => {
+    if (!selectedVehicleId || !liveStatusData) return null;
+    return liveStatusData.find(m => m.id === selectedVehicleId);
+  }, [selectedVehicleId, liveStatusData]);
+
     
+  const refreshPlaybackData = useCallback(async () => {
+
+  try {
+
+    if (!selectedVehicle?.bbid) return;
+
+    const playbackStats =
+      await fetchAndCalculatePlaybackData(
+        selectedVehicle.bbid,
+        new Date()
+      );
+
+    setVehicleExtraDetails({
+      distance: playbackStats.totalDistance || 0,
+      workingHours: playbackStats.drivingTime || 0,
+      idlingHours: playbackStats.totalIdlingTime || 0,
+      stoppageTime: playbackStats.totalStoppageTime || 0,
+    });
+
+  } catch (error) {
+
+    console.error(
+      'Failed to refresh playback data',
+      error
+    );
+
+  }
+
+}, [selectedVehicle]);
   //Auto-refresh logic
- useEffect(() => {
+useEffect(() => {
+
   if (!autoRefresh) return;
 
-  const intervalId = setInterval(() => {
-    refetch();
-  }, 180000);
+  const intervalId = setInterval(async () => {
+
+    // Refresh vehicle list/map
+    await refetch();
+
+    // Refresh playback only if sidebar open
+    if (isDataSidebarOpen && selectedVehicle) {
+      await refreshPlaybackData();
+    }
+
+  }, 60000);
 
   return () => clearInterval(intervalId);
-}, [autoRefresh]);
+
+}, [
+  autoRefresh,
+  isDataSidebarOpen,
+  selectedVehicle,
+  refreshPlaybackData,
+  refetch
+]);
 
   // Handle vehicle from URL parameter
     useEffect(() => {
@@ -105,11 +155,7 @@ import { fetchAndCalculatePlaybackData } from '@/lib/playback-utils';
     });
   }, [liveStatusData, searchTerm, selectedStatuses, selectedTypes]);
 
-  const selectedVehicle = useMemo(() => {
-    if (!selectedVehicleId || !liveStatusData) return null;
-    return liveStatusData.find(m => m.id === selectedVehicleId);
-  }, [selectedVehicleId, liveStatusData]);
-
+  
   
 const handleSelectVehicle = async (
   vehicleId: string
