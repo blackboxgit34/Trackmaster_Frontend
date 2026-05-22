@@ -111,7 +111,7 @@ useEffect(() => {
       await refreshPlaybackData();
     }
 
-  }, 30000);
+  }, 60000);
 
   return () => clearInterval(intervalId);
 
