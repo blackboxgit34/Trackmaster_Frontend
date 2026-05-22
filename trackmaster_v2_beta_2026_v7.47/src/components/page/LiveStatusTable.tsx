@@ -537,8 +537,12 @@ const handleOpenDetail = (vehicle: any) => {
       playbackMap[vehicle.bbid]?.totalDistance || 0,
 
     speed:
-      vehicle.speed || 0
+      vehicle.speed || 0,
 
+    latLongHistory:
+      playbackMap[vehicle.bbid]?.latLongHistory ||
+      vehicle.latLongHistory ||
+      [],
   });
 
   setIsDetailOpen(true);
