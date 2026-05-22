@@ -545,7 +545,13 @@ const handleOpenDetail = (vehicle: any) => {
 };
 
   const handleOpenLiveLocation = (vehicle: any) => {
-    setSelectedVehicleForLive(vehicle);
+    setSelectedVehicleForLive({
+      ...vehicle,
+      latLongHistory:
+        playbackMap[vehicle.bbid]?.latLongHistory ||
+        vehicle.latLongHistory ||
+        [],
+    });
     setIsLiveLocationOpen(true);
   };
 
