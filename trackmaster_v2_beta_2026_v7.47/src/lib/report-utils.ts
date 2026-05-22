@@ -59,8 +59,9 @@ export const sortAndCalculateDetails = (details: BaseDetailData[], totalDistance
   });
 
   // Compute cumulativeDistance in chronological order (based on startTime)
-  const chronological = [...withSession].sort((a, b) => a.startTime.localeCompare(b.startTime));
-  let cumulative = 0;
+  const chronological = [...withSession].sort(
+    (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
+  ); let cumulative = 0;
   const withCumulative = chronological.map(d => {
     cumulative += d.sessionDistance;
     return { ...d, cumulativeDistance: cumulative };
@@ -81,12 +82,23 @@ export const sortAndCalculateDetails = (details: BaseDetailData[], totalDistance
       return sortConfig.direction === 'asc' ? aValue - bValue : bValue - aValue;
     }
 
+    // Handle date sorting
+    const aDate = new Date(aValue as string);
+    const bDate = new Date(bValue as string);
+
+    if (!isNaN(aDate.getTime()) && !isNaN(bDate.getTime())) {
+      return sortConfig.direction === 'asc'
+        ? aDate.getTime() - bDate.getTime()
+        : bDate.getTime() - aDate.getTime();
+    }
+
     // Fallback to string compare
-    const aStr = String(aValue);
-    const bStr = String(bValue);
-    if (aStr < bStr) return sortConfig.direction === 'asc' ? -1 : 1;
-    if (aStr > bStr) return sortConfig.direction === 'asc' ? 1 : -1;
-    return 0;
+    const aStr = String(aValue).toLowerCase();
+    const bStr = String(bValue).toLowerCase();
+
+    return sortConfig.direction === 'asc'
+      ? aStr.localeCompare(bStr)
+      : bStr.localeCompare(aStr);
   });
 
   return sorted;
