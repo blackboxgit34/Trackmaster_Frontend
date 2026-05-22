@@ -495,7 +495,6 @@ const LiveStatusTable = () => {
 
       if (response) {
         setLiveStatus(response);
-
         setTotalRecords(
           response.length > 0
             ? (response[0] as any).totalRecords || 0
@@ -611,14 +610,11 @@ const handleOpenDetail = (vehicle: any) => {
   }, [paginatedData]);
 
 
-
-
 // ================= PLAYBACK =================
 useEffect(() => {
   let cancelled = false;
 
   const currentDateTime = new Date();
-
   async function load() {
     if (paginatedData.length === 0) return;
 
@@ -641,6 +637,8 @@ useEffect(() => {
 
         map[bbid] = {
           totalDistance: res.totalDistance,
+           latLongHistory:
+          res.playbackData?.latLongHistory || []
         };
       });
 
