@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { LoadScript } from '@react-google-maps/api';
 import { GOOGLE_MAPS_API_KEY } from '@/config/maps';
-import { parseISO, differenceInSeconds, parse, format } from 'date-fns';
+import { parseISO, parse, format } from 'date-fns';
+import { fetchAndCalculatePlaybackData } from '@/lib/playback-utils';
 
 import { Loader, Calendar as CalendarIcon } from 'lucide-react';
 
@@ -98,269 +99,43 @@ const RoutePlayback = () => {
   // ================= PLAYBACK =================
 
   useEffect(() => {
-    const loadPlaybackData = async () => {
+    let cancelled = false;
+    async function load() {
       try {
-        if (!selectedVehicle || !selectedDate) return;
-
-        const date = format(selectedDate, 'yyyy-MM-dd');
-
-        const url = `${API_BASE_URL}/VehicleStatus/GetPlaybackData?bbid=${selectedVehicle}&date=${date}`;
-
-        console.log('Playback API URL:', url);
-
-        const response = await fetch(url);
-
-        if (!response.ok) {
-          throw new Error(
-            `HTTP Error: ${response.status} ${response.statusText}`
-          );
+        const stats = await fetchAndCalculatePlaybackData(selectedVehicle!, selectedDate!);
+        if (!cancelled) {
+          setTotalDistance(stats.totalDistance);
+          setDrivingTime(stats.drivingTime);
+          setTotalIdlingTime(stats.totalIdlingTime);
+          setTotalStoppageTime(stats.totalStoppageTime);
+          setPlaybackData(stats.playbackData);
+          setPlaybackTime(0);
+          setIsPlaying(false);
+          lastPausedTime.current = 0;
         }
-
-        const text = await response.text();
-
-        const data = text ? JSON.parse(text) : null;
-
-        if (!data || !data.data || !Array.isArray(data.data)) {
-          resetPlaybackStats();
-          return;
-        }
-
-        if (data.data.length === 0) {
-          resetPlaybackStats();
-          return;
-        }
-
-        // ================= FULL PATH =================
-
-        const processedPath = data.data.map((item: any) => ({
-          lat: Number(item.latitude),
-          lng: Number(item.longitude),
-          location: item.location,
-          speed: Number(item.speed || 0),
-          timestamp: formatISO(new Date(item.datadate)),
-          engineStatus:
-            String(item.acignition).toUpperCase() === 'ON'
-              ? 'ON'
-              : 'OFF',
-          distance: Number(item.distance || 0),
-        }));
-
-        processedPath.sort(
-          (
-            a: (typeof processedPath)[0],
-            b: (typeof processedPath)[0]
-          ) =>
-            parseISO(a.timestamp).getTime() -
-            parseISO(b.timestamp).getTime()
-        );
-
-        // ================= MOVING PATH =================
-
-        const processedMovingPath = data.movingData.map((item: any) => ({
-          lat: Number(item.latitude),
-          lng: Number(item.longitude),
-          location: item.location,
-          speed: Number(item.speed || 0),
-          timestamp: formatISO(new Date(item.datadate)),
-          engineStatus:
-            String(item.acignition).toUpperCase() === 'ON'
-              ? 'ON'
-              : 'OFF',
-          distance: Number(item.distance || 0),
-        }));
-
-        processedMovingPath.sort(
-          (
-            a: (typeof processedMovingPath)[0],
-            b: (typeof processedMovingPath)[0]
-          ) =>
-            parseISO(a.timestamp).getTime() -
-            parseISO(b.timestamp).getTime()
-        );
-
-        // ================= DISTANCE / DRIVING / IDLING / STOPPAGE =================
-
-        let drivingSeconds = 0;
-        let idlingSeconds = 0;
-        let stoppageSeconds = 0;
-
-        let totalDistanceValue = 0;
-
-        let flag = false;
-
-        let sdist = 0;
-        let edist = 0;
-
-        for (let i = 0; i < processedPath.length; i++) {
-          const current = processedPath[i];
-          const next = processedPath[i + 1];
-
-          // ================= TIME CALCULATIONS =================
-
-          if (next) {
-            const diff = differenceInSeconds(
-              parseISO(next.timestamp),
-              parseISO(current.timestamp)
-            );
-
-            if (diff > 0) {
-              const speed = Number(current.speed || 0);
-
-              const engineStatus = String(
-                current.engineStatus
-              ).toUpperCase();
-
-              // ================= DRIVING =================
-
-              if (speed > 0) {
-                drivingSeconds += diff;
-              }
-
-              // ================= IDLING =================
-
-              if (
-                speed === 0 &&
-                engineStatus === 'ON'
-              ) {
-                idlingSeconds += diff;
-              }
-
-              // ================= STOPPAGE =================
-
-              if (speed === 0) {
-                stoppageSeconds += diff;
-              }
-            }
-          }
-
-          // ================= DISTANCE =================
-
-          const speed = Number(current.speed || 0);
-
-          const currentDistance = Number(
-            current.distance || 0
-          );
-
-          // START MOVEMENT
-
-          if (speed > 0 && flag === false) {
-            if (i === 0) {
-              sdist = currentDistance;
-            } else {
-              sdist = Number(
-                processedPath[i - 1]?.distance || 0
-              );
-            }
-
-            flag = true;
-          }
-
-          // CONTINUE MOVEMENT
-
-          else if (speed > 0 && flag === true) {
-            edist = currentDistance;
-          }
-
-          // STOP MOVEMENT
-
-          else if (speed <= 0 && flag === true) {
-            edist = currentDistance;
-
-            const tripDistance = Number(
-              (edist - sdist).toFixed(1)
-            );
-
-            if (
-              tripDistance > 0 &&
-              tripDistance < 500
-            ) {
-              totalDistanceValue += tripDistance;
-            }
-
-            flag = false;
-          }
-        }
-
-        // HANDLE LAST RUNNING SESSION
-
-        if (flag === true) {
-          const tripDistance = Number(
-            (edist - sdist).toFixed(1)
-          );
-
-          if (
-            tripDistance > 0 &&
-            tripDistance < 500
-          ) {
-            totalDistanceValue += tripDistance;
-          }
-        }
-
-        // ================= FINAL VALUES =================
-
-        setTotalDistance(
-          totalDistanceValue > 0
-            ? Number(totalDistanceValue.toFixed(2))
-            : 0
-        );
-
-        setDrivingTime(drivingSeconds / 60);
-
-        setTotalIdlingTime(idlingSeconds / 60);
-
-        setTotalStoppageTime(stoppageSeconds / 60);
-
-        // ================= PLAYBACK DATA =================
-        // TIMELINE SAME AS DRIVING TIME
-
-        const startTime =
-          processedMovingPath[0]?.timestamp ||
-          processedPath[0].timestamp;
-
-        const endTime =
-          processedMovingPath[
-            processedMovingPath.length - 1
-          ]?.timestamp ||
-          processedPath[processedPath.length - 1]
-            .timestamp;
-
-        const playbackDuration = drivingSeconds;
-
-        setPlaybackData({
-          path: processedPath,
-          movingPath: processedMovingPath,
-          startTime,
-          endTime,
-          duration: playbackDuration,
-        });
-
-        // ================= RESET =================
-
-        setPlaybackTime(0);
-
-        setIsPlaying(false);
-
-        lastPausedTime.current = 0;
       } catch (error) {
+        if (!cancelled) {
+          setPlaybackData(null);
+          setTotalDistance(0);
+          setDrivingTime(0);
+          setTotalIdlingTime(0);
+          setTotalStoppageTime(0);
+        }
         console.error('Playback API Error:', error);
-
-        resetPlaybackStats();
       }
-    };
-
-    const resetPlaybackStats = () => {
+    }
+    if (selectedVehicle && selectedDate) {
+      load();
+    } else {
       setPlaybackData(null);
-
       setTotalDistance(0);
-
       setDrivingTime(0);
-
       setTotalIdlingTime(0);
-
       setTotalStoppageTime(0);
+    }
+    return () => {
+      cancelled = true;
     };
-
-    loadPlaybackData();
   }, [selectedVehicle, selectedDate, vehicles]);
 
   // ================= CURRENT POINT =================

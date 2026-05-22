@@ -7,6 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import type { CrewMember } from '@/data/crewData';
 import AddCrewDialog, { type AddCrewFormValues } from './AddCrewDialog';
 import { API_BASE_URL } from '@/config/Api';
+import type { DataTableRequestModel } from '@/hooks/DataTableRequestModel';
 
 const CrewReportTable = ({ search }: { search: string }) => {
 const [crewMembers, setCrewMembers] = useState<CrewMember[]>([]);
@@ -56,6 +57,8 @@ const handleSort = (column: string) => {
     }
     return <ChevronsUpDown className="inline ml-1 h-4 w-4 opacity-40" />;
   };
+
+
  const getVehicleIcon = (vehicleType?: string) => {
   debugger
     const val = (vehicleType || '').toLowerCase();
@@ -68,52 +71,67 @@ const handleSort = (column: string) => {
     }
     return "/icons/vehicles/car/icon.png";
 };
-  useEffect(() => {
-    const fetchCrew = async () => {
-      try {
-        setLoading(true);
-        const auth = JSON.parse(localStorage.getItem("trackmaster-auth") || "{}");
-        const CustId = auth.custId; //dynamic custid
-        debugger
-        const params = new URLSearchParams({
-          //CustId: '45',
-          CustId: CustId, //dynamic custid
-          sEcho: '1',        
-          iDisplayStart: String(page * rowsPerPage),
-          iDisplayLength: String(rowsPerPage),
-          sSearch: search && search.trim() !== '' ? search : 'null',
-          sortColumn: sortMap[sortColumn],
-          sortDirection: sortDirection.toUpperCase()
-        });
-        const res = await fetch(
-          `${API_BASE_URL}/Reports/GetConductorInfo?${params}`
-        );
-        const data = await res.json();
-        setTotalRecords(data.iTotalRecords);
-        setCrewMembers( 
-          (data.aaData || []).map((item: any, index: number) => ({
-            id: item.bbid || `crew-${index}`,
-            //  FIXED ICON ISSUE
-            type: getVehicleIcon(item.vehicleType),
-            vehicleName: item.vehicleName,
-            driverName: item.driverName === 'No Driver Assigned' ? null : item.driverName,
-            conductorName: item.conductor
-          }))
-        );
 
-      } catch (e) {
-        toast({
-          title: "Error",
-          description: "Failed to load data"
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
+ useEffect(() => {
+  const fetchCrew = async () => {
+    try {
+      setLoading(true);
 
-    fetchCrew();
-  }, [page, rowsPerPage, search, sortColumn, sortDirection]);
-  
+      const auth = JSON.parse(
+        localStorage.getItem("trackmaster-auth") || "{}"
+      );
+
+      const requestModel: DataTableRequestModel = {
+        CustId: auth.custId,
+        sEcho: 1,
+        iDisplayStart: page * rowsPerPage,
+        iDisplayLength: rowsPerPage,
+        sSearch: search?.trim() || "",
+        sortColumn: sortMap[sortColumn],
+        sortDirection: sortDirection,
+      };
+
+      const params = new URLSearchParams();
+
+      Object.entries(requestModel).forEach(([key, value]) => {
+        params.append(key, String(value ?? ""));
+      });
+
+      const res = await fetch(
+        `${API_BASE_URL}/Reports/GetConductorInfo?${params}`
+      );
+
+      const data = await res.json();
+
+      setTotalRecords(data.iTotalRecords);
+
+      setCrewMembers(
+        (data.aaData || []).map((item: any, index: number) => ({
+          id: item.bbid || `crew-${index}`,
+          type: getVehicleIcon(item.vehicleType),
+          vehicleName: item.vehicleName,
+          driverName:
+            item.driverName === "No Driver Assigned"
+              ? null
+              : item.driverName,
+          conductorName: item.conductor,
+        }))
+      );
+    } catch (e) {
+      toast({
+        title: "Error",
+        description: "Failed to load data",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchCrew();
+}, [page, rowsPerPage, search, sortColumn, sortDirection]);
+
+
+
   const handleAddCrew = (data: AddCrewFormValues) => {
     const newCrew: CrewMember = {
       id: `crew-${Date.now()}`,

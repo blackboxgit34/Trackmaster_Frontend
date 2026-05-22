@@ -19,10 +19,10 @@ import type { LiveVehicleStatus, VehicleStatus } from '@/types';
 import FuelGauge from './FuelGauge';
 import { useToast } from '@/hooks/use-toast';
 import ShareLocationDialog from './ShareLocationDialog';
-import { format, parse } from 'date-fns';
+import { format, parse , isValid } from 'date-fns';
 import BlackboxSignalIcon from '../icons/BlackboxSignalIcon';
 import SpeedGauge from './SpeedGauge';
-
+import { getIconUrl } from '@/lib/map-utils';
 
 const DeviceSignalIcon = ({
   
@@ -32,7 +32,7 @@ const DeviceSignalIcon = ({
   gpsAntConStatus: number | null;
   GPSFix: number | null;
 }) => {
-  debugger
+  
   let text = 'Unknown';
   let color = 'text-muted-foreground';
   let Icon;
@@ -152,7 +152,6 @@ const GsmSignalIcon = ({ signal }: { signal: number }) => {
     </TooltipProvider>
   );
 };
-
 const BatteryIcon = ({ battery, tooltipLabel }: { battery: number; tooltipLabel: string }) => {
     let Icon, text, color;
   switch (true) {
@@ -213,10 +212,9 @@ return (
   );
   
 };
-
 const BatteryIconDevice = ({ deviceBattery, tooltipLabel }: { deviceBattery: number; tooltipLabel: string }) => {
   let Icon, text, color;
-  debugger
+  
   switch (true) {
     case deviceBattery == null:
       Icon = TriangleAlert;
@@ -267,6 +265,8 @@ return (
   );
 };
 const DistanceDisplay = ({ distance }: { distance: number }) => {
+
+  
   // Format to have up to 4 integer digits and 1 decimal digit.
   const distanceString = distance.toFixed(1);
   const [integerPart, decimalPart] = distanceString.split('.');
@@ -293,7 +293,6 @@ const DistanceDisplay = ({ distance }: { distance: number }) => {
     </div>
   );
 };
-
 const formatHoursMinutes = (hoursDecimal: number, format: 'short' | 'long' = 'short') => {
   const hours = Math.floor(hoursDecimal);
   const minutes = Math.round((hoursDecimal - hours) * 60);
@@ -366,18 +365,35 @@ const VehicleDataSidebar = ({ machine: vehicle, onRecenter }: VehicleDataSidebar
 
   const todayStr = format(new Date(), 'yyyy-MM-dd');
 
-  const playbackDate = useMemo(() => {
-    try {
-      const parsedDate = parse(vehicle.lastUpdated, 'dd-MMM-yyyy hh:mm:ss a', new Date());
-      return format(parsedDate, 'yyyy-MM-dd');
-    } catch (e) {
-      console.error("Failed to parse date for playback link:", e);
-      return format(new Date(), 'yyyy-MM-dd'); // Fallback to today
-    }
-  }, [vehicle.lastUpdated]);
+const formatDuration = (minutes: number) => {
+  if (isNaN(minutes) || minutes < 0) return '0h 0m';
+  const h = Math.floor(minutes / 60);
+  const m = Math.round(minutes % 60);
+  return `${h}h ${m}m`;
+};
 
-  const stopTimeHours = Math.floor(vehicle.idlingHours);
-  const stopTimeMinutes = Math.round((vehicle.idlingHours - stopTimeHours) * 60);
+const playbackDate = useMemo(() => {
+  try {
+    const parsedDate = parse(
+      vehicle.lastUpdated,
+      'M/d/yyyy hh:mm:ss a',
+      new Date()
+    );
+
+    if (!isValid(parsedDate)) {
+      console.error('Invalid date:', vehicle.lastUpdated);
+      return todayStr;
+    }
+
+    return format(parsedDate, 'yyyy-MM-dd');
+  } catch (e) {
+    console.error('Failed to parse date for playback link:', e);
+    return todayStr;
+  }
+}, [vehicle.lastUpdated, todayStr]);
+
+  const stopTimeHours = Math.floor(vehicle.stoppageTime);
+  // const stopTimeMinutes = Math.round((vehicle.idlingHours - stopTimeHours) * 60);
 
   return (
     <>
@@ -387,7 +403,8 @@ const VehicleDataSidebar = ({ machine: vehicle, onRecenter }: VehicleDataSidebar
             {/* Header */}
             <div className="flex items-start gap-4">
               <img
-                src="https://www.yanmar.com/ltc/global/construction/products/excavator/vio20/img/e666979970/img_mainvisual_top_01_sp.jpg"
+               src={getIconUrl(vehicle.type, vehicle.status)}
+                // src="https://www.yanmar.com/ltc/global/construction/products/excavator/vio20/img/e666979970/img_mainvisual_top_01_sp.jpg"
                 alt={vehicle.type}
                 className="h-16 w-16 object-contain"
               />
@@ -445,11 +462,11 @@ const VehicleDataSidebar = ({ machine: vehicle, onRecenter }: VehicleDataSidebar
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-100 dark:bg-orange-900/30 mb-2">
                   <Clock className="h-5 w-5 text-orange-500 dark:text-orange-400" />
                 </div>
-                <p className="text-xs text-muted-foreground uppercase">Stop Time</p>
+                <p className="text-xs text-muted-foreground uppercase">Stoppage Time</p>
                 <p className="text-xl font-bold">
-                  {stopTimeHours}
-                  <span className="text-sm font-medium text-muted-foreground">h</span> {stopTimeMinutes}
-                  <span className="text-sm font-medium text-muted-foreground">m</span>
+                  {formatDuration(stopTimeHours)}
+                  {/* <span className="text-sm font-medium text-muted-foreground">h</span> {stopTimeMinutes}
+                  <span className="text-sm font-medium text-muted-foreground">m</span> */}
                 </p>
               </div>
             </div>
@@ -463,12 +480,12 @@ const VehicleDataSidebar = ({ machine: vehicle, onRecenter }: VehicleDataSidebar
                             </div>
                             <div>
                                 <p className="text-xs font-semibold text-muted-foreground">PARKING STATUS</p>
-                                <p className="text-xs text-muted-foreground">Last: 0h 10m</p>
+                                {/* <p className="text-xs text-muted-foreground">{formatDuration(vehicle.idlingHours)}</p> */}
                             </div>
                         </div>
                         <div className="text-right">
                             <p className="text-xs text-muted-foreground">TOTAL TODAY</p>
-                            <p className="text-xl font-bold">{formatHoursMinutes(vehicle.idlingHours)}</p>
+                            <p className="text-xl font-bold">{formatDuration(vehicle.idlingHours)}</p>
                         </div>
                     </div>
                 </Card>
@@ -480,12 +497,12 @@ const VehicleDataSidebar = ({ machine: vehicle, onRecenter }: VehicleDataSidebar
                             </div>
                             <div>
                                 <p className="text-xs font-semibold text-muted-foreground">MOVING STATUS</p>
-                                <p className="text-xs text-muted-foreground">Last: 0h 8m</p>
+                                {/* <p className="text-xs text-muted-foreground">{formatDuration(vehicle.workingHours)}</p> */}
                             </div>
                         </div>
                         <div className="text-right">
                             <p className="text-xs text-muted-foreground">TOTAL TODAY</p>
-                            <p className="text-xl font-bold text-green-500">{formatHoursMinutes(vehicle.workingHours - vehicle.idlingHours)}</p>
+                            <p className="text-xl font-bold text-green-500">{formatDuration(vehicle.workingHours)}</p>
                         </div>
                     </div>
                 </Card>
@@ -545,36 +562,45 @@ const VehicleDataSidebar = ({ machine: vehicle, onRecenter }: VehicleDataSidebar
               </div>
             </div>
 
-            <Card>
-              <CardHeader className="p-4 pb-2">
-                <CardTitle className="text-base">Alerts</CardTitle>
-              </CardHeader>
-              <CardContent className="p-2">
-                <div className="space-y-1">
-                  {Object.entries(alertIcons).map(([name, { icon: Icon, color, slug }]) => {
-                    const count = alertCounts[name as keyof typeof alertCounts] || 0;
-                    return (
-                      <Link
-                        key={name}
-                        to={`/alerts/${slug}?vehicle=${vehicle.vehicleNo}&from=${todayStr}&to=${todayStr}`}
-                        className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50"
-                      >
-                        <div className="flex items-center gap-3">
-                          <Icon className={cn("h-5 w-5", color)} />
-                          <span className="text-sm font-medium">{name}</span>
-                        </div>
-                        <div className={cn(
-                          "flex items-center justify-center h-6 min-w-[24px] px-1 rounded-full text-xs font-bold",
-                          count > 0 ? 'bg-red-500 text-white' : 'bg-muted text-muted-foreground'
-                        )}>
-                          {count}
-                        </div>
-                      </Link>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
+            {false && (
+              <Card>
+                <CardHeader className="p-4 pb-2">
+                  <CardTitle className="text-base">Alerts</CardTitle>
+                </CardHeader>
+
+                <CardContent className="p-2">
+                  <div className="space-y-1">
+                    {Object.entries(alertIcons).map(([name, { icon: Icon, color, slug }]) => {
+                      const count = alertCounts[name as keyof typeof alertCounts] || 0;
+
+                      return (
+                        <Link
+                          key={name}
+                          to={`/alerts/${slug}?vehicle=${vehicle.vehicleNo}&from=${todayStr}&to=${todayStr}`}
+                          className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50"
+                        >
+                          <div className="flex items-center gap-3">
+                            <Icon className={cn("h-5 w-5", color)} />
+                            <span className="text-sm font-medium">{name}</span>
+                          </div>
+
+                          <div
+                            className={cn(
+                              "flex items-center justify-center h-6 min-w-[24px] px-1 rounded-full text-xs font-bold",
+                              count > 0
+                                ? "bg-red-500 text-white"
+                                : "bg-muted text-muted-foreground"
+                            )}
+                          >
+                            {count}
+                          </div>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </ScrollArea>
         {/* Footer Actions */}
@@ -584,7 +610,9 @@ const VehicleDataSidebar = ({ machine: vehicle, onRecenter }: VehicleDataSidebar
             <span className="text-xs">Recenter</span>
           </Button>
           <Button asChild variant="outline" className="flex flex-col h-16 gap-1">
-            <Link to={`/vehicle-status/route-playback?vehicle=${vehicle.vehicleNo}&date=${playbackDate}`}>
+            <Link
+              to={`/vehicle-status/route-playback?vehicle=${vehicle.bbid}&date=${playbackDate}`}
+            >
               <Play className="h-5 w-5" />
               <span className="text-xs">Playback</span>
             </Link>

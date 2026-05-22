@@ -4,7 +4,6 @@ import { Search, Filter, ChevronLeft, ChevronRight, Loader } from 'lucide-react'
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-// import { type VehicleStatus } from '@/data/mockData';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -29,8 +28,9 @@ import { useApi } from '@/hooks/useApi';
 import { getIconUrl } from '@/lib/map-utils';
 import type {LiveVehicleStatus,VehicleStatus} from '@/types';
 import { getVehicleStatusList } from '@/hooks/useApi';
+import { fetchAndCalculatePlaybackData } from '@/lib/playback-utils';
 
-const VehicleOnMap = () => {
+  const VehicleOnMap = () => {   
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
   const [isDataSidebarOpen, setIsDataSidebarOpen] = useState(false);
@@ -48,50 +48,100 @@ const VehicleOnMap = () => {
 
   // State for vehicle type filter search
   const [typeSearch, setTypeSearch] = useState('');
-
+  const [vehicleExtraDetails, setVehicleExtraDetails] =
+  useState<Partial<LiveVehicleStatus>>({});
   // calling API to get vehicle on map
   const getLiveStatusData = useCallback(async () => {
-    debugger
   const auth = JSON.parse(localStorage.getItem("trackmaster-auth") || "{}");
   return await getVehicleStatusList({
     pageName: 'vehonmap',
     CustId: auth.custId,
   });
-}, []);
+  }, []);
 
   // Data fetching
   const { data: liveStatusData, loading, refetch} = useApi(getLiveStatusData);
-  
-//    //Auto-refresh logic
- useEffect(() => {
+  const selectedVehicle = useMemo(() => {
+    if (!selectedVehicleId || !liveStatusData) return null;
+    return liveStatusData.find(m => m.id === selectedVehicleId);
+  }, [selectedVehicleId, liveStatusData]);
+
+    
+  const refreshPlaybackData = useCallback(async () => {
+
+  try {
+
+    if (!selectedVehicle?.bbid) return;
+
+    const playbackStats =
+      await fetchAndCalculatePlaybackData(
+        selectedVehicle.bbid,
+        new Date()
+      );
+
+    setVehicleExtraDetails({
+      distance: playbackStats.totalDistance || 0,
+      workingHours: playbackStats.drivingTime || 0,
+      idlingHours: playbackStats.totalIdlingTime || 0,
+      stoppageTime: playbackStats.totalStoppageTime || 0,
+    });
+
+  } catch (error) {
+
+    console.error(
+      'Failed to refresh playback data',
+      error
+    );
+
+  }
+
+}, [selectedVehicle]);
+  //Auto-refresh logic
+useEffect(() => {
+
   if (!autoRefresh) return;
 
-  const intervalId = setInterval(() => {
-    refetch();
-  }, 180000);
+  const intervalId = setInterval(async () => {
+
+    // Refresh vehicle list/map
+    await refetch();
+
+    // Refresh playback only if sidebar open
+    if (isDataSidebarOpen && selectedVehicle) {
+      await refreshPlaybackData();
+    }
+
+  }, 60000);
 
   return () => clearInterval(intervalId);
-}, [autoRefresh]);
+
+}, [
+  autoRefresh,
+  isDataSidebarOpen,
+  selectedVehicle,
+  refreshPlaybackData,
+  refetch
+]);
 
   // Handle vehicle from URL parameter
-  useEffect(() => {
-    const vehicleFromUrl = searchParams.get('vehicle');
-    if (vehicleFromUrl && liveStatusData) {
-      const vehicle = liveStatusData.find(m => m.vehicleNo === vehicleFromUrl);
-      if (vehicle) {
-        setSelectedVehicleId(vehicle.id);
-        setIsDataSidebarOpen(true);
+    useEffect(() => {
+      const vehicleFromUrl = searchParams.get('vehicle');
+      if (vehicleFromUrl && liveStatusData) {
+        const vehicle = liveStatusData.find(m => m.vehicleNo === vehicleFromUrl);
+        if (vehicle) {
+          setSelectedVehicleId(vehicle.id);
+          setIsDataSidebarOpen(true);
+        }
       }
-    }
-  }, [searchParams, liveStatusData]);
+    }, [searchParams, liveStatusData]);
 
-  const { allStatuses, allTypes } = useMemo(() => {
-    if (!liveStatusData) return { allStatuses: [], allTypes: [] };
-    return {
-      allStatuses: [...new Set(liveStatusData.map(m => m.status))],
-      allTypes: [...new Set(liveStatusData.map(m => m.type))],
-    };
-  }, [liveStatusData]);
+    const { allStatuses, allTypes } = useMemo(() => {
+      if (!liveStatusData) return { allStatuses: [], allTypes: [] };
+      return {
+        allStatuses: [...new Set(liveStatusData.map(m => m.status))],
+        allTypes: [...new Set(liveStatusData.map(m => m.type))],
+      };
+    }, [liveStatusData]);
 
   const filteredVehicles = useMemo(() => {
     if (!liveStatusData) return [];
@@ -105,16 +155,57 @@ const VehicleOnMap = () => {
     });
   }, [liveStatusData, searchTerm, selectedStatuses, selectedTypes]);
 
-  const selectedVehicle = useMemo(() => {
-    if (!selectedVehicleId || !liveStatusData) return null;
-    return liveStatusData.find(m => m.id === selectedVehicleId);
-  }, [selectedVehicleId, liveStatusData]);
+  
+  
+const handleSelectVehicle = async (
+  vehicleId: string
+) => {
 
-  const handleSelectVehicle = (vehicleId: string) => {
+  try {
+
     setSelectedVehicleId(vehicleId);
-    setIsDataSidebarOpen(true);
-  };
 
+    setIsDataSidebarOpen(true);
+
+    // Find selected vehicle
+    const selectedVehicle =
+      liveStatusData?.find(
+        (v) => v.id === vehicleId
+      );
+
+    if (!selectedVehicle?.bbid) return;
+
+    // Playback API calculation
+    const playbackStats =
+      await fetchAndCalculatePlaybackData(
+        selectedVehicle.bbid,
+        new Date()
+      );
+
+    setVehicleExtraDetails({
+      distance:
+        playbackStats.totalDistance || 0,
+
+      workingHours:
+        playbackStats.drivingTime || 0,
+
+      idlingHours:
+        playbackStats.totalIdlingTime || 0,
+
+      stoppageTime:
+        playbackStats.totalStoppageTime || 0,
+    });
+
+
+  } catch (error) {
+
+    console.error(
+      'Failed to fetch playback data',
+      error
+    );
+
+  }
+};
   const handleStatusChange = (status: VehicleStatus) => {
     setSelectedStatuses(prev => {
       const newSet = new Set(prev);
@@ -280,7 +371,9 @@ const VehicleOnMap = () => {
                     </div>
                   )}
                   {filteredVehicles.map(vehicle => (
+                    
                     <div
+                    
                       key={vehicle.id}
                       onClick={() => handleSelectVehicle(vehicle.id)}
                       className={cn(
@@ -341,7 +434,14 @@ const VehicleOnMap = () => {
           )}>
             <div className="w-[300px] flex-shrink-0 h-full">
               {selectedVehicle ? (
-                <VehicleDataSidebar machine={selectedVehicle} onRecenter={handleRecenter} />
+                // <VehicleDataSidebar machine={selectedVehicle} onRecenter={handleRecenter} />
+                <VehicleDataSidebar
+                  machine={{
+                    ...selectedVehicle,
+                    ...vehicleExtraDetails,
+                  }}
+                  onRecenter={handleRecenter}
+                />
               ) : (
                 <div className="flex items-center justify-center h-full p-4 text-center w-full">
                   <div>

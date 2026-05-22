@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,7 +14,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import WhatsappPopup from '../../WhatsappPopup';
 import { VehicleCombobox } from '../../VehicleCombobox';
-import { vehicles } from '@/data/mockData';
+import { API_BASE_URL } from '@/config/Api';
+import { useSearchParams } from 'react-router-dom';
 
 const timeRanges = [
   { label: 'Today', value: 'today' },
@@ -57,7 +58,51 @@ const DistanceReportToolbar = ({
     setDateRange({ from: fromDate, to: toDate });
     setIsCalendarOpen(false);
   };
+  const [vehicles, setVehicles] = useState<{ label: string; value: string }[]>([]);
+  const [searchParams] = useSearchParams();
+  const vehicleFromUrl = searchParams.get('vehicle');
+  useEffect(() => {
+    const loadVehicles = async () => {
+      try {
+        const auth = JSON.parse(localStorage.getItem('trackmaster-auth') || '{}');
 
+        const custId = auth.custId;
+
+        const response = await fetch(
+          `${API_BASE_URL}/Dashboard/GetAllVehicleListByCustId?userid=${custId}`
+        );
+
+        const data = await response.json();
+
+        const formattedVehicles = [
+          {
+            label: 'All Vehicles',
+            value: '',
+          },
+          ...(data.data || []).map((v: any) => ({
+            label: v.vehName,
+            value: v.bbid,
+          })),
+        ];
+
+        setVehicles(formattedVehicles);
+
+        // Only set selected vehicle if parent hasn't provided one yet
+        if (formattedVehicles.length > 0) {
+          // If a vehicle is provided in URL, prefer that. Otherwise only set when selectedVehicle is falsy.
+          if (vehicleFromUrl) {
+            setSelectedVehicle(vehicleFromUrl);
+          } else if (!selectedVehicle) {
+            setSelectedVehicle(formattedVehicles[0].value);
+          }
+        }
+      } catch (error) {
+        console.error('Vehicle API Error', error);
+      }
+    };
+
+    loadVehicles();
+  }, []);
   return (
     <div className="flex items-center gap-2 flex-wrap justify-start sm:justify-end">
       <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
@@ -99,7 +144,36 @@ const DistanceReportToolbar = ({
             mode="range"
             defaultMonth={dateRange?.from}
             selected={dateRange}
-            onSelect={setDateRange}
+            onSelect={(val) => {
+              // If cleared
+              if (!val) {
+                setDateRange(undefined);
+                return;
+              }
+
+              const maybeAny: any = val;
+
+              // If a single Date is returned, treat it as the start (from) and wait for the user to pick end
+              if (maybeAny instanceof Date) {
+                setDateRange({ from: maybeAny, to: undefined });
+                return;
+              }
+
+              // If only from present (user clicked first date), set from and wait for end (do not auto-set to same day)
+              if (maybeAny.from && !maybeAny.to) {
+                setDateRange({ from: maybeAny.from, to: undefined });
+                return;
+              }
+
+              // If both from and to present, respect user's click order: first click becomes `from`, second becomes `to`.
+              // Do NOT automatically swap — this preserves the user's selection flow (start then end).
+              if (maybeAny.from && maybeAny.to) {
+                setDateRange({ from: maybeAny.from as Date, to: maybeAny.to as Date });
+                return;
+              }
+
+              setDateRange(maybeAny as any);
+            }}
             numberOfMonths={1}
           />
         </PopoverContent>

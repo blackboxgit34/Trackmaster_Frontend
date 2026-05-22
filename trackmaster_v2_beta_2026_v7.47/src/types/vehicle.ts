@@ -11,8 +11,9 @@ export interface LiveVehicleStatus {
   lat: number;
   lng: number;
   bbid: string;
-  workingHours?: number;
-  idlingHours?: number;
+  workingHours: number;
+  idlingHours: number;
+  stoppageTime: number;
   fuelConsumed?: number;
   gsmSignal: number;
   deviceSignal: number;
@@ -33,6 +34,12 @@ export interface LiveVehicleStatus {
   sensorStatus: 'ok' | 'disconnected' | 'dirt_error';
   acStatus: 'On' | 'Off';
   ignitionStatus: 'On' | 'Off';
+  driverName: string;
+  mob_no: string;
+  latLongHistory?: {
+    lat: number;
+    lng: number;
+  }[];
 }
 
 export interface Vehicle {
