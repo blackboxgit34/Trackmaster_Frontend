@@ -8,7 +8,7 @@ import {
 } from '@/components/ui/dialog';
 import { Card, CardContent } from '@/components/ui/card';
 import type { LiveVehicleStatus } from '@/types';
-import { GoogleMap, OverlayView } from '@react-google-maps/api';
+import { GoogleMap, OverlayView, Polyline, Marker } from '@react-google-maps/api';
 import { getIconUrl, calculateBearing, getStatusColor } from '@/lib/map-utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
@@ -32,43 +32,57 @@ const mapOptions = {
 };
 
 const LiveLocationDialog = ({ open, onOpenChange, vehicle }: LiveLocationDialogProps) => {
-  const [currentPosition, setCurrentPosition] = useState(vehicle ? { lat: vehicle.lat, lng: vehicle.lng } : null);
+  const [pathPoints, setPathPoints] = useState<{ lat: number; lng: number }[]>([]);
+  const [markerPosition, setMarkerPosition] = useState<{ lat: number; lng: number } | null>(null);
   const [currentBearing, setCurrentBearing] = useState(0);
   const [lastUpdated, setLastUpdated] = useState(new Date());
   const mapRef = useRef<google.maps.Map | null>(null);
 
   useEffect(() => {
-    if (vehicle) {
-      setCurrentPosition({ lat: vehicle.lat, lng: vehicle.lng });
+    if (!vehicle) {
+      setPathPoints([]);
+      setMarkerPosition(null);
+      return;
     }
+
+    const history = vehicle.latLongHistory?.length
+      ? vehicle.latLongHistory.map((point) => ({ lat: point.lat, lng: point.lng }))
+      : [{ lat: vehicle.lat, lng: vehicle.lng }];
+
+    setPathPoints(history);
+    setMarkerPosition(history[0]);
+    setCurrentBearing(0);
+    setLastUpdated(new Date());
   }, [vehicle]);
 
   useEffect(() => {
-    let intervalId: NodeJS.Timeout;
-    if (open && vehicle?.status === 'Moving') {
-      intervalId = setInterval(() => {
-        setCurrentPosition(prevPos => {
-          if (!prevPos) return null;
-          const newPos = {
-            lat: prevPos.lat + (Math.random() - 0.5) * 0.0002,
-            lng: prevPos.lng + (Math.random() - 0.5) * 0.0002,
-          };
-          setCurrentBearing(calculateBearing(prevPos.lat, prevPos.lng, newPos.lat, newPos.lng));
-          if (mapRef.current) {
-            mapRef.current.panTo(newPos);
-          }
-          return newPos;
-        });
-        setLastUpdated(new Date());
-      }, 5000); // Update every 5 seconds
+    if (!open || pathPoints.length <= 1) {
+      return;
     }
 
-    return () => {
-      if (intervalId) {
+    let currentIndex = 0;
+    const intervalId = setInterval(() => {
+      const nextIndex = currentIndex + 1;
+      if (nextIndex >= pathPoints.length) {
         clearInterval(intervalId);
+        return;
       }
+
+      const prev = pathPoints[currentIndex];
+      const next = pathPoints[nextIndex];
+      setMarkerPosition(next);
+      setCurrentBearing(calculateBearing(prev.lat, prev.lng, next.lat, next.lng));
+      setLastUpdated(new Date());
+      if (mapRef.current) {
+        mapRef.current.panTo(next);
+      }
+      currentIndex = nextIndex;
+    }, 1000);
+
+    return () => {
+      clearInterval(intervalId);
     };
-  }, [open, vehicle?.status]);
+  }, [open, pathPoints]);
 
   if (!vehicle) return null;
 
@@ -82,16 +96,38 @@ const LiveLocationDialog = ({ open, onOpenChange, vehicle }: LiveLocationDialogP
           </DialogDescription>
         </DialogHeader>
         <div className="flex-1 relative">
-          {currentPosition ? (
+          {markerPosition ? (
             <GoogleMap
               mapContainerStyle={containerStyle}
-              center={currentPosition}
+              center={markerPosition}
               zoom={16}
               options={mapOptions}
-              onLoad={(map) => { mapRef.current = map; }}
+              onLoad={(map) => {
+                mapRef.current = map;
+                if (pathPoints.length > 0) {
+                  const bounds = new window.google.maps.LatLngBounds();
+                  pathPoints.forEach((point) => bounds.extend(point));
+                  map.fitBounds(bounds);
+                }
+              }}
             >
+              {pathPoints.length > 1 && (
+                <>
+                  <Polyline
+                    path={pathPoints}
+                    options={{
+                      strokeColor: '#2563EB',
+                      strokeOpacity: 0.85,
+                      strokeWeight: 5,
+                    }}
+                  />
+                  <Marker position={pathPoints[0]} label="A" />
+                  <Marker position={pathPoints[pathPoints.length - 1]} label="B" />
+                </>
+              )}
+
               <OverlayView
-                position={currentPosition}
+                position={markerPosition}
                 mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
               >
                 <div style={{

@@ -6,7 +6,7 @@ export interface DataTableRequestModel {
     sSearch?: string;
     sortColumn?: string;
     sortDirection?: "asc" | "desc";
-    interval?: number;
+    interval?: string;
     beginDate?: string;
     endDate?: string;
      Status?: string | null; 

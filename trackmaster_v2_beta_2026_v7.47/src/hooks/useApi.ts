@@ -61,14 +61,10 @@ export function useVehicleList() {
 
     const vehicles = data?.data || [];
 
-    return [
-      { label: 'All', value: 'all' },
-
-      ...vehicles.map((v: any) => ({
-        label: v.vehName,
-        value: v.bbid
-      }))
-    ];
+    return vehicles.map((v: any) => ({
+      label: v.vehName,
+      value: v.bbid,
+    }));
 
   }, [custId]);
 
@@ -152,43 +148,11 @@ export const getVehicleStatusList = async ({
     acStatus: 'Off',
     ignitionStatus: item.IgnitionStatus,
     totalRecords: item.totalRecords || 0,
+    driverName:item.driverName || '',
+    mob_no:item.mob_no||'',
 
   }));
 };
 
-// ==============================
-// DISTANCE API HOOK
-// ==============================
 
-export const getVehicleDetailsByBbid = async (
-  bbid: string
-): Promise<Partial<LiveVehicleStatus>> => {
-debugger
-  const response = await fetch(
-    `${API_BASE_URL}/Dashboard/GetAllVehicleListByCustId?bbid=${bbid}`
-  );
 
-  if (!response.ok) {
-    throw new Error('Failed to fetch vehicle details');
-  }
-
-  const result = await response.json();
-
-  const item = result.data?.[0];
-
-  if (!item) {
-    return {};
-  }
-
-  return {
-    distance: Number(item.distance || 0),
-    fuelLevel: Number(item.fuelLevel || 0),
-    fuelConsumed: Number(item.fuelConsumed || 0),
-    fuelLiters: Number(item.fuelLiters || 0),
-    fuelTankCapacity: Number(item.fuelTankCapacity || 0),
-    engineTemp: Number(item.engineTemp || 0),
-    hydraulicTemp: Number(item.hydraulicTemp || 0),
-    battery: Number(item.battery || 0),
-    gpsDeviceBattery: Number(item.gpsDeviceBattery || 0),
-  };
-};

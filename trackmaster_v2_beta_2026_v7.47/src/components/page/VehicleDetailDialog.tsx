@@ -6,9 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import type { LiveVehicleStatus } from '@/types';
 import { actualVehicles } from '@/data/mockData';
-import { GoogleMap, OverlayView } from '@react-google-maps/api';
-import { getIconUrl, getStatusColor } from '@/lib/map-utils';
+import { GoogleMap, OverlayView, Polyline, Marker } from '@react-google-maps/api';
+import { getIconUrl, calculateBearing, getStatusColor } from '@/lib/map-utils';
 import { cn } from '@/lib/utils';
+import { useEffect, useRef, useState } from 'react';
 
 interface VehicleDetailDialogProps {
   open: boolean;
@@ -42,10 +43,62 @@ const mapOptions = {
 };
 
 const VehicleDetailDialog = ({ open, onOpenChange, vehicle }: VehicleDetailDialogProps) => {
+  const [pathPoints, setPathPoints] = useState<{ lat: number; lng: number }[]>([]);
+  const [markerPosition, setMarkerPosition] = useState<{ lat: number; lng: number } | null>(null);
+  const [currentBearing, setCurrentBearing] = useState(0);
+  const mapRef = useRef<google.maps.Map | null>(null);
+
+  useEffect(() => {
+    if (!vehicle) {
+      setPathPoints([]);
+      setMarkerPosition(null);
+      return;
+    }
+
+    const history = vehicle.latLongHistory?.length
+      ? vehicle.latLongHistory.map((point) => ({ lat: point.lat, lng: point.lng }))
+      : [{ lat: vehicle.lat, lng: vehicle.lng }];
+
+    setPathPoints(history);
+    setMarkerPosition(history[0]);
+    setCurrentBearing(0);
+  }, [vehicle]);
+
+  useEffect(() => {
+    if (!open || pathPoints.length <= 1) {
+      return;
+    }
+
+    let currentIndex = 0;
+    const intervalId = setInterval(() => {
+      const nextIndex = currentIndex + 1;
+      if (nextIndex >= pathPoints.length) {
+        clearInterval(intervalId);
+        return;
+      }
+
+      const prev = pathPoints[currentIndex];
+      const next = pathPoints[nextIndex];
+
+      setMarkerPosition(next);
+      setCurrentBearing(calculateBearing(prev.lat, prev.lng, next.lat, next.lng));
+
+      if (mapRef.current) {
+        mapRef.current.panTo(next);
+      }
+
+      currentIndex = nextIndex;
+    }, 1000);
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [open, pathPoints]);
+
   if (!vehicle) return null;
 
   const vehicleDetails = actualVehicles.find(m => m.id === vehicle.vehicleNo);
-  const position = { lat: vehicle.lat, lng: vehicle.lng };
+  const position = markerPosition ?? { lat: vehicle.lat, lng: vehicle.lng };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -83,7 +136,30 @@ const VehicleDetailDialog = ({ open, onOpenChange, vehicle }: VehicleDetailDialo
               center={position}
               zoom={15}
               options={mapOptions}
+              onLoad={(map) => {
+                mapRef.current = map;
+                if (pathPoints.length > 0) {
+                  const bounds = new window.google.maps.LatLngBounds();
+                  pathPoints.forEach((point) => bounds.extend(point));
+                  map.fitBounds(bounds);
+                }
+              }}
             >
+              {pathPoints.length > 1 && (
+                <>
+                  <Polyline
+                    path={pathPoints}
+                    options={{
+                      strokeColor: '#2563EB',
+                      strokeOpacity: 0.85,
+                      strokeWeight: 5,
+                    }}
+                  />
+                  <Marker position={pathPoints[0]} label="A" />
+                  <Marker position={pathPoints[pathPoints.length - 1]} label="B" />
+                </>
+              )}
+
               <OverlayView
                 position={position}
                 mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
@@ -100,6 +176,7 @@ const VehicleDetailDialog = ({ open, onOpenChange, vehicle }: VehicleDetailDialo
                     src={getIconUrl(vehicle.type, vehicle.status)}
                     alt="vehicle"
                     className="relative z-10 w-full h-full object-contain"
+                    style={{ transform: `rotate(${currentBearing}deg)`, transformOrigin: 'center' }}
                   />
                 </div>
               </OverlayView>
@@ -158,8 +235,8 @@ const VehicleDetailDialog = ({ open, onOpenChange, vehicle }: VehicleDetailDialo
                 </div>
                 <div className="space-y-2 pt-4 border-t">
                     <DailyStatusItem label="BBID" value={vehicle.id} />
-                    <DailyStatusItem label="Driver Name" value={vehicleDetails?.driver} />
-                    <DailyStatusItem label="Driver Mobile" value={null} />
+                    <DailyStatusItem label="Driver Name" value={vehicle.driverName} />
+                    <DailyStatusItem label="Driver Mobile" value={vehicle.mob_no} />
                     <DailyStatusItem label="Coordinates" value={`${vehicle.lat}, ${vehicle.lng}`} />
                     <DailyStatusItem label="Two Way Comms" value="5754160173629" />
                 </div>

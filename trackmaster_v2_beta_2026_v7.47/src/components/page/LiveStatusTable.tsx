@@ -73,6 +73,7 @@ import BlackboxSignalIcon from '../icons/BlackboxSignalIcon';
 import { getVehicleStatusList } from '@/hooks/useApi';
 import { DataTableRequestModel } from '@/hooks/DataTableRequestModel';
 import { API_BASE_URL } from '@/config/Api';
+import { fetchAndCalculatePlaybackData } from '@/lib/playback-utils';
 
 const StatusBadge = ({ status }: { status: string }) => {
   const styles: Record<string, string> = {
@@ -449,6 +450,7 @@ const LiveStatusTable = () => {
   const [totalRecords, setTotalRecords] = useState(0);
   const latestRequestRef = useRef(0);
   const [fuelMap, setFuelMap] = useState<any>({});
+  const [playbackMap, setPlaybackMap] = useState<any>({});
   const getLiveStatusData = async () => {
     const requestId = ++latestRequestRef.current;
 
@@ -493,7 +495,6 @@ const LiveStatusTable = () => {
 
       if (response) {
         setLiveStatus(response);
-
         setTotalRecords(
           response.length > 0
             ? (response[0] as any).totalRecords || 0
@@ -522,13 +523,39 @@ const LiveStatusTable = () => {
     statusFromUrl,
   ]);
 
-  const handleOpenDetail = (vehicle: any) => {
-    setSelectedVehicleForDetail(vehicle);
-    setIsDetailOpen(true);
-  };
+  // const handleOpenDetail = (vehicle: any) => {
+  //   setSelectedVehicleForDetail(vehicle,);
+  //   setIsDetailOpen(true);
+  // };
+
+const handleOpenDetail = (vehicle: any) => {
+
+  setSelectedVehicleForDetail({
+    ...vehicle,
+
+    distance:
+      playbackMap[vehicle.bbid]?.totalDistance || 0,
+
+    speed:
+      vehicle.speed || 0,
+
+    latLongHistory:
+      playbackMap[vehicle.bbid]?.latLongHistory ||
+      vehicle.latLongHistory ||
+      [],
+  });
+
+  setIsDetailOpen(true);
+};
 
   const handleOpenLiveLocation = (vehicle: any) => {
-    setSelectedVehicleForLive(vehicle);
+    setSelectedVehicleForLive({
+      ...vehicle,
+      latLongHistory:
+        playbackMap[vehicle.bbid]?.latLongHistory ||
+        vehicle.latLongHistory ||
+        [],
+    });
     setIsLiveLocationOpen(true);
   };
 
@@ -556,7 +583,7 @@ const LiveStatusTable = () => {
     const bbids =
       paginatedData.map(x => x.bbid);
 
-     fetch(`${API_BASE_URL}/VehicleStatus/GetFuelLevels`, {
+    fetch(`${API_BASE_URL}/VehicleStatus/GetFuelLevels`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -591,6 +618,55 @@ const LiveStatusTable = () => {
       });
 
   }, [paginatedData]);
+
+
+// ================= PLAYBACK =================
+useEffect(() => {
+  let cancelled = false;
+
+  const currentDateTime = new Date();
+  async function load() {
+    if (paginatedData.length === 0) return;
+
+    try {
+      const results = await Promise.all(
+        paginatedData.map(item =>
+          fetchAndCalculatePlaybackData(
+            item.bbid,
+            currentDateTime
+          )
+        )
+      );
+
+      if (cancelled) return;
+
+      const map: any = {};
+
+      results.forEach((res, index) => {
+        const bbid = paginatedData[index].bbid;
+
+        map[bbid] = {
+          totalDistance: res.totalDistance,
+           latLongHistory:
+          res.playbackData?.latLongHistory || []
+        };
+      });
+
+      setPlaybackMap(map);
+
+    } catch (error) {
+      console.error("Playback API Error:", error);
+    }
+  }
+
+  load();
+
+  return () => {
+    cancelled = true;
+  };
+}, [paginatedData]);
+
+
 
   return (
     <>
@@ -772,10 +848,7 @@ const LiveStatusTable = () => {
 
                             <span className="font-semibold">
                               {' '}
-                              {Number(
-                                row.distance || 0
-                              ).toFixed(1)}{' '}
-                              km
+                              {Number(playbackMap[row.bbid]?.totalDistance || 0).toFixed(1)} km
                             </span>
                           </div>
 

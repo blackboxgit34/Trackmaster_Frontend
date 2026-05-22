@@ -9,6 +9,7 @@ export interface PlaybackStats {
   playbackData: {
     path: any[];
     movingPath: any[];
+    latLongHistory: any[];
     startTime: string;
     endTime: string;
     duration: number;
@@ -69,6 +70,11 @@ export async function fetchAndCalculatePlaybackData(selectedVehicle: string, sel
     timestamp: formatISO(new Date(item.datadate)),
     engineStatus: String(item.acignition).toUpperCase() === 'ON' ? 'ON' : 'OFF',
     distance: Number(item.distance || 0),
+  }));
+  // ================= MOVING PATH =================
+  const processedLatLongHistory = (data.latLongData  || []).map((item: any) => ({
+    lat: Number(item.latitude),
+    lng: Number(item.longitude),
   }));
 
   processedMovingPath.sort((a: any, b: any) => parseISO(a.timestamp).getTime() - parseISO(b.timestamp).getTime());
@@ -140,6 +146,7 @@ export async function fetchAndCalculatePlaybackData(selectedVehicle: string, sel
     playbackData: {
       path: processedPath,
       movingPath: processedMovingPath,
+      latLongHistory: processedLatLongHistory,
       startTime,
       endTime,
       duration: playbackDuration,
