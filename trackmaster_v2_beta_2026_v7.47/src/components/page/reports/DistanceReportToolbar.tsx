@@ -61,6 +61,7 @@ const DistanceReportToolbar = ({
   const [vehicles, setVehicles] = useState<{ label: string; value: string }[]>([]);
   const [searchParams] = useSearchParams();
   const vehicleFromUrl = searchParams.get('vehicle');
+  const [tempRange, setTempRange] = useState<DateRange | undefined>(dateRange);
   useEffect(() => {
     const loadVehicles = async () => {
       try {
@@ -126,7 +127,82 @@ const DistanceReportToolbar = ({
             )}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-0 flex" align="end">
+        <PopoverContent className="w-auto p-0" align="end">
+  
+  {/* LEFT QUICK RANGE PANEL */}
+  <div className="flex">
+    <div className="flex flex-col space-y-1 p-2 border-r">
+      {timeRanges.map((range) => (
+        <Button
+          key={range.value}
+          variant="ghost"
+          className="justify-start"
+          onClick={() => handleTimeRangeClick(range.value)}
+        >
+          {range.label}
+        </Button>
+      ))}
+    </div>
+
+    {/* CALENDAR */}
+    <div className="p-2">
+      <Calendar
+        initialFocus
+        mode="range"
+        defaultMonth={dateRange?.from}
+        selected={tempRange}
+        onSelect={(val) => {
+          if (!val) return setTempRange(undefined);
+
+          const maybeAny: any = val;
+
+          if (maybeAny instanceof Date) {
+            setTempRange({ from: maybeAny, to: undefined });
+            return;
+          }
+
+          if (maybeAny.from && !maybeAny.to) {
+            setTempRange({ from: maybeAny.from, to: undefined });
+            return;
+          }
+
+          if (maybeAny.from && maybeAny.to) {
+            setTempRange({ from: maybeAny.from, to: maybeAny.to });
+            return;
+          }
+
+          setTempRange(maybeAny);
+        }}
+        numberOfMonths={1}
+      />
+    </div>
+  </div>
+
+  {/* ✅ BUTTONS BELOW EVERYTHING */}
+  <div className="flex justify-end gap-2 p-3 border-t bg-white">
+    <Button
+      variant="outline"
+      onClick={() => {
+        setTempRange(dateRange);
+        setIsCalendarOpen(false);
+      }}
+    >
+      Cancel
+    </Button>
+
+    <Button
+      onClick={() => {
+        setDateRange(tempRange);
+        setIsCalendarOpen(false);
+      }}
+      disabled={!tempRange?.from || !tempRange?.to}
+    >
+      Apply
+    </Button>
+  </div>
+
+</PopoverContent>
+        {/* <PopoverContent className="w-auto p-0 flex" align="end">
           <div className="flex flex-col space-y-1 p-2 border-r">
             {timeRanges.map((range) => (
               <Button
@@ -176,7 +252,7 @@ const DistanceReportToolbar = ({
             }}
             numberOfMonths={1}
           />
-        </PopoverContent>
+        </PopoverContent> */}
       </Popover>
       <VehicleCombobox vehicles={vehicles} value={selectedVehicle} onChange={setSelectedVehicle} className="w-full sm:w-[180px]" />
       <DropdownMenu>

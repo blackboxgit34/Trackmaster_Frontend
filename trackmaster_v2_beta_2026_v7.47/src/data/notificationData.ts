@@ -9,20 +9,38 @@ export const messageTypes = [
   'Over-speed', 'OverStoppage', 'Stoppage', 'Idling'
 ] as const;
 
-export const notificationTypes = ['SMS', 'Notification'] as const;
+export const notificationTypes = [
+  { id: "1", label: "SMS" },
+  { id: "2", label: "Notification" },
+];
 export const deliveryStatuses = ['Sent', 'Delivered', 'Failed', 'Read'] as const;
 
+// export interface NotificationData {
+//   id: string;
+//   vehicleId: string;
+//   vehicleName: string;
+//   messageDate: string;
+//   messageType: typeof messageTypes[number];
+//   notificationType: typeof notificationTypes[number];
+//   mobile: string;
+//   MessageText: string;
+//   androidstatus: typeof deliveryStatuses[number];
+//   iosstatus: typeof deliveryStatuses[number];
+
+// }
 export interface NotificationData {
-  id: string;
+  id: number;
   vehicleId: string;
   vehicleName: string;
   messageDate: string;
-  messageType: typeof messageTypes[number];
-  notificationType: typeof notificationTypes[number];
+  messageType: string;
+  notificationType: string;
   mobile: string;
+
   message: string;
-  androidStatus: typeof deliveryStatuses[number];
-  iosStatus: typeof deliveryStatuses[number];
+
+  androidStatus: string;
+  iosStatus: string;
 }
 
 const generateNotifications = (): NotificationData[] => {

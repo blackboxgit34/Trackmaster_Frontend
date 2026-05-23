@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Table,
   TableBody,
@@ -22,14 +22,13 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-import { notificationData, messageTypes, notificationTypes, type NotificationData } from '@/data/notificationData';
+//import { notificationData, messageTypes, notificationTypes, type NotificationData } from '@/data/notificationData';
+import { notificationTypes, type NotificationData } from '@/data/notificationData';// neha k
 import {
   ArrowUp,
   ArrowDown,
   ChevronLeft,
   ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
   Download,
   FileText,
   FileSpreadsheet,
@@ -37,7 +36,7 @@ import {
   ChevronsUpDown,
 } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
-import { subWeeks, isWithinInterval, parse, startOfDay, endOfDay } from 'date-fns';
+import { subWeeks } from 'date-fns';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import WhatsappPopup from '../WhatsappPopup';
 import { VehicleCombobox } from '../VehicleCombobox';
@@ -49,7 +48,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
+//import { ScrollArea } from '@/components/ui/scroll-area';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import Papa from 'papaparse';
@@ -64,6 +63,7 @@ import {
   CommandItem,
 } from '@/components/ui/command';
 import { Check} from 'lucide-react';
+import type { DataTableRequestModel } from '@/hooks/DataTableRequestModel';
 //========== searchable dropdown ==================//
 
 type ReportDataKey = keyof NotificationData;
@@ -107,7 +107,21 @@ const StatusBadge = ({ status }: { status: string }) => {
     'Failed': 'destructive',
   }[status] || 'secondary';
 
-  return <Badge variant={variant as any}>{status}</Badge>;
+  return <Badge variant={
+  variant as
+    | "default"
+    | "secondary"
+    | "destructive"
+    | "outline"
+}>{status}</Badge>;
+};
+
+
+const sortMap: any = {
+  vehicleName: "vehicleName",
+  messageDate: "messageDate",
+  messageType: "messageType",
+  mobile: "mobile",
 };
 
 const SmsNotificationReportTable = () => {
@@ -117,60 +131,181 @@ const SmsNotificationReportTable = () => {
 
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [sortConfig, setSortConfig] = useState<{ key: ReportDataKey; direction: 'asc' | 'desc'; }>({ key: 'messageDate', direction: 'desc' });
+  const [sortConfig, setSortConfig] = useState<{
+  key: ReportDataKey;
+  direction: "asc" | "desc";
+}>({
+  key: "messageDate",
+  direction: "desc",
+});
+  
+  // neha k
+  const [search, setSearch] = useState("");
+
+const [sortColumn, setSortColumn] =
+  useState<ReportDataKey>("messageDate");
+
+const [sortDirection, setSortDirection] =
+  useState("desc");
+  
+  
   const [date, setDate] = useState<DateRange | undefined>({ from: subWeeks(new Date(), 1), to: new Date() });
   const [selectedVehicle, setSelectedVehicle] = useState('all');
-  const [messageTypeFilter, setMessageTypeFilter] = useState('all');
-  const [notificationTypeFilter, setNotificationTypeFilter] = useState('all');
+  //const [messageTypeFilter, setMessageTypeFilter] = useState('all');
+  const [messageTypeFilter, setMessageTypeFilter] = useState('0');// neha k 22.05.2026
+  const [notificationTypeFilter, setNotificationTypeFilter] = useState('0');
 
-  const filteredData = useMemo(() => {
-    let data = [...notificationData];
+  const [reportData, setReportData] = useState<NotificationData[]>([]); //neha k 
+  const [loading, setLoading] = useState(false); //neha k 
+  const [totalRecords, setTotalRecords] = useState(0); // neha k
+  
+// neha k bind data table 
+const getMessageReports = async () => {
+  debugger
+ 
+  try {
+    setLoading(true);
+  console.log("Start Date:", date?.from);
+    console.log("End Date:", date?.to);
 
-    if (date?.from) {
-      const start = startOfDay(date.from);
-      const end = date.to ? endOfDay(date.to) : endOfDay(date.from);
-      data = data.filter(item => {
-        const itemDate = parse(item.messageDate, 'yyyy-MM-dd HH:mm', new Date());
-        return isWithinInterval(itemDate, { start, end });
-      });
+
+       const auth = JSON.parse(
+            localStorage.getItem("trackmaster-auth") || "{}"
+          );
+    
+          const requestModel: DataTableRequestModel = {
+            CustId: auth.custId,
+            sEcho: 1,
+            iDisplayStart: page * rowsPerPage,
+            iDisplayLength: rowsPerPage,
+            sSearch: search?.trim() || "",
+            sortColumn: sortMap[sortConfig.key],
+            sortDirection: sortConfig.direction,
+          };
+
+          //typeid 2
+   const typeId =
+  notificationTypeFilter === "0"
+    ? 0
+    : Number(notificationTypeFilter);
+
+    //messagetype 0
+// const messageType =
+//   messageTypeFilter === "all"
+//     ? 0
+//     : Number(messageTypeFilter);
+console.log("notificationTypeFilter =", notificationTypeFilter);
+    const params = new URLSearchParams({
+ 
+  CustId: String(auth.custId),
+
+  sEcho: String(requestModel.sEcho),
+  iDisplayStart: String(requestModel.iDisplayStart),
+  iDisplayLength: String(requestModel.iDisplayLength),
+
+  sSearch: requestModel.sSearch || "",
+
+  sortColumn: requestModel.sortColumn || "",
+
+  sortDirection: requestModel.sortDirection || "",
+
+  typeid: String(typeId),
+
+  messagetype: messageTypeFilter,
+
+  // notificationtype: String(notificationTypeFilter),
+
+ beginDate: date?.from
+  ? date.from.toLocaleString("en-US")
+  : "",
+
+endDate: date?.to
+  ? date.to.toLocaleString("en-US")
+  : "",
+});
+
+    const response = await fetch(
+  `${API_BASE_URL}/Reports/GetMessageReports?${params.toString()}`
+    );
+  
+
+    const text = await response.text();
+
+    if (!text) {
+      setReportData([]);
+      return;
     }
 
-    if (selectedVehicle !== 'all') {
-      data = data.filter(item => item.vehicleId === selectedVehicle);
-    }
+    const result = JSON.parse(text);
+    console.log(result);
+    console.log(result?.aaData);  // neha k 
 
-    if (messageTypeFilter !== 'all') {
-      data = data.filter(item => item.messageType === messageTypeFilter);
-    }
+   const formattedData = (result?.aaData || []).map(
+    //console.log(formattedData);
+  (item: any, index: number) => ({
+    id: index + 1,
+    vehicleId: String(item.vehicleId || ""),
+    vehicleName:
+      item.vehicleName ||
+      item.vehName ||
+      "-",
+    messageDate:
+      item.messageDate ||
+      "-",
+    messageType:
+      item.messageType ||
+      item.type ||
+      "-",
+    mobile:
+      item.mobile ||
+      item.mobileNo ||
+      "-",
+    message:
+      item.messageText ||
+      "-",
 
-    if (notificationTypeFilter !== 'all') {
-      data = data.filter(item => item.notificationType === notificationTypeFilter);
-    }
+    androidStatus:
+      item.androidstatus ||
+      "-",
 
-    return data;
-  }, [date, selectedVehicle, messageTypeFilter, notificationTypeFilter]);
+    iosStatus:
+      item.iosstatus ||
+      "-",
 
-  const sortedData = useMemo(() => {
-    const sortableData = [...filteredData];
-    if (sortConfig) {
-      sortableData.sort((a, b) => {
-        const aValue = a[sortConfig.key];
-        const bValue = b[sortConfig.key];
-        if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
-        if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
-        return 0;
-      });
-    }
-    return sortableData;
-  }, [filteredData, sortConfig]);
+    notificationType:
+      item.notificationType ||
+      "-",
+  })
+);
+
+    setReportData(formattedData);
+    setTotalRecords(result?.iTotalRecords || 0);
+  } catch (error) {
+    console.error("GetMessageReports API Error:", error);
+    setReportData([]);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const handleSort = (key: ReportDataKey) => {
-    setSortConfig(prev => ({ key, direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc' }));
-    setPage(0);
-  };
+  const direction =
+    sortConfig.key === key &&
+    sortConfig.direction === "asc"
+      ? "desc"
+      : "asc";
+
+  setSortConfig({
+    key,
+    direction,
+  });
+
+  setPage(0);
+};
 
   const generateExportData = () => {
-    return sortedData.map(row => ({
+    return reportData.map(row => ({
       'Vehicle No': row.vehicleName,
       'Message Date': row.messageDate,
       'Type': row.messageType,
@@ -178,6 +313,7 @@ const SmsNotificationReportTable = () => {
       'Message': row.message,
       'Android Status': row.androidStatus,
       'iOS Status': row.iosStatus,
+      
     }));
   };
 
@@ -231,6 +367,37 @@ const SmsNotificationReportTable = () => {
       })
       .catch(err => console.error("Vehicle API error:", err));
   }, []);
+
+
+// neha k
+// reset page when filters change
+useEffect(() => {
+  setPage(0);
+}, [
+  selectedVehicle,
+  messageTypeFilter,
+  notificationTypeFilter,
+  date,
+  search,
+]);
+
+// fetch report data
+useEffect(() => {
+  if (!custId) return;
+
+  getMessageReports();
+}, [
+  page,
+  rowsPerPage,
+  search,
+  selectedVehicle,
+  messageTypeFilter,
+  notificationTypeFilter,
+  sortConfig,
+  date,
+]);
+
+
   useEffect(() => {
     fetch(`${API_BASE_URL}/Reports/GetMessageType`)
       .then(async (res) => {
@@ -244,7 +411,7 @@ const SmsNotificationReportTable = () => {
       .then(data => {
         const messageTypes = data?.data || data || [];
         const formatted = [
-          { label: 'All Message Types', value: 'all' },
+          { label: 'All Message Types', value: '0'},
 
           ...messageTypes.map((item: any) => ({
             label: item.name,
@@ -257,8 +424,10 @@ const SmsNotificationReportTable = () => {
 
   }, []);
 
-  const paginatedData = sortedData.slice(page * rowsPerPage, (page + 1) * rowsPerPage);
-  const totalPages = Math.ceil(sortedData.length / rowsPerPage);
+  const paginatedData = reportData;
+  //const totalPages = Math.ceil(totalRecords / rowsPerPage);
+
+  const totalPages = Math.ceil(totalRecords / rowsPerPage);
 
   return (
     <Card className="shadow-sm overflow-hidden">
@@ -277,7 +446,7 @@ const SmsNotificationReportTable = () => {
                 role="combobox"
                 className="w-full sm:w-[220px] justify-between"
               >
-                {messageTypeFilter === "all"
+                {messageTypeFilter === "0"
                   ? "All Message Types"
                   : messageTypeList.find(
                     (item) => item.value === messageTypeFilter
@@ -315,11 +484,24 @@ const SmsNotificationReportTable = () => {
             </PopoverContent>
           </Popover>
 
-          <Select value={notificationTypeFilter} onValueChange={setNotificationTypeFilter}>
+          <Select
+ onValueChange={(value) => {
+  console.log("Selected Notification Type:", value);
+
+  setNotificationTypeFilter(String(value));
+}}
+>
             <SelectTrigger className="w-full sm:w-[180px]"><SelectValue placeholder="Notification Type" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Notification Types</SelectItem>
-              {notificationTypes.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}
+              <SelectItem value="0">All Notification Types</SelectItem>
+             {notificationTypes.map((type) => (
+  <SelectItem
+    key={String(type.id)}
+    value={String(type.id)}
+  >
+    {type.label}
+  </SelectItem>
+))}
             </SelectContent>
           </Select>
           <DropdownMenu>
@@ -330,7 +512,8 @@ const SmsNotificationReportTable = () => {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onSelect={handleExportPDF}><FileText className="mr-2 h-4 w-4" />Export as PDF</DropdownMenuItem>
-              <DropdownMenuItem onSelect={handleExportCSV}><FileSpreadsheet className="mr-2 h-4 w-4" />Export as Excel</DropdownMenuItem>
+              {/* <DropdownMenuItem onSelect={handleExportCSV}><FileSpreadsheet className="mr-2 h-4 w-4" />Export as Excel</DropdownMenuItem> */}
+               <DropdownMenuItem onSelect={handleExportCSV}><FileSpreadsheet className="mr-2 h-4 w-4" />Export as CSV</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           <WhatsappPopup />
@@ -346,32 +529,79 @@ const SmsNotificationReportTable = () => {
                     {header.label}
                   </SortableHeader>
                 ))}
-                <TableHead className="px-6 py-3 text-center">Action</TableHead>
+                {/* <TableHead className="px-6 py-3 text-center">Action</TableHead> */}
               </TableRow>
             </TableHeader>
+         
+
             <TableBody>
-              {paginatedData.map((row) => (
-                <TableRow key={row.id} className="bg-card hover:bg-muted/50 border-b">
-                  <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-foreground">{row.vehicleName}</TableCell>
-                  <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{row.messageDate}</TableCell>
-                  <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{row.messageType}</TableCell>
-                  <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{row.mobile}</TableCell>
-                  <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground max-w-xs truncate">{row.message}</TableCell>
-                  <TableCell className="px-6 py-4 whitespace-nowrap text-sm"><StatusBadge status={row.androidStatus} /></TableCell>
-                  <TableCell className="px-6 py-4 whitespace-nowrap text-sm"><StatusBadge status={row.iosStatus} /></TableCell>
-                  <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-center">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem>Resend</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
+  {loading ? (
+    <TableRow>
+      <TableCell
+        colSpan={8}
+        className="text-center py-10"
+      >
+        Loading...
+      </TableCell>
+    </TableRow>
+  ) : paginatedData.length > 0 ? (
+    paginatedData.map((row) => (
+      <TableRow key={row.id} className="bg-card hover:bg-muted/50 border-b">
+        <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-foreground">
+          {row.vehicleName}
+        </TableCell>
+
+        <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+          {row.messageDate}
+        </TableCell>
+
+        <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+          {row.messageType}
+        </TableCell>
+
+        <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+          {row.mobile}
+        </TableCell>
+         <TableCell className="px-6 py-4 text-sm text-muted-foreground max-w-[350px] whitespace-normal break-words">
+       {row.message}
+        </TableCell>
+
+        <TableCell className="px-6 py-4 whitespace-nowrap text-sm">
+          <StatusBadge status={row.androidStatus} />
+        </TableCell>
+
+        <TableCell className="px-6 py-4 whitespace-nowrap text-sm">
+          <StatusBadge status={row.iosStatus} />
+        </TableCell>
+
+        {/* <TsableCell className="px-6 py-4 whitespace-nowrap text-sm text-center">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem>
+                Resend
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </TableCell> */}
+      </TableRow>
+    ))
+  ) : (
+    <TableRow>
+      <TableCell
+        colSpan={8}
+        className="text-center py-10"
+      >
+        No Data Found
+      </TableCell>
+    </TableRow>
+  )}
+</TableBody>
           </Table>
         </div>
       </CardContent>
@@ -388,12 +618,19 @@ const SmsNotificationReportTable = () => {
           </Select>
         </div>
         <div className="flex items-center gap-4">
-          <span className="text-sm text-muted-foreground">{page * rowsPerPage + 1}-{Math.min((page + 1) * rowsPerPage, sortedData.length)} of {sortedData.length}</span>
-          <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setPage(0)} disabled={page === 0}><ChevronsLeft className="h-4 w-4" /></Button>
+         {totalRecords === 0
+  ? 0
+  : page * rowsPerPage + 1}
+-
+{Math.min(
+  (page + 1) * rowsPerPage,
+  totalRecords
+)}
+of {totalRecords}
+          <div className="flex items-center gap-1">   
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setPage(page - 1)} disabled={page === 0}><ChevronLeft className="h-4 w-4" /></Button>
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setPage(page + 1)} disabled={page >= totalPages - 1}><ChevronRight className="h-4 w-4" /></Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setPage(totalPages - 1)} disabled={page >= totalPages - 1}><ChevronsRight className="h-4 w-4" /></Button>
+           
           </div>
         </div>
       </CardFooter>

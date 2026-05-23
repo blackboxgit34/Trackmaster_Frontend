@@ -96,6 +96,7 @@ function AppLayout() {
 // This component protects routes that require authentication.
 function ProtectedRoutes() {
   const { isAuthenticated, isStaffMember } = useUser();
+  const location = useLocation();
 
   // If the user is not authenticated, redirect them to the login page.
   if (!isAuthenticated) {

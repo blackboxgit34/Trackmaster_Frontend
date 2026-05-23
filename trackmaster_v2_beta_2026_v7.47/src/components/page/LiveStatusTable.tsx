@@ -74,7 +74,7 @@ import { getVehicleStatusList } from '@/hooks/useApi';
 import { DataTableRequestModel } from '@/hooks/DataTableRequestModel';
 import { API_BASE_URL } from '@/config/Api';
 import { fetchAndCalculatePlaybackData } from '@/lib/playback-utils';
-
+import { ArrowUpDown } from "lucide-react";
 const StatusBadge = ({ status }: { status: string }) => {
   const styles: Record<string, string> = {
     Moving:
@@ -451,12 +451,15 @@ const LiveStatusTable = () => {
   const latestRequestRef = useRef(0);
   const [fuelMap, setFuelMap] = useState<any>({});
   const [playbackMap, setPlaybackMap] = useState<any>({});
+  const [sortConfig, setSortConfig] = useState({
+    sortColumn: 'vehname',
+    sortDirection: 'asc' as 'asc' | 'desc',
+  });
   const getLiveStatusData = async () => {
     const requestId = ++latestRequestRef.current;
 
     try {
       setLoading(true);
-
       // CLEAR OLD DATA IMMEDIATELY
       setLiveStatus([]);
       setTotalRecords(0);
@@ -467,18 +470,11 @@ const LiveStatusTable = () => {
 
       const requestModel: DataTableRequestModel = {
         CustId: authData?.custId || 0,
-
-        iDisplayStart:
-          pagination.pageIndex * pagination.pageSize,
-
+        iDisplayStart: pagination.pageIndex * pagination.pageSize,
         iDisplayLength: pagination.pageSize,
-
         sSearch: searchTerm || '',
-
-        sortDirection: 'desc',
-
-        interval: 0,
-
+        sortColumn: sortConfig.sortColumn,
+        sortDirection: sortConfig.sortDirection,
         Status: statusFromUrl || null,
       };
 
@@ -514,6 +510,18 @@ const LiveStatusTable = () => {
     }
   };
 
+  const handleSort = (column: string) => {
+    setSortConfig(prev => ({
+      sortColumn: column,
+      sortDirection:
+        prev.sortColumn === column && prev.sortDirection === 'asc'
+          ? 'desc'
+          : 'asc',
+    }));
+
+    setPagination(p => ({ ...p, pageIndex: 0 }));
+  };
+
   useEffect(() => {
     getLiveStatusData();
   }, [
@@ -521,32 +529,28 @@ const LiveStatusTable = () => {
     pagination.pageSize,
     searchTerm,
     statusFromUrl,
+    sortConfig,
   ]);
 
-  // const handleOpenDetail = (vehicle: any) => {
-  //   setSelectedVehicleForDetail(vehicle,);
-  //   setIsDetailOpen(true);
-  // };
+  const handleOpenDetail = (vehicle: any) => {
 
-const handleOpenDetail = (vehicle: any) => {
+    setSelectedVehicleForDetail({
+      ...vehicle,
 
-  setSelectedVehicleForDetail({
-    ...vehicle,
+      distance:
+        playbackMap[vehicle.bbid]?.totalDistance || 0,
 
-    distance:
-      playbackMap[vehicle.bbid]?.totalDistance || 0,
+      speed:
+        vehicle.speed || 0,
 
-    speed:
-      vehicle.speed || 0,
+      latLongHistory:
+        playbackMap[vehicle.bbid]?.latLongHistory ||
+        vehicle.latLongHistory ||
+        [],
+    });
 
-    latLongHistory:
-      playbackMap[vehicle.bbid]?.latLongHistory ||
-      vehicle.latLongHistory ||
-      [],
-  });
-
-  setIsDetailOpen(true);
-};
+    setIsDetailOpen(true);
+  };
 
   const handleOpenLiveLocation = (vehicle: any) => {
     setSelectedVehicleForLive({
@@ -619,54 +623,51 @@ const handleOpenDetail = (vehicle: any) => {
 
   }, [paginatedData]);
 
+  // ================= PLAYBACK =================
+  useEffect(() => {
+    let cancelled = false;
 
-// ================= PLAYBACK =================
-useEffect(() => {
-  let cancelled = false;
+    const currentDateTime = new Date();
+    async function load() {
+      if (paginatedData.length === 0) return;
 
-  const currentDateTime = new Date();
-  async function load() {
-    if (paginatedData.length === 0) return;
-
-    try {
-      const results = await Promise.all(
-        paginatedData.map(item =>
-          fetchAndCalculatePlaybackData(
-            item.bbid,
-            currentDateTime
+      try {
+        const results = await Promise.all(
+          paginatedData.map(item =>
+            fetchAndCalculatePlaybackData(
+              item.bbid,
+              currentDateTime
+            )
           )
-        )
-      );
+        );
 
-      if (cancelled) return;
+        if (cancelled) return;
 
-      const map: any = {};
+        const map: any = {};
 
-      results.forEach((res, index) => {
-        const bbid = paginatedData[index].bbid;
+        results.forEach((res, index) => {
+          const bbid = paginatedData[index].bbid;
 
-        map[bbid] = {
-          totalDistance: res.totalDistance,
-           latLongHistory:
-          res.playbackData?.latLongHistory || []
-        };
-      });
+          map[bbid] = {
+            totalDistance: res.totalDistance,
+            latLongHistory:
+              res.playbackData?.latLongHistory || []
+          };
+        });
 
-      setPlaybackMap(map);
+        setPlaybackMap(map);
 
-    } catch (error) {
-      console.error("Playback API Error:", error);
+      } catch (error) {
+        console.error("Playback API Error:", error);
+      }
     }
-  }
 
-  load();
+    load();
 
-  return () => {
-    cancelled = true;
-  };
-}, [paginatedData]);
-
-
+    return () => {
+      cancelled = true;
+    };
+  }, [paginatedData]);
 
   return (
     <>
@@ -737,10 +738,23 @@ useEffect(() => {
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/50 hover:bg-muted/50 border-b">
-                  <TableHead className="px-6 py-3 uppercase text-xs font-semibold text-muted-foreground tracking-wider">
-                    Vehicle
-                  </TableHead>
+                  <TableHead
+                    className="cursor-pointer select-none"
+                    onClick={() => handleSort('vehname')}
+                  >
+                    <div className="flex items-center gap-2">
+                      Vehicle
 
+                      <ArrowUpDown
+                        className={cn(
+                          "h-4 w-4 transition-transform duration-200",
+                          sortConfig.sortColumn === 'vehname' &&
+                          sortConfig.sortDirection === 'asc' &&
+                          "rotate-180"
+                        )}
+                      />
+                    </div>
+                  </TableHead>
                   <TableHead className="px-6 py-3 uppercase text-xs font-semibold text-muted-foreground tracking-wider">
                     Status
                   </TableHead>
