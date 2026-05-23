@@ -183,20 +183,11 @@ const handleSelectVehicle = async (
       );
 
     setVehicleExtraDetails({
-      distance:
-        playbackStats.totalDistance || 0,
-
-      workingHours:
-        playbackStats.drivingTime || 0,
-
-      idlingHours:
-        playbackStats.totalIdlingTime || 0,
-
-      stoppageTime:
-        playbackStats.totalStoppageTime || 0,
+      distance: playbackStats.totalDistance || 0,
+      workingHours: playbackStats.drivingTime || 0,
+      idlingHours: playbackStats.totalIdlingTime || 0,
+      stoppageTime: playbackStats.totalStoppageTime || 0,
     });
-
-
   } catch (error) {
 
     console.error(
