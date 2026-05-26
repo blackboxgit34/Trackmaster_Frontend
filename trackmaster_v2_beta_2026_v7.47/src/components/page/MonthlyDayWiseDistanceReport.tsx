@@ -836,7 +836,7 @@ const MonthlyDayWiseDistanceReport = () => {
                           </div>
 
                           <span className="font-bold text-sm text-foreground">
-                            {row.totalStoppage}
+                            {row.totalStoppage}h
                           </span>
                         </div>
 
