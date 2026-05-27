@@ -80,7 +80,7 @@ const intervalOptions = [
   { label: '2-3 mins', value: '2-3' },
   { label: '3-5 mins', value: '3-5' },
   { label: '5-10 mins', value: '5-10' },
-  { label: '10 mins and more', value: '10+' },
+  { label: '10 mins and more', value: '10-0' },
 ];
 
 const formatDurationForReport = (totalSeconds: number) => {
@@ -240,6 +240,10 @@ const StoppageAnalysisTable = () => {
     setPage(0);
   };
 
+  const columnMap: Record<string, string> = {
+  VehName: "VehName", 
+};
+
   // 🚗 VEHICLE LIST API
   // ===============================
 
@@ -271,6 +275,7 @@ const StoppageAnalysisTable = () => {
       })
       .catch(err => console.error("API error:", err));
   }, []);
+  
   const auth = JSON.parse(localStorage.getItem("trackmaster-auth") || "{}");
   const custId = auth.custId;
   const [apiData, setApiData] = useState<any[]>([]);
@@ -304,10 +309,10 @@ const StoppageAnalysisTable = () => {
         ? ""
         : selectedVehicle || "",
 
-    sortColumn: "0",
-
-    sortDirection:
-      (sortConfig?.direction?.toLowerCase() as "asc" | "desc") || "asc",
+    //sortColumn: "0",
+sortColumn:columnMap[sortConfig?.key as string] || "VehName",
+     sortDirection:
+       (sortConfig?.direction?.toLowerCase() as "asc" | "desc") || "asc",
 
     interval: intervalFilter || undefined,
 
@@ -356,7 +361,7 @@ const fetchStoppageReport = useCallback(async () => {
     setApiData(json.data || []);
 
     setTotalRecords(
-      json.iTotalRecords || json.data?.length || 0
+      json.count || json.data?.length || 0
     );
   } catch (err) {
     console.error(err);
@@ -489,17 +494,46 @@ const fetchStoppageReport = useCallback(async () => {
       </CardHeader>
       <CardContent className="p-0">
         <div className="overflow-x-auto">
-          <Table>
+          <Table>  
             <TableHeader>
-              <TableRow className="bg-muted/50 hover:bg-muted/50 border-b">
-                {headers.map((header) => (
-                  <SortableHeader key={header.key as string} onClick={() => handleSort(header.key)} isSorted={sortConfig.key === header.key} sortDirection={sortConfig.key === header.key ? sortConfig.direction : undefined}>
-                    {header.label}
-                  </SortableHeader>
-                ))}
-                <TableHead className="px-6 py-3"></TableHead>
-              </TableRow>
-            </TableHeader>
+  <TableRow className="bg-muted/50 hover:bg-muted/50 border-b">
+
+    {headers.map((header) => {
+
+      const isSortable =
+        header.key === "vehicleName";
+
+      return isSortable ? (
+
+        <SortableHeader
+          key={header.key as string}
+          onClick={() => handleSort(header.key)}
+          isSorted={sortConfig.key === header.key}
+          sortDirection={
+            sortConfig.key === header.key
+              ? sortConfig.direction
+              : undefined
+          }
+        >
+          {header.label}
+        </SortableHeader>
+
+      ) : (
+
+        <TableHead
+          key={header.key as string}
+          className="px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider"
+        >
+          {header.label}
+        </TableHead>
+
+      );
+    })}
+
+    <TableHead className="px-6 py-3"></TableHead>
+
+  </TableRow>
+</TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
