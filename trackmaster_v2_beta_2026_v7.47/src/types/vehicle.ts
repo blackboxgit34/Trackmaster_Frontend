@@ -36,6 +36,7 @@ export interface LiveVehicleStatus {
   ignitionStatus: 'On' | 'Off';
   driverName: string;
   mob_no: string;
+  totalRecords: number;
   latLongHistory?: {
     lat: number;
     lng: number;

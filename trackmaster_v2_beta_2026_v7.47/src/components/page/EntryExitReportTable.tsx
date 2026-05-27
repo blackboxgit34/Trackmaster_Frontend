@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Table,
   TableBody,
@@ -24,10 +24,12 @@ import {
 import { Button } from '@/components/ui/button';
 import {
   consolidatedReportTableData,
-  vehicles,
   workingHourDetails,
   actualVehicles,
 } from '@/data/mockData';
+
+import { useVehicleList } from '@/hooks/useApi';
+
 import { tripReportData } from '@/data/tripReportData';
 import { poiData } from '@/data/poiData';
 import {
@@ -64,6 +66,8 @@ import { Calendar } from '@/components/ui/calendar';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import Papa from 'papaparse';
+import { DataTableRequestModel } from '@/hooks/DataTableRequestModel';
+import { API_BASE_URL } from '@/config/Api';
 
 const driverMap = new Map(actualVehicles.map(v => [v.id, v.driver]));
 const poiMap = new Map(poiData.map(p => [p.id, p.poiName]));
@@ -108,16 +112,44 @@ const SortableHeader = ({ children, isSorted, sortDirection, onClick }: { childr
 );
 
 const EntryExitReportTable = () => {
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [sortConfig, setSortConfig] = useState<{ key: ReportDataKey; direction: 'asc' | 'desc'; }>({ key: 'date', direction: 'desc' });
+  // const [sortConfig, setSortConfig] = useState<{ key: ReportDataKey; direction: 'asc' | 'desc'; }>({ key: 'date', direction: 'desc' });
   const [detailsSortConfig, setDetailsSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'startTime', direction: 'asc' });
-  const [date, setDate] = useState<DateRange | undefined>({ from: subWeeks(new Date(), 1), to: new Date() });
+  const [date, setDate] = useState<DateRange | undefined>({
+    from: new Date(),
+    to: new Date(),
+  });
   const [selectedVehicle, setSelectedVehicle] = useState('all');
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [intervalFilter, setIntervalFilter] = useState('all');
+  const [reportData, setReportData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const [tempDate, setTempDate] = useState<DateRange | undefined>(date);
+  const [pagination, setPagination] = useState({
+    pageIndex: 0,
+    pageSize: 10,
+  });
 
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortConfig, setSortConfig] = useState({
+    sortColumn: "vehname",
+    sortDirection: "asc" as "asc" | "desc",
+  });
+  const intervalMap: Record<string, string> = {
+    all: "1",
+    "5": "300",
+    "10": "600",
+    "20": "1200",
+  };
+
+
+  const {
+    data: vehicleList,
+    loading: vehicleLoading
+  } = useVehicleList();
+
+  const vehiclesData = vehicleList ?? [];
   const toggleRow = (rowId: string) => {
     setExpandedRows((prev) => {
       const newSet = new Set(prev);
@@ -168,8 +200,8 @@ const EntryExitReportTable = () => {
       const tripsForDay = tripReportData.filter(trip => trip.vehicleId === d.vehicleId && trip.startTime.startsWith(d.date));
       const poiIds = new Set<string>();
       tripsForDay.forEach(trip => {
-          poiIds.add(trip.startPoiId);
-          poiIds.add(trip.endPoiId);
+        poiIds.add(trip.startPoiId);
+        poiIds.add(trip.endPoiId);
       });
       const poisCovered = Array.from(poiIds).map(id => poiMap.get(id) || 'Unknown POI').join(', ');
 
@@ -217,14 +249,33 @@ const EntryExitReportTable = () => {
     return sortableData;
   }, [sortConfig, date, selectedVehicle, intervalFilter]);
 
-  const handleSort = (key: ReportDataKey) => {
-    let direction: 'asc' | 'desc' = 'asc';
-    if (sortConfig.key === key && sortConfig.direction === 'asc') {
-      direction = 'desc';
-    }
-    setSortConfig({ key, direction });
-    setPage(0);
+
+  const handleSort = (
+    column: string
+  ) => {
+
+    setSortConfig(prev => ({
+
+      sortColumn: column,
+
+      sortDirection:
+
+        prev.sortColumn === column &&
+          prev.sortDirection === "asc"
+
+          ? "desc"
+
+          : "asc"
+
+    }));
+
+    setPagination(p => ({
+      ...p,
+      pageIndex: 0
+    }));
+
   };
+
 
   const generateExportData = () => {
     return sortedData.map(row => ({
@@ -245,34 +296,310 @@ const EntryExitReportTable = () => {
     doc.save(`entry-exit-report-${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
-  const handleExportCSV = () => {
-    const exportData = generateExportData();
-    if (exportData.length === 0) return;
-    const csv = Papa.unparse(exportData);
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `entry-exit-report-${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+const handleExportCSV = () => {
+  if (!reportData.length) return;
+
+  const exportData = reportData.map((row) => ({
+    "Vehicle No": row.vehName,
+    "Driver Name":
+      row.driverName && row.driverName !== "undefined"
+        ? row.driverName
+        : "NA",
+    "POIs Covered": row.poisCovered ?? 0,
+  }));
+
+  const csv = Papa.unparse(exportData);
+
+  const blob = new Blob([csv], {
+    type: "text/csv;charset=utf-8;",
+  });
+
+  const link = document.createElement("a");
+  const url = URL.createObjectURL(blob);
+
+  link.href = url;
+  link.download = `entry-exit-report-${
+    new Date().toISOString().split("T")[0]
+  }.csv`;
+
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
+
+
+  // const handleExportCSV = () => {
+  //   const exportData = generateExportData();
+  //   if (exportData.length === 0) return;
+  //   const csv = Papa.unparse(exportData);
+  //   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  //   const link = document.createElement('a');
+  //   const url = URL.createObjectURL(blob);
+  //   link.setAttribute('href', url);
+  //   link.setAttribute('download', `entry-exit-report-${new Date().toISOString().split('T')[0]}.csv`);
+  //   document.body.appendChild(link);
+  //   link.click();
+  //   document.body.removeChild(link);
+  // };
+
+  const parseDuration = (value: string) => {
+    if (!value) {
+      return {
+        text: "",
+        color: "inherit",
+      };
+    }
+
+    const colorMatch =
+      value.match(/color=['"]?([^'">]+)['"]?/i);
+
+    const text =
+      value.replace(/<[^>]+>/g, "").trim();
+
+    return {
+      text,
+      color:
+        colorMatch?.[1] || "inherit",
+    };
   };
 
-  const paginatedData = sortedData.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
-  const totalPages = Math.ceil(sortedData.length / rowsPerPage);
-  const firstRowIndex = page * rowsPerPage + 1;
-  const lastRowIndex = Math.min((page + 1) * rowsPerPage, sortedData.length);
+  const loadData = async () => {
+
+    try {
+
+      setLoading(true);
+
+      const authData = JSON.parse(
+        localStorage.getItem("trackmaster-auth") || "{}"
+      );
+
+      const request: DataTableRequestModel = {
+
+        CustId: authData?.custId || 0,
+
+        sEcho: 1,
+
+        iDisplayStart:
+          pagination.pageIndex *
+          pagination.pageSize,
+
+        iDisplayLength:
+          pagination.pageSize,
+
+        sSearch: searchTerm,
+
+        sortColumn:
+          sortConfig.sortColumn,
+
+        sortDirection:
+          sortConfig.sortDirection,
+        // updated interval mapping
+        interval: intervalMap[intervalFilter] || "1",
+        beginDate:
+          format(
+
+            startOfDay(
+
+              date?.from ||
+
+              new Date()
+
+            ),
+
+            "M/d/yyyy h:mm:ss a"
+
+          ),
+
+        endDate:
+          format(
+            new Date(),
+            "M/d/yyyy h:mm:ss a"
+          ),
+
+        Status: ""
+      };
+
+      const params =
+        new URLSearchParams();
+
+      Object.entries(request)
+        .forEach(([key, value]) => {
+
+          if (
+            value !== null &&
+            value !== undefined
+          ) {
+
+            params.append(
+              key,
+              String(value)
+            );
+
+          }
+
+        });
+      // ADD THIS
+      if (
+        selectedVehicle &&
+        selectedVehicle !== "all"
+      ) {
+
+        params.append(
+          "bbid",
+          selectedVehicle
+        );
+
+      }
+
+      const response =
+        await fetch(
+
+          `${API_BASE_URL}/Reports/GetEntryExitReport?${params.toString()}`,
+
+          {
+            method: "GET"
+          }
+
+        );
+
+      if (!response.ok)
+        throw new Error(
+          "API Failed"
+        );
+
+      const result =
+        await response.json();
+
+      console.log("result", result);
+
+      setReportData(
+
+        Array.isArray(
+          result?.data
+        )
+
+          ? result.data
+
+          : []
+
+      );
+
+      setTotalRecords(
+
+        result?.count || 0
+
+      );
+    }
+    catch (err) {
+
+      console.log(err);
+
+      setReportData([]);
+
+      setTotalRecords(0);
+
+    }
+    finally {
+
+      setLoading(false);
+
+    }
+
+  };
+
+  useEffect(() => {
+
+    loadData();
+
+  }, [
+
+    pagination.pageIndex,
+    pagination.pageSize,
+
+    searchTerm,
+
+    sortConfig,
+
+    date,
+
+    intervalFilter,
+
+    selectedVehicle
+
+  ]);
+
+  const paginatedData =
+    Array.isArray(reportData)
+      ? reportData
+      : [];
+
+  const totalPages =
+    Math.ceil(
+      totalRecords /
+      pagination.pageSize
+    );
+  const firstRowIndex =
+
+    totalRecords === 0
+
+      ? 0
+
+      :
+
+      pagination.pageIndex *
+
+      pagination.pageSize + 1;
+
+  const lastRowIndex =
+
+    Math.min(
+
+      (
+
+        pagination.pageIndex + 1
+
+      )
+
+      *
+
+      pagination.pageSize,
+
+      totalRecords
+
+    );
 
   return (
     <Card className="shadow-sm overflow-hidden">
+      {loading && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/70 dark:bg-black/50 rounded-xl">
+          <div className="flex items-center gap-3 bg-white dark:bg-zinc-900 px-5 py-3 rounded-lg shadow-lg border">
+
+            <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+
+            <span className="text-sm font-medium text-foreground">
+              Please wait...
+            </span>
+
+          </div>
+        </div>
+      )}
       <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 px-6 py-4">
         <div>
           <CardTitle className="text-xl font-bold text-foreground">Entry / Exit Report</CardTitle>
           <CardDescription>Daily entry and exit of vehicles.</CardDescription>
         </div>
         <div className="flex items-center gap-2 flex-wrap justify-start sm:justify-end">
-          <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+          <Popover
+            open={isCalendarOpen}
+            onOpenChange={(open) => {
+              setIsCalendarOpen(open);
+
+              if (open) {
+                setTempDate(date);
+              }
+            }}
+          >
             <PopoverTrigger asChild>
               <Button
                 id="date"
@@ -313,14 +640,14 @@ const EntryExitReportTable = () => {
               <Calendar
                 initialFocus
                 mode="range"
-                defaultMonth={date?.from}
-                selected={date}
-                onSelect={setDate}
+                defaultMonth={tempDate?.from}
+                selected={tempDate}
+                onSelect={setTempDate}
                 numberOfMonths={1}
               />
             </PopoverContent>
           </Popover>
-          <VehicleCombobox vehicles={vehicles} value={selectedVehicle} onChange={setSelectedVehicle} className="w-full sm:w-[180px]" />
+          <VehicleCombobox vehicles={[{ label: 'All Vehicles', value: 'all' }, ...(vehicleList ?? []),]} value={selectedVehicle} onChange={setSelectedVehicle} className="w-full sm:w-[180px]" />
           <Select value={intervalFilter} onValueChange={setIntervalFilter}>
             <SelectTrigger className="w-full sm:w-[180px]">
               <SelectValue placeholder="Filter by interval" />
@@ -350,19 +677,52 @@ const EntryExitReportTable = () => {
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
+
               <TableRow className="bg-muted/50 hover:bg-muted/50 border-b">
+
                 {headers.map((header) => (
-                  <SortableHeader key={header.key as string} onClick={() => handleSort(header.key)} isSorted={sortConfig.key === header.key} sortDirection={sortConfig.key === header.key ? sortConfig.direction : undefined}>
+
+                  <SortableHeader
+
+                    key={String(header.key)}
+
+                    onClick={() =>
+                      handleSort(
+                        String(header.key)
+                      )
+                    }
+
+                    isSorted={
+                      sortConfig.sortColumn ===
+                      String(header.key)
+                    }
+
+                    sortDirection={
+                      sortConfig.sortColumn ===
+                        String(header.key)
+
+                        ? sortConfig.sortDirection
+
+                        : undefined
+                    }
+
+                  >
+
                     {header.label}
+
                   </SortableHeader>
+
                 ))}
-                <TableHead className="px-6 py-3"></TableHead>
+
+                <TableHead className="px-6 py-3" />
+
               </TableRow>
+
             </TableHeader>
             <TableBody>
               {paginatedData.map((row) => {
-                const isExpanded = expandedRows.has(row.id);
-                const details = workingHourDetails.filter(d => d.vehicleId === row.vehicleId && d.date === row.date);
+                const isExpanded = expandedRows.has(row.bbid);
+                const details = row.poisCoveredList || [];
                 const sortedDetails = [...details].sort((a, b) => {
                   const key = detailsSortConfig.key as keyof typeof a;
                   let aValue = a[key];
@@ -375,15 +735,37 @@ const EntryExitReportTable = () => {
                   }
                   return 0;
                 });
-                
+
                 return (
-                  <React.Fragment key={row.id}>
+                  <React.Fragment key={row.bbid}>
                     <TableRow className="bg-card hover:bg-muted/50 border-b">
-                      <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-foreground font-semibold">{row.vehicleName}</TableCell>
-                      <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{row.driverName}</TableCell>
-                      <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground max-w-xs truncate">{row.poisCovered}</TableCell>
+                      <TableCell
+                        className="px-6 py-4"
+
+                      >
+
+                        {row.vehName}
+
+                      </TableCell>
+
+                      <TableCell
+                        className="px-6 py-4"
+                      >
+
+                        {
+                          row.driverName &&
+                            row.driverName !== "undefined"
+                            ? row.driverName
+                            : "NA"
+                        }
+
+                      </TableCell>
+
+                      <TableCell className="px-6 py-4">
+                        {row.poisCovered ?? 0}
+                      </TableCell>
                       <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-right">
-                        <Button variant="link" onClick={() => toggleRow(row.id)} className="font-medium text-brand-blue dark:text-blue-400 p-0 h-auto flex items-center gap-1">
+                        <Button variant="link" onClick={() => toggleRow(row.bbid)} className="font-medium text-brand-blue dark:text-blue-400 p-0 h-auto flex items-center gap-1">
                           Details
                           <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
                         </Button>
@@ -410,19 +792,59 @@ const EntryExitReportTable = () => {
                                         <SortableHeader onClick={() => handleDetailsSort('startTime')} isSorted={detailsSortConfig.key === 'startTime'} sortDirection={detailsSortConfig.direction}>Entry Time</SortableHeader>
                                         <SortableHeader onClick={() => handleDetailsSort('location')} isSorted={detailsSortConfig.key === 'location'} sortDirection={detailsSortConfig.direction}>Entry Location</SortableHeader>
                                         <SortableHeader onClick={() => handleDetailsSort('endTime')} isSorted={detailsSortConfig.key === 'endTime'} sortDirection={detailsSortConfig.direction}>Exit Time</SortableHeader>
-                                        <SortableHeader onClick={() => handleDetailsSort('location')} isSorted={detailsSortConfig.key === 'location'} sortDirection={detailsSortConfig.direction}>Exit Location</SortableHeader>
+                                        {/* <SortableHeader onClick={() => handleDetailsSort('location')} isSorted={detailsSortConfig.key === 'location'} sortDirection={detailsSortConfig.direction}>Exit Location</SortableHeader> */}
                                         <SortableHeader onClick={() => handleDetailsSort('duration')} isSorted={detailsSortConfig.key === 'duration'} sortDirection={detailsSortConfig.direction}>Duration</SortableHeader>
                                       </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                       {sortedDetails.length > 0 ? (
-                                        sortedDetails.map(detail => (
-                                          <TableRow key={detail.id}>
-                                            <TableCell className="font-mono text-sm text-foreground">{detail.startTime}</TableCell>
-                                            <TableCell className="text-sm text-muted-foreground truncate">{detail.location}</TableCell>
-                                            <TableCell className="font-mono text-sm text-foreground">{detail.endTime}</TableCell>
-                                            <TableCell className="text-sm text-muted-foreground truncate">{detail.location}</TableCell>
-                                            <TableCell className="text-sm text-muted-foreground">{formatDuration(detail.duration)}</TableCell>
+                                        sortedDetails.map((detail: any, index: number) => (
+                                          <TableRow key={index}>
+
+                                            {/* Entry Time */}
+                                            <TableCell className="font-mono text-sm text-foreground">
+                                              {detail.intime}
+                                            </TableCell>
+
+                                            {/* Entry Location (lat used here as you requested) */}
+                                            <TableCell className="text-sm text-muted-foreground">
+                                              <button
+                                                className="text-blue-600 hover:underline"
+                                                // onClick={() =>
+                                                //   showMapWindow(
+                                                //     detail.bbid,
+                                                //     detail.vehname,
+                                                //     detail.poiLat,
+                                                //     detail.poiLong,
+                                                //     detail.poiName,
+                                                //     "~/resources/images/legends/stop.png"
+                                                //   )
+                                                // }
+                                              >
+                                                {detail.poiName.replace(/<[^>]*>/g, "")}
+                                              </button>
+                                            </TableCell>
+
+                                            {/* Exit Time */}
+                                            <TableCell className="font-mono text-sm text-foreground">
+                                              {detail.outTime}
+                                            </TableCell>
+
+                                            {/* Exit Location (long used here as you requested) */}
+                                            {/* <TableCell className="text-sm text-muted-foreground">
+                                              {detail.poiLong}
+                                            </TableCell> */}
+
+                                            {/* Duration */}
+                                            <TableCell
+                                              className="text-sm font-medium"
+                                              style={{
+                                                color: parseDuration(detail.duration).color,
+                                              }}
+                                            >
+                                              {parseDuration(detail.duration).text}
+                                            </TableCell>
+
                                           </TableRow>
                                         ))
                                       ) : (
@@ -451,18 +873,130 @@ const EntryExitReportTable = () => {
       <CardFooter className="flex items-center justify-between py-3 px-6 border-t bg-card">
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">Rows per page:</span>
-          <Select value={String(rowsPerPage)} onValueChange={(value) => { setRowsPerPage(Number(value)); setPage(0); }}>
-            <SelectTrigger className="w-20 h-9 text-sm focus:ring-2 focus:ring-primary"><SelectValue placeholder={rowsPerPage} /></SelectTrigger>
+          <Select
+            value={String(
+              pagination.pageSize
+            )}
+            onValueChange={(value) => {
+
+              setPagination({
+
+                pageIndex: 0,
+
+                pageSize: Number(value)
+
+              });
+
+            }}
+          >
+            <SelectTrigger className="w-20 h-9 text-sm focus:ring-2 focus:ring-primary">
+              <SelectValue
+                placeholder={String(
+                  pagination.pageSize
+                )}
+              />
+            </SelectTrigger>
             <SelectContent><SelectItem value="10">10</SelectItem><SelectItem value="25">25</SelectItem><SelectItem value="50">50</SelectItem></SelectContent>
           </Select>
         </div>
         <div className="flex items-center gap-4">
-          <span className="text-sm text-muted-foreground">{firstRowIndex}-{lastRowIndex} of {sortedData.length}</span>
+          <span className="text-sm text-muted-foreground">{firstRowIndex}-{lastRowIndex} of {totalRecords}</span>
           <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setPage(0)} disabled={page === 0}><ChevronsLeft className="h-4 w-4" /></Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setPage(page - 1)} disabled={page === 0}><ChevronLeft className="h-4 w-4" /></Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setPage(page + 1)} disabled={page >= totalPages - 1}><ChevronRight className="h-4 w-4" /></Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setPage(totalPages - 1)} disabled={page >= totalPages - 1}><ChevronsRight className="h-4 w-4" /></Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() =>
+
+                setPagination(p => ({
+
+                  ...p,
+
+                  pageIndex: 0
+
+                }))
+
+              }
+              disabled={
+                pagination.pageIndex === 0
+              }
+            >
+              <ChevronsLeft className="h-4 w-4" />
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() =>
+
+                setPagination(p => ({
+
+                  ...p,
+
+                  pageIndex:
+                    p.pageIndex - 1
+
+                }))
+
+              }
+              disabled={
+                pagination.pageIndex === 0
+              }
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() =>
+
+                setPagination(p => ({
+
+                  ...p,
+
+                  pageIndex:
+                    p.pageIndex + 1
+
+                }))
+
+              }
+              disabled={
+
+                pagination.pageIndex >=
+
+                totalPages - 1
+
+              }
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() =>
+
+                setPagination(p => ({
+
+                  ...p,
+
+                  pageIndex:
+
+                    totalPages - 1
+
+                }))
+
+              }
+              disabled={
+
+                pagination.pageIndex >=
+
+                totalPages - 1
+
+              }
+            >
+              <ChevronsRight className="h-4 w-4" />
+            </Button>
           </div>
         </div>
       </CardFooter>

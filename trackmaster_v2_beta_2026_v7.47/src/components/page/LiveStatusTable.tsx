@@ -298,43 +298,6 @@ const BatteryIcon = ({ battery, tooltipLabel }: { battery: number; tooltipLabel:
 
 };
 
-//   level,
-//   tooltipLabel,
-// }: {
-//   level: number;
-//   tooltipLabel: string;
-// }) => {
-//   let text, color;
-
-//   if (level > 70) {
-//     text = 'High';
-//     color = 'text-green-500';
-//   } else if (level > 30) {
-//     text = 'Medium';
-//     color = 'text-yellow-500';
-//   } else {
-//     text = 'Low';
-//     color = 'text-red-500';
-//   }
-
-//   return (
-//     <TooltipProvider>
-//       <Tooltip>
-//         <TooltipTrigger asChild>
-//           <button>
-//             <CarBatteryIcon className={cn('h-5 w-5', color)} />
-//           </button>
-//         </TooltipTrigger>
-
-//         <TooltipContent className="bg-black text-white border-black">
-//           <p>
-//             {tooltipLabel}: {text} ({level}%)
-//           </p>
-//         </TooltipContent>
-//       </Tooltip>
-//     </TooltipProvider>
-//   );
-// };
 const BatteryIconDevice = ({ deviceBattery, tooltipLabel }: { deviceBattery: number; tooltipLabel: string }) => {
   let Icon, text, color;
   switch (true) {
@@ -435,6 +398,7 @@ const TableSkeleton = () => (
   </TableBody>
 );
 
+
 const LiveStatusTable = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -455,60 +419,63 @@ const LiveStatusTable = () => {
     sortColumn: 'vehname',
     sortDirection: 'asc' as 'asc' | 'desc',
   });
-  const getLiveStatusData = async () => {
-    const requestId = ++latestRequestRef.current;
+ const getLiveStatusData = async (silent = false) => {
+  const requestId = ++latestRequestRef.current;
 
-    try {
+  try {
+    // Loader only manual load
+    if (!silent) {
       setLoading(true);
-      // CLEAR OLD DATA IMMEDIATELY
-      setLiveStatus([]);
-      setTotalRecords(0);
-
-      const authData = JSON.parse(
-        localStorage.getItem('trackmaster-auth') || '{}'
-      );
-
-      const requestModel: DataTableRequestModel = {
-        CustId: authData?.custId || 0,
-        iDisplayStart: pagination.pageIndex * pagination.pageSize,
-        iDisplayLength: pagination.pageSize,
-        sSearch: searchTerm || '',
-        sortColumn: sortConfig.sortColumn,
-        sortDirection: sortConfig.sortDirection,
-        Status: statusFromUrl || null,
-      };
-
-      const response = await getVehicleStatusList({
-        pageName: 'livestatus',
-        CustId: authData?.custId || 0,
-        requestModel,
-      });
-
-      // IGNORE OLD API RESPONSES
-      if (requestId !== latestRequestRef.current) {
-        return;
-      }
-
-      if (response) {
-        setLiveStatus(response);
-        setTotalRecords(
-          response.length > 0
-            ? (response[0] as any).totalRecords || 0
-            : 0
-        );
-      }
-    } catch (error) {
-      console.error('API ERROR:', error);
-
-      setLiveStatus([]);
-      setTotalRecords(0);
-    } finally {
-      // ONLY HIDE LOADER FOR LATEST REQUEST
-      if (requestId === latestRequestRef.current) {
-        setLoading(false);
-      }
     }
-  };
+
+    const authData = JSON.parse(
+      localStorage.getItem("trackmaster-auth") || "{}"
+    );
+
+    const requestModel: DataTableRequestModel = {
+      CustId: authData?.custId || 0,
+      iDisplayStart:
+        pagination.pageIndex * pagination.pageSize,
+      iDisplayLength: pagination.pageSize,
+      sSearch: searchTerm || "",
+      sortColumn: sortConfig.sortColumn,
+      sortDirection: sortConfig.sortDirection,
+      Status: statusFromUrl || null,
+    };
+
+    const response = await getVehicleStatusList({
+      pageName: "livestatus",
+      CustId: authData?.custId || 0,
+      requestModel,
+    });
+
+    if (requestId !== latestRequestRef.current) return;
+
+    if (response) {
+      setLiveStatus(response);
+
+      const total =
+        response?.length > 0
+          ? response[0]?.totalRecords || 0
+          : 0;
+
+      setTotalRecords(total);
+    }
+
+  } catch (error) {
+    console.log(error);
+
+  } finally {
+
+    if (
+      requestId === latestRequestRef.current &&
+      !silent
+    ) {
+      setLoading(false);
+    }
+
+  }
+};
 
   const handleSort = (column: string) => {
     setSortConfig(prev => ({
@@ -522,15 +489,56 @@ const LiveStatusTable = () => {
     setPagination(p => ({ ...p, pageIndex: 0 }));
   };
 
+useEffect(() => {
+
+  const interval = setInterval(() => {
+
+    // silent refresh
+    getLiveStatusData(true);
+
+  }, 60000);
+
+  return () => clearInterval(interval);
+
+}, [
+  pagination.pageIndex,
+  pagination.pageSize,
+  searchTerm,
+  statusFromUrl,
+  sortConfig
+]);
+
+useEffect(() => {
+
+  getLiveStatusData(false);
+
+}, [
+  pagination.pageIndex,
+  pagination.pageSize,
+  searchTerm,
+  statusFromUrl,
+  sortConfig
+]);
   useEffect(() => {
-    getLiveStatusData();
-  }, [
-    pagination.pageIndex,
-    pagination.pageSize,
-    searchTerm,
-    statusFromUrl,
-    sortConfig,
-  ]);
+    setPagination(prev => ({
+      pageIndex: 0,
+      pageSize: prev.pageSize, // preserve user selection
+    }));
+  }, [statusFromUrl]);
+
+
+  useEffect(() => {
+    const pageCount = Math.ceil(totalRecords / pagination.pageSize);
+
+    if (pagination.pageIndex >= pageCount && pageCount > 0) {
+      setPagination(prev => ({
+        ...prev,
+        pageIndex: 0,
+      }));
+    }
+  }, [totalRecords, pagination.pageSize]);
+
+
 
   const handleOpenDetail = (vehicle: any) => {
 
