@@ -20,7 +20,7 @@ export interface VehicleSpeedSummary {
   details: SpeedEvent[];
 }
 
-const OVER_SPEED_LIMIT = 80; // km/h
+const OVER_SPEED_LIMIT = 60; // km/h
 
 const generateSpeedData = (): VehicleSpeedSummary[] => {
   const speedData: VehicleSpeedSummary[] = [];

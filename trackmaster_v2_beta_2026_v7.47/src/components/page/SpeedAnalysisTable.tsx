@@ -45,6 +45,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useSettings } from '@/context/SettingsContext';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { API_BASE_URL } from '@/config/Api';
 
 type ReportDataKey = keyof VehicleSpeedSummary;
 
@@ -61,7 +62,7 @@ const timeRanges = [
   { label: 'Last Day', value: 'last-day' },
   { label: 'Last Week', value: 'last-week' },
   { label: 'Last Month', value: 'last-month' },
-  { label: 'Last 2 Months', value: 'last-2-months' },
+  // { label: 'Last 2 Months', value: 'last-2-months' },
 ];
 
 const SortableHeader = ({ children, isSorted, sortDirection, onClick }: { children: React.ReactNode; isSorted?: boolean; sortDirection?: 'asc' | 'desc'; onClick: () => void; }) => (
