@@ -70,7 +70,7 @@ export const menuItems = [
         title: 'Speed & Driving Behavior',
         icon: Gauge,
         children: [
-          { title: 'Speed Report', icon: FileText, href: '/reports/speed-driving/speed-analysis' },
+          { title: 'Over-Speed Report', icon: FileText, href: '/reports/speed-driving/speed-analysis' },
         ],
       },
       {

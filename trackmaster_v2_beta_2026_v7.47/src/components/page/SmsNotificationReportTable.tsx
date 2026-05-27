@@ -1,67 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import {Table,TableBody,TableCell,TableHead,TableHeader,TableRow,} from '@/components/ui/table';
+import {Card,CardContent,CardDescription,CardFooter,CardHeader,CardTitle,} from '@/components/ui/card';
+import {DropdownMenu,DropdownMenuContent,DropdownMenuItem,DropdownMenuTrigger,} from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-//import { notificationData, messageTypes, notificationTypes, type NotificationData } from '@/data/notificationData';
 import { notificationTypes, type NotificationData } from '@/data/notificationData';// neha k
-import {
-  ArrowUp,
-  ArrowDown,
-  ChevronLeft,
-  ChevronRight,
-  Download,
-  FileText,
-  FileSpreadsheet,
-  MoreHorizontal,
-  ChevronsUpDown,
-} from 'lucide-react';
+import {ChevronLeft,ChevronRight,Download,FileText,FileSpreadsheet,ChevronsUpDown,} from 'lucide-react'; // neha k remove sort for columns
 import { DateRange } from 'react-day-picker';
 import { subWeeks } from 'date-fns';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import WhatsappPopup from '../WhatsappPopup';
 import { VehicleCombobox } from '../VehicleCombobox';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import {Select,SelectContent,SelectItem,SelectTrigger,SelectValue,} from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-//import { ScrollArea } from '@/components/ui/scroll-area';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
-import Papa from 'papaparse';
 import { API_BASE_URL } from '@/config/Api';
 
 //========== searchable dropdown ==================//
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import {
-  Command,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-} from '@/components/ui/command';
+import {Command,CommandGroup,CommandInput,CommandItem,} from '@/components/ui/command';
 import { Check} from 'lucide-react';
 import type { DataTableRequestModel } from '@/hooks/DataTableRequestModel';
 //========== searchable dropdown ==================//
@@ -79,25 +34,22 @@ const headers: { key: ReportDataKey; label: string }[] = [
   { key: 'iosStatus', label: 'iOS Status' },
 ];
 
-const SortableHeader = ({ children, isSorted, sortDirection, onClick }: { children: React.ReactNode; isSorted?: boolean; sortDirection?: 'asc' | 'desc'; onClick: () => void; }) => (
+const SortableHeader = ({
+  children,
+  onClick,
+}: {
+  children: React.ReactNode;
+  onClick: () => void;
+}) => (
   <TableHead
-    className="cursor-pointer px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider group"
+    className="cursor-pointer px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider"
     onClick={onClick}
   >
     <div className="flex items-center gap-2">
       {children}
-      {isSorted ? (
-        sortDirection === 'asc' ? (
-          <ArrowUp className="h-4 w-4" />
-        ) : (
-          <ArrowDown className="h-4 w-4" />
-        )
-      ) : (
-        <ChevronsUpDown className="h-4 w-4 text-muted-foreground/50 group-hover:text-muted-foreground" />
-      )}
     </div>
   </TableHead>
-);
+); // neha k remove sort for columns
 
 const StatusBadge = ({ status }: { status: string }) => {
   const variant = {
@@ -115,8 +67,6 @@ const StatusBadge = ({ status }: { status: string }) => {
     | "outline"
 }>{status}</Badge>;
 };
-
-
 const sortMap: any = {
   vehicleName: "vehicleName",
   messageDate: "messageDate",
@@ -147,18 +97,14 @@ const [sortColumn, setSortColumn] =
 
 const [sortDirection, setSortDirection] =
   useState("desc");
-  
-  
   const [date, setDate] = useState<DateRange | undefined>({ from: subWeeks(new Date(), 1), to: new Date() });
   const [selectedVehicle, setSelectedVehicle] = useState('all');
   //const [messageTypeFilter, setMessageTypeFilter] = useState('all');
   const [messageTypeFilter, setMessageTypeFilter] = useState('0');// neha k 22.05.2026
-  const [notificationTypeFilter, setNotificationTypeFilter] = useState('0');
-
+  const [notificationTypeFilter, setNotificationTypeFilter] = useState('1');
   const [reportData, setReportData] = useState<NotificationData[]>([]); //neha k 
   const [loading, setLoading] = useState(false); //neha k 
   const [totalRecords, setTotalRecords] = useState(0); // neha k
-  
 // neha k bind data table 
 const getMessageReports = async () => {
   debugger
@@ -167,79 +113,50 @@ const getMessageReports = async () => {
     setLoading(true);
   console.log("Start Date:", date?.from);
     console.log("End Date:", date?.to);
-
-
        const auth = JSON.parse(
             localStorage.getItem("trackmaster-auth") || "{}"
           );
-    
+          const lowerBand = page * rowsPerPage;
+          const upperBand = lowerBand + rowsPerPage;
           const requestModel: DataTableRequestModel = {
             CustId: auth.custId,
             sEcho: 1,
-            iDisplayStart: page * rowsPerPage,
-            iDisplayLength: rowsPerPage,
+            iDisplayStart: lowerBand,
+            iDisplayLength: upperBand,
             sSearch: search?.trim() || "",
             sortColumn: sortMap[sortConfig.key],
-            sortDirection: sortConfig.direction,
-          };
-
+            sortDirection: sortConfig.direction,           
+          };    
           //typeid 2
-   const typeId =
-  notificationTypeFilter === "0"
-    ? 0
-    : Number(notificationTypeFilter);
-
-    //messagetype 0
-// const messageType =
-//   messageTypeFilter === "all"
-//     ? 0
-//     : Number(messageTypeFilter);
-console.log("notificationTypeFilter =", notificationTypeFilter);
+    const typeId =notificationTypeFilter === "0"? 0: Number(notificationTypeFilter);
+    console.log("notificationTypeFilter =", notificationTypeFilter);
     const params = new URLSearchParams({
- 
-  CustId: String(auth.custId),
-
-  sEcho: String(requestModel.sEcho),
-  iDisplayStart: String(requestModel.iDisplayStart),
-  iDisplayLength: String(requestModel.iDisplayLength),
-
-  sSearch: requestModel.sSearch || "",
-
-  sortColumn: requestModel.sortColumn || "",
-
-  sortDirection: requestModel.sortDirection || "",
-
-  typeid: String(typeId),
-
-  messagetype: messageTypeFilter,
-
-  // notificationtype: String(notificationTypeFilter),
-
- beginDate: date?.from
-  ? date.from.toLocaleString("en-US")
-  : "",
-
-endDate: date?.to
-  ? date.to.toLocaleString("en-US")
-  : "",
-});
+          // neha k
+          CustId: String(auth.custId),
+          sEcho: String(requestModel.sEcho),
+          iDisplayStart: String(requestModel.iDisplayStart),
+          iDisplayLength: String(requestModel.iDisplayLength),
+          sSearch: requestModel.sSearch || "",
+          sortColumn: requestModel.sortColumn || "",
+          sortDirection: requestModel.sortDirection || "",
+          typeid: String(typeId),
+          messagetype: messageTypeFilter,
+          beginDate: date?.from? date.from.toLocaleString("en-US").replace(",", ""): "",
+          endDate: date?.to? date.to.toLocaleString("en-US").replace(",", ""): "",
+          vehicleNo: selectedVehicle // neha k extra parameter added
+        });
 
     const response = await fetch(
   `${API_BASE_URL}/Reports/GetMessageReports?${params.toString()}`
     );
-  
-
     const text = await response.text();
-
     if (!text) {
       setReportData([]);
       return;
     }
-
     const result = JSON.parse(text);
     console.log(result);
     console.log(result?.aaData);  // neha k 
-
    const formattedData = (result?.aaData || []).map(
     //console.log(formattedData);
   (item: any, index: number) => ({
@@ -266,11 +183,11 @@ endDate: date?.to
 
     androidStatus:
       item.androidstatus ||
-      "-",
+      "NA",
 
     iosStatus:
       item.iosstatus ||
-      "-",
+      "NA",
 
     notificationType:
       item.notificationType ||
@@ -304,43 +221,154 @@ endDate: date?.to
   setPage(0);
 };
 
-  const generateExportData = () => {
-    return reportData.map(row => ({
-      'Vehicle No': row.vehicleName,
-      'Message Date': row.messageDate,
-      'Type': row.messageType,
-      'Mobile': row.mobile,
-      'Message': row.message,
-      'Android Status': row.androidStatus,
-      'iOS Status': row.iosStatus,
-      
-    }));
-  };
+// for pdf neha k 26.05.2026
+  const handleExportPDF = async () => {
+  try {
+    const auth = JSON.parse(
+      localStorage.getItem("trackmaster-auth") || "{}"
+    );
 
-  const handleExportPDF = () => {
-    const exportData = generateExportData();
-    if (exportData.length === 0) return;
-    const doc = new jsPDF({ orientation: 'landscape' });
-    const tableColumn = Object.keys(exportData[0]);
-    const tableRows = exportData.map(row => Object.values(row).map(String));
-    doc.text("SMS & Notification Report", 14, 15);
-    autoTable(doc, { head: [tableColumn], body: tableRows, startY: 20 });
-    doc.save(`sms-notification-report-${new Date().toISOString().split('T')[0]}.pdf`);
-  };
+    const typeId =
+      notificationTypeFilter === "0"
+        ? 0
+        : Number(notificationTypeFilter);
 
-  const handleExportCSV = () => {
-    const exportData = generateExportData();
-    if (exportData.length === 0) return;
-    const csv = Papa.unparse(exportData);
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `sms-notification-report-${new Date().toISOString().split('T')[0]}.csv`);
+    const params = new URLSearchParams({
+      CustId: String(auth.custId),
+      sEcho: "1",
+      iDisplayStart: "0",
+      iDisplayLength: String(totalRecords || 10000),
+      sSearch: search?.trim() || "",
+      sortColumn: sortMap[sortConfig.key] || "",
+      sortDirection: sortConfig.direction || "",
+      typeid: String(typeId),
+      messagetype: messageTypeFilter,
+      beginDate: date?.from
+        ? date.from.toLocaleString("en-US").replace(",", "")
+        : "",
+      endDate: date?.to
+        ? date.to.toLocaleString("en-US").replace(",", "")
+        : "",
+      vehicleNo: selectedVehicle,
+      downloadType: "PDF",
+    });
+
+    const response = await fetch(
+      `${API_BASE_URL}/Reports/GetMessageReports?${params.toString()}`,
+      {
+        method: "GET",
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to download PDF");
+    }
+
+    const blob = await response.blob();
+
+    const downloadUrl =
+      window.URL.createObjectURL(blob);
+
+    const link =
+      document.createElement("a");
+
+    link.href = downloadUrl;
+
+    link.download =
+      `sms-notification-report-${new Date()
+        .toISOString()
+        .split("T")[0]}.pdf`;
+
     document.body.appendChild(link);
+
     link.click();
-    document.body.removeChild(link);
-  };
+
+    link.remove();
+
+    window.URL.revokeObjectURL(downloadUrl);
+
+  } catch (error) {
+    console.error(
+      "Export PDF Error:",
+      error
+    );
+  }
+};
+
+// for excel neha k 26.05.2026
+const handleExportExcel = async () => {
+  try {
+    const auth = JSON.parse(
+      localStorage.getItem("trackmaster-auth") || "{}"
+    );
+
+    const typeId =
+      notificationTypeFilter === "0"
+        ? 0
+        : Number(notificationTypeFilter);
+
+    const params = new URLSearchParams({
+      CustId: String(auth.custId),
+      sEcho: "1",
+      iDisplayStart: "0",
+      iDisplayLength: String(totalRecords || 10000),
+      sSearch: search?.trim() || "",
+      sortColumn: sortMap[sortConfig.key] || "",
+      sortDirection: sortConfig.direction || "",
+      typeid: String(typeId),
+      messagetype: messageTypeFilter,
+      beginDate: date?.from
+        ? date.from.toLocaleString("en-US").replace(",", "")
+        : "",
+      endDate: date?.to
+        ? date.to.toLocaleString("en-US").replace(",", "")
+        : "",
+      vehicleNo: selectedVehicle,
+      downloadType: "Excel",
+    });
+
+    const response = await fetch(
+      `${API_BASE_URL}/Reports/GetMessageReports?${params.toString()}`,
+      {
+        method: "GET",
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to download excel");
+    }
+
+    const blob = await response.blob();
+
+    const downloadUrl =
+      window.URL.createObjectURL(blob);
+
+    const link =
+      document.createElement("a");
+
+    link.href = downloadUrl;
+
+    link.download =
+      `sms-notification-report-${new Date()
+        .toISOString()
+        .split("T")[0]}.xlsx`;
+
+    document.body.appendChild(link);
+
+    link.click();
+
+    link.remove();
+
+    window.URL.revokeObjectURL(downloadUrl);
+
+  } catch (error) {
+    console.error(
+      "Export Excel Error:",
+      error
+    );
+  }
+};
+
 
   //neha k  get vehicle
   useEffect(() => {
@@ -360,7 +388,8 @@ endDate: date?.to
           { label: 'All', value: 'all' }, 
           ...vehicles.map((v: any) => ({
             label: v.vehName,          
-            value: String(v.bbid)     
+            //value: String(v.bbid)   
+            value: v.vehName // neha k   
           }))
         ];
         setVehicleList(formatted);
@@ -425,8 +454,6 @@ useEffect(() => {
   }, []);
 
   const paginatedData = reportData;
-  //const totalPages = Math.ceil(totalRecords / rowsPerPage);
-
   const totalPages = Math.ceil(totalRecords / rowsPerPage);
 
   return (
@@ -485,15 +512,18 @@ useEffect(() => {
           </Popover>
 
           <Select
- onValueChange={(value) => {
+  value={notificationTypeFilter}
+  onValueChange={(value) => {
   console.log("Selected Notification Type:", value);
 
   setNotificationTypeFilter(String(value));
 }}
 >
-            <SelectTrigger className="w-full sm:w-[180px]"><SelectValue placeholder="Notification Type" /></SelectTrigger>
+            <SelectTrigger className="w-full sm:w-[180px]">
+  <SelectValue />
+</SelectTrigger>
             <SelectContent>
-              <SelectItem value="0">All Notification Types</SelectItem>
+              {/* <SelectItem value="0">All Notification Types</SelectItem> neha k */}
              {notificationTypes.map((type) => (
   <SelectItem
     key={String(type.id)}
@@ -513,7 +543,7 @@ useEffect(() => {
             <DropdownMenuContent align="end">
               <DropdownMenuItem onSelect={handleExportPDF}><FileText className="mr-2 h-4 w-4" />Export as PDF</DropdownMenuItem>
               {/* <DropdownMenuItem onSelect={handleExportCSV}><FileSpreadsheet className="mr-2 h-4 w-4" />Export as Excel</DropdownMenuItem> */}
-               <DropdownMenuItem onSelect={handleExportCSV}><FileSpreadsheet className="mr-2 h-4 w-4" />Export as CSV</DropdownMenuItem>
+               <DropdownMenuItem onSelect={handleExportExcel}><FileSpreadsheet className="mr-2 h-4 w-4" /> Export as Excel</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           <WhatsappPopup />
@@ -525,7 +555,7 @@ useEffect(() => {
             <TableHeader>
               <TableRow className="bg-muted/50 hover:bg-muted/50 border-b">
                 {headers.map((header) => (
-                  <SortableHeader key={header.key} onClick={() => handleSort(header.key)} isSorted={sortConfig.key === header.key} sortDirection={sortConfig.key === header.key ? sortConfig.direction : undefined}>
+                  <SortableHeader key={header.key} onClick={() => handleSort(header.key)}>
                     {header.label}
                   </SortableHeader>
                 ))}
@@ -541,7 +571,7 @@ useEffect(() => {
         colSpan={8}
         className="text-center py-10"
       >
-        Loading...
+        Please wait...
       </TableCell>
     </TableRow>
   ) : paginatedData.length > 0 ? (
@@ -573,22 +603,6 @@ useEffect(() => {
         <TableCell className="px-6 py-4 whitespace-nowrap text-sm">
           <StatusBadge status={row.iosStatus} />
         </TableCell>
-
-        {/* <TsableCell className="px-6 py-4 whitespace-nowrap text-sm text-center">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem>
-                Resend
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </TableCell> */}
       </TableRow>
     ))
   ) : (

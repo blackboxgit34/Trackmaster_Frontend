@@ -158,7 +158,7 @@ const StoppageAnalysisTable = () => {
   const [detailsSortConfig, setDetailsSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'stopDate', direction: 'asc' });
   const [date, setDate] = useState<DateRange | undefined>({ from: subWeeks(new Date(), 1), to: new Date() });
   const [vehicleList, setVehicleList] = useState<any[]>([]);
-  const [selectedVehicle, setSelectedVehicle] = useState('All');
+  const [selectedVehicle, setSelectedVehicle] = useState('');
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [intervalFilter, setIntervalFilter] = useState('0-0');
@@ -212,7 +212,7 @@ const StoppageAnalysisTable = () => {
       })
       .filter(v => v.stoppageCount > 0);
 
-    if (selectedVehicle && selectedVehicle !== 'all') {
+    if (selectedVehicle && selectedVehicle !== '') {
       data = data.filter(item => item.vehicleId === selectedVehicle);
     }
 
@@ -514,8 +514,23 @@ const fetchStoppageReport = useCallback(async () => {
                 paginatedData.map((row) => {
                   const isExpanded = expandedRows.has(row.bbid);
 
-                  const sortedDetails = row.objStoppageReport || [];
+                 // const sortedDetails = row.objStoppageReport || [];
+const sortedDetails = [...(row.objStoppageReport || [])].sort((a, b) => {
+  if (!detailsSortConfig.key) return 0;
 
+  const aValue = a[detailsSortConfig.key];
+  const bValue = b[detailsSortConfig.key];
+
+  if (aValue < bValue) {
+    return detailsSortConfig.direction === "asc" ? -1 : 1;
+  }
+
+  if (aValue > bValue) {
+    return detailsSortConfig.direction === "asc" ? 1 : -1;
+  }
+
+  return 0;
+});
                   return (
                     <React.Fragment key={row.bbid}>
                       <TableRow className="bg-card hover:bg-muted/50 border-b">
@@ -557,17 +572,17 @@ const fetchStoppageReport = useCallback(async () => {
                       {isExpanded && (
                         <TableRow className="bg-muted/20 hover:bg-muted/20">
                           <TableCell colSpan={5} className="p-0">
-                            <div className="bg-muted/50 p-6">
-
-                              <h5 className="font-semibold mb-4">
-                                Stoppage Details
-                              </h5>
-
+                            
+  <div className="bg-muted/50 p-6 max-h-[500px] overflow-auto">
+                              <div className="p-6 border-b">
+                                <h5 className="text-lg font-semibold text-foreground">Stoppage Log for {row.vehicleName}</h5>
+                                <p className="text-sm text-muted-foreground">Detailed stoppage breakdown for the selected period.</p>
+                              </div>
                               {sortedDetails.length > 0 ? (
                                 <Table>
                                   <TableHeader>
                                     <TableRow>
-                                        <SortableHeader onClick={() => handleDetailsSort('stopDate')} isSorted={detailsSortConfig.key === 'stopDate'} sortDirection={detailsSortConfig.direction}>Stop date & time</SortableHeader>
+                                        <SortableHeader onClick={() => handleDetailsSort('stopDateAndTime')} isSorted={detailsSortConfig.key === 'stopDateAndTime'} sortDirection={detailsSortConfig.direction}>Stop date & time</SortableHeader>
                                         <SortableHeader onClick={() => handleDetailsSort('location')} isSorted={detailsSortConfig.key === 'location'} sortDirection={detailsSortConfig.direction}>Location</SortableHeader>
                                         <SortableHeader onClick={() => handleDetailsSort('duration')} isSorted={detailsSortConfig.key === 'duration'} sortDirection={detailsSortConfig.direction}>Duration</SortableHeader>
                                         <SortableHeader onClick={() => handleDetailsSort('ignitionOn')} isSorted={detailsSortConfig.key === 'ignitionOn'} sortDirection={detailsSortConfig.direction}>Ignition</SortableHeader>
