@@ -56,7 +56,7 @@ const timeRanges = [
   { label: 'Last Day', value: 'last-day' },
   { label: 'Last Week', value: 'last-week' },
   { label: 'Last Month', value: 'last-month' },
-  { label: 'Last 2 Months', value: 'last-2-months' },
+ // { label: 'Last 2 Months', value: 'last-2-months' },
 ];
 
 const SortableHeader = ({ children, isSorted, sortDirection, onClick }: { children: React.ReactNode; isSorted?: boolean; sortDirection?: 'asc' | 'desc'; onClick: () => void; }) => (

@@ -31,6 +31,11 @@ const LiveStatus = () => {
     };
 
     fetchVehicleStatusData();
+     // Set up interval to run every 30,000 milliseconds (30 seconds)
+    const intervalId = setInterval(fetchVehicleStatusData, 30000);
+
+    // Clear interval when component unmounts
+    return () => clearInterval(intervalId);
   }, []);
 
   return (
