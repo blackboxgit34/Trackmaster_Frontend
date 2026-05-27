@@ -10,4 +10,5 @@ export interface DataTableRequestModel {
     beginDate?: string;
     endDate?: string;
      Status?: string | null; 
+     DownloadType?: string | null;
 }

@@ -166,11 +166,160 @@ export const useDistanceReportData = ({
 
     fetchData();
   }, [dateRange, selectedVehicle, pageIndex, pageSize, sortConfig]);
+  const handleExportExcel = async () => {
+    setIsLoading(true);
+    try {
+      const auth = JSON.parse(localStorage.getItem('trackmaster-auth') || '{}');
+      const custId = Number(auth.custId ?? 0) || 0;
 
+      const begin = dateRange?.from ? startOfDay(dateRange.from) : startOfDay(new Date());
+      const end = dateRange?.to ? endOfDay(dateRange.to) : endOfDay(dateRange?.from ?? new Date());
+
+      const mapSortKeyToApiColumn = (key: string): string => {
+        switch (key) {
+          case 'vehicleId':
+            return 'BBID';
+          case 'vehicleName':
+            return 'VehName';
+          case 'distance':
+            return 'Distance';
+          default:
+            return 'BBID'; // Default sort column
+        }
+      };
+      const requestModel: DataTableRequestModel = {
+        CustId: custId,
+        iDisplayStart: pageIndex * pageSize,
+        iDisplayLength: pageSize,
+        sortColumn: mapSortKeyToApiColumn(String(sortConfig.key)),
+        sortDirection: sortConfig.direction,
+        sSearch: selectedVehicle && selectedVehicle !== 'all' ? selectedVehicle : undefined,
+        beginDate: formatDateTime(begin),
+        endDate: formatDateTime(end, true),
+        DownloadType: 'Excel'
+      };
+
+      const response = await fetch(`${API_BASE_URL}/Reports/GetDistanceReportData`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestModel),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to download excel');
+      }
+
+      // Convert response to blob
+      const blob = await response.blob();
+
+      // Create download url
+      const downloadUrl = window.URL.createObjectURL(blob);
+
+      // Create temp anchor
+      const link = document.createElement('a');
+
+      link.href = downloadUrl;
+
+      link.download =
+        `DistanceReport_${custId}.xlsx`;
+
+      document.body.appendChild(link);
+
+      // Trigger download
+      link.click();
+
+      // Cleanup
+      link.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+
+    } catch (error) {
+      console.error('Export Excel Error:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  const handleExportPDF = async () => {
+    setIsLoading(true);
+    try {
+      const auth = JSON.parse(localStorage.getItem('trackmaster-auth') || '{}');
+      const custId = Number(auth.custId ?? 0) || 0;
+
+      const begin = dateRange?.from ? startOfDay(dateRange.from) : startOfDay(new Date());
+      const end = dateRange?.to ? endOfDay(dateRange.to) : endOfDay(dateRange?.from ?? new Date());
+
+      const mapSortKeyToApiColumn = (key: string): string => {
+        switch (key) {
+          case 'vehicleId':
+            return 'BBID';
+          case 'vehicleName':
+            return 'VehName';
+          case 'distance':
+            return 'Distance';
+          default:
+            return 'BBID'; // Default sort column
+        }
+      };
+      const requestModel: DataTableRequestModel = {
+        CustId: custId,
+        iDisplayStart: pageIndex * pageSize,
+        iDisplayLength: pageSize,
+        sortColumn: mapSortKeyToApiColumn(String(sortConfig.key)),
+        sortDirection: sortConfig.direction,
+        sSearch: selectedVehicle && selectedVehicle !== 'all' ? selectedVehicle : undefined,
+        beginDate: formatDateTime(begin),
+        endDate: formatDateTime(end, true),
+        DownloadType: 'Pdf'
+      };
+
+      const response = await fetch(`${API_BASE_URL}/Reports/GetDistanceReportData`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestModel),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to download pdf');
+      }
+
+      // Convert response to blob
+      const blob = await response.blob();
+
+      // Create download url
+      const downloadUrl = window.URL.createObjectURL(blob);
+
+      // Create temp anchor
+      const link = document.createElement('a');
+
+      link.href = downloadUrl;
+
+      link.download =
+        `DistanceReport_${custId}.pdf`;
+
+      document.body.appendChild(link);
+
+      // Trigger download
+      link.click();
+
+      // Cleanup
+      link.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+
+    } catch (error) {
+      console.error('Export PDF Error:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
   return {
     reportRows,
     detailRows,
     totalRows,
     isLoading,
+    handleExportExcel,
+    handleExportPDF,
   };
 };
