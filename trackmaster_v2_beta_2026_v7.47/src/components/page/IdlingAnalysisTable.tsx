@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   Table,
   TableBody,
@@ -44,6 +44,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { API_BASE_URL } from '@/config/Api';
+import { DataTableRequestModel } from '@/hooks/DataTableRequestModel';
 
 type IdlingReportData = {
   vehicleId: string;
@@ -61,6 +63,7 @@ const headers: { key: ReportDataKey; label: string }[] = [
   { key: 'driverName', label: 'Driver Name' },
   { key: 'idlingCount', label: 'Idling Count' },
   { key: 'totalIdlingTime', label: 'Idling Duration' },
+  
 ];
 
 const timeRanges = [
@@ -68,6 +71,7 @@ const timeRanges = [
   { label: 'Yesterday', value: 'yesterday' },
   { label: 'Last Week', value: 'last-week' },
   { label: 'Last Month', value: 'last-month' },
+  { label: 'Custom Date', value: 'custom' },
 ];
 
 const intervalOptions = [
@@ -154,9 +158,12 @@ const IdlingAnalysisTable = () => {
   const [sortConfig, setSortConfig] = useState<{ key: ReportDataKey; direction: 'asc' | 'desc'; }>({ key: 'vehicleName', direction: 'asc' });
   const [detailsSortConfig, setDetailsSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'startDate', direction: 'asc' });
   const [date, setDate] = useState<DateRange | undefined>({ from: subWeeks(new Date(), 1), to: new Date() });
-  const [selectedVehicle, setSelectedVehicle] = useState('all');
+  const [vehicleList, setVehicleList] = useState<any[]>([]);
+  const [selectedVehicle, setSelectedVehicle] = useState('');
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
-  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+ const [tempDate, setTempDate] = useState<any>();
+ const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+ const [isCustomMode, setIsCustomMode] = useState(false);
   const [intervalFilter, setIntervalFilter] = useState('all');
   const [idlingAboveValue, setIdlingAboveValue] = useState(0);
   const [idlingAboveUnit, setIdlingAboveUnit] = useState<'min' | 'hr'>('min');
@@ -170,20 +177,64 @@ const IdlingAnalysisTable = () => {
     });
   };
 
-  const handleTimeRangeClick = (range: string) => {
-    const now = new Date();
-    let fromDate: Date;
-    let toDate: Date = now;
-    switch (range) {
-      case 'today': fromDate = now; break;
-      case 'yesterday': fromDate = subDays(now, 1); toDate = subDays(now, 1); break;
-      case 'last-week': fromDate = subWeeks(now, 1); break;
-      case 'last-month': fromDate = subMonths(now, 1); break;
-      default: fromDate = now;
-    }
-    setDate({ from: fromDate, to: toDate });
-    setIsCalendarOpen(false);
-  };
+ const handleTimeRangeClick = (range: string) => {
+   const now = new Date();
+ 
+   let fromDate: Date = now;
+   let toDate: Date = now;
+ 
+   switch (range) {
+     case 'today':
+       fromDate = now;
+       toDate = now;
+ 
+       setDate({ from: fromDate, to: toDate });
+       setIsCalendarOpen(false);
+       break;
+ 
+     case 'yesterday':
+       fromDate = subDays(now, 1);
+       toDate = subDays(now, 1);
+ 
+       setDate({ from: fromDate, to: toDate });
+       setIsCalendarOpen(false);
+       break;
+ 
+     case 'last-week':
+       fromDate = subWeeks(now, 1);
+       toDate = now;
+ 
+       setDate({ from: fromDate, to: toDate });
+       setIsCalendarOpen(false);
+       break;
+ 
+     case 'last-month':
+       fromDate = subMonths(now, 1);
+       toDate = now;
+ 
+       setDate({ from: fromDate, to: toDate });
+       setIsCalendarOpen(false);
+       break;
+ 
+     case 'custom':
+       setIsCustomMode(true);
+       setTempDate(date);
+       break;
+ 
+     default:
+       break;
+   }
+ };
+ 
+ const handleApply = () => {
+   setDate(tempDate);
+   setIsCalendarOpen(false);
+ };
+ 
+ const handleCancel = () => {
+   setTempDate(date);
+   setIsCalendarOpen(false);
+ };
 
   const handleDetailsSort = (key: string) => {
     setDetailsSortConfig(prev => ({
@@ -238,11 +289,155 @@ const IdlingAnalysisTable = () => {
     setPage(0);
   };
 
-  const paginatedData = sortedData.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
-  const totalPages = Math.ceil(sortedData.length / rowsPerPage);
-  const firstRowIndex = page * rowsPerPage + 1;
-  const lastRowIndex = Math.min((page + 1) * rowsPerPage, sortedData.length);
+  // const paginatedData = sortedData.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+  // const totalPages = Math.ceil(sortedData.length / rowsPerPage);
+  // const firstRowIndex = page * rowsPerPage + 1;
+  // const lastRowIndex = Math.min((page + 1) * rowsPerPage, sortedData.length);
+    const columnMap: Record<string, string> = {
+  VehName: "VehName", 
+};
+// 🚗 VEHICLE LIST API
+  // ===============================
 
+  useEffect(() => {
+    if (!custId) return;
+    fetch(`${API_BASE_URL}/Dashboard/GetAllVehicleListByCustId?userid=${custId}`)
+      .then(async (res) => {
+        const text = await res.text();
+
+        if (!text) {
+          console.warn("Empty response");
+          return [];
+        }
+
+        return JSON.parse(text);
+      })
+      .then(data => {
+        const vehicles = data?.data || [];
+
+        const formatted = [
+          { label: 'All', value: '' },
+          ...vehicles.map((v: any) => ({
+            label: v.vehName,
+            value: v.bbid
+          }))
+        ];
+ 
+        setVehicleList(formatted);
+      })
+      .catch(err => console.error("API error:", err));
+  }, []);
+  
+  const auth = JSON.parse(localStorage.getItem("trackmaster-auth") || "{}");
+  const custId = auth.custId;
+  const [apiData, setApiData] = useState<any[]>([]);
+  const [totalRecords, setTotalRecords] = useState(0);
+
+  const paginatedData = apiData;
+
+  const totalPages = Math.ceil(totalRecords / rowsPerPage);
+
+  const firstRowIndex = totalRecords === 0 ? 0 : page * rowsPerPage + 1;
+
+  const lastRowIndex = Math.min(
+    (page + 1) * rowsPerPage,
+    totalRecords
+  );
+  const buildRequestModel = (): DataTableRequestModel => {
+
+  const start = date?.from;
+  const end = date?.to;
+
+  return {
+    CustId: custId,
+
+    sEcho: 1,
+
+    iDisplayStart: page * rowsPerPage,
+
+    iDisplayLength: rowsPerPage,
+
+    sSearch:
+      selectedVehicle === ""
+        ? ""
+        : selectedVehicle || "",
+
+    //sortColumn: "0",
+sortColumn:columnMap[sortConfig?.key as string] || "VehName",
+     sortDirection:
+       (sortConfig?.direction?.toLowerCase() as "asc" | "desc") || "asc",
+
+    interval: intervalFilter || undefined,
+
+    beginDate: start
+      ? new Date(
+          new Date(start).setHours(0, 0, 0, 0)
+        ).toISOString()
+      : "",
+
+    endDate: end
+      ? new Date(
+          new Date(end).setHours(23, 59, 59, 999)
+        ).toISOString()
+      : "",
+  };
+};
+  // ================= API CALL =================
+  const [loading, setLoading] = useState(true);
+
+const fetchStoppageReport = useCallback(async () => {
+  setLoading(true);
+
+  try {
+    const requestModel = buildRequestModel();
+
+    const params = new URLSearchParams(
+      Object.entries(requestModel).reduce(
+        (acc, [key, value]) => {
+          if (value !== undefined && value !== null) {
+            acc[key] = String(value);
+          }
+          return acc;
+        },
+        {} as Record<string, string>
+      )
+    );
+
+    const url = `${API_BASE_URL}/Reports/GetIdlingStatusReport?${params.toString()}`;
+
+    const res = await fetch(url);
+
+    const json = await res.json();
+
+    console.log(json);
+
+    setApiData(json.data || []);
+
+    setTotalRecords(
+      json.count || json.data?.length || 0
+    );
+  } catch (err) {
+    console.error(err);
+  } finally {
+    setLoading(false);
+  }
+}, [
+  date,
+  intervalFilter,
+  page,
+  rowsPerPage,
+  selectedVehicle,
+  sortConfig,
+]);
+  useEffect(() => {
+    fetchStoppageReport();
+  }, [fetchStoppageReport]);
+  if (loading) return <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+    <div className="bg-white p-4 rounded-lg flex items-center gap-3 shadow-lg">
+      <div className="animate-spin h-5 w-5 border-2 border-black border-t-transparent rounded-full"></div>
+      <span>Please wait...</span>
+    </div>
+  </div>;
   return (
     <Card className="shadow-sm overflow-hidden">
       <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 px-6 py-4">
@@ -277,30 +472,57 @@ const IdlingAnalysisTable = () => {
                   )}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0 flex" align="end">
-                <div className="flex flex-col space-y-1 p-2 border-r">
-                  {timeRanges.map((range) => (
-                    <Button
-                      key={range.value}
-                      variant="ghost"
-                      className="justify-start"
-                      onClick={() => handleTimeRangeClick(range.value)}
-                    >
-                      {range.label}
-                    </Button>
-                  ))}
-                </div>
-                <Calendar
-                  initialFocus
-                  mode="range"
-                  defaultMonth={date?.from}
-                  selected={date}
-                  onSelect={setDate}
-                  numberOfMonths={1}
-                />
-              </PopoverContent>
+             <PopoverContent className="w-auto p-0 flex flex-col" align="end">
+               <div className="flex">
+                 
+                 {/* Left Side Buttons */}
+                 <div className="flex flex-col space-y-1 p-2 border-r min-w-[140px]">
+                   {timeRanges.map((range) => (
+                     <Button
+                       key={range.value}
+                       variant="ghost"
+                       className="justify-start"
+                       onClick={() => handleTimeRangeClick(range.value)}
+                     >
+                       {range.label}
+                     </Button>
+                   ))}
+                 </div>
+             
+                 {/* Calendar */}
+                 <div className="p-3">
+                   <Calendar
+                     initialFocus
+                     mode="range"
+                     defaultMonth={tempDate?.from || date?.from}
+                     selected={tempDate}
+                     onSelect={(range: any) => setTempDate(range)}
+                     numberOfMonths={1}
+                   />
+             
+                   {/* Apply / Cancel Buttons */}
+                   {isCustomMode && (
+                     <div className="flex justify-end gap-2 mt-4">
+                       <Button
+                         variant="outline"
+                         onClick={handleCancel}
+                       >
+                         Cancel
+                       </Button>
+             
+                       <Button onClick={handleApply}>
+                         Apply
+                       </Button>
+                     </div>
+                   )}
+                 </div>
+               </div>
+             </PopoverContent>            
             </Popover>
-            <VehicleCombobox vehicles={vehicles} value={selectedVehicle} onChange={setSelectedVehicle} className="w-full sm:w-[180px]" />
+            {/* <VehicleCombobox vehicles={vehicles} value={selectedVehicle} onChange={setSelectedVehicle} className="w-full sm:w-[180px]" /> */}
+            <VehicleCombobox vehicles={vehicleList} value={selectedVehicle} onChange={(value) => {setSelectedVehicle(value);// Reset pagination
+                setPage(0); setRowsPerPage(10);}}
+              className="w-full sm:w-[180px]"/>
             <Select value={intervalFilter} onValueChange={setIntervalFilter}>
               <SelectTrigger className="w-full sm:w-[180px]">
                 <SelectValue placeholder="Filter by duration" />
@@ -362,21 +584,37 @@ const IdlingAnalysisTable = () => {
                 <TableHead className="px-6 py-3"></TableHead>
               </TableRow>
             </TableHeader>
-            <TableBody>
-              {paginatedData.map((row) => {
-                const isExpanded = expandedRows.has(row.vehicleId);
-                const sortedDetails = [...row.details].sort((a, b) => {
-                  const key = detailsSortConfig.key as keyof typeof a;
-                  let aValue = a[key];
-                  let bValue = b[key];
-                  if (typeof aValue === 'string' && typeof bValue === 'string') {
-                    return detailsSortConfig.direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
-                  }
-                  if (typeof aValue === 'number' && typeof bValue === 'number') {
-                    return detailsSortConfig.direction === 'asc' ? aValue - bValue : bValue - aValue;
-                  }
-                  return 0;
-                });
+            {/* <TableBody>
+                            { loading ? (
+                              <TableRow>
+                                <TableCell
+                                  colSpan={5}
+                                  className="text-center py-10"
+                                >
+                                  Loading...
+                                </TableCell>
+                              </TableRow>
+                             ) : paginatedData.length > 0 ? (
+                              paginatedData.map((row) => {
+                                const isExpanded = expandedRows.has(row.bbid);
+              
+                               // const sortedDetails = row.objStoppageReport || [];
+              const sortedDetails = [...(row.objStoppageReport || [])].sort((a, b) => {
+                if (!detailsSortConfig.key) return 0;
+              
+                const aValue = a[detailsSortConfig.key];
+                const bValue = b[detailsSortConfig.key];
+              
+                if (aValue < bValue) {
+                  return detailsSortConfig.direction === "asc" ? -1 : 1;
+                }
+              
+                if (aValue > bValue) {
+                  return detailsSortConfig.direction === "asc" ? 1 : -1;
+                }
+              
+                return 0;
+              });
 
                 return (
                   <React.Fragment key={row.vehicleId}>
@@ -451,7 +689,122 @@ const IdlingAnalysisTable = () => {
                   </React.Fragment>
                 );
               })}
-            </TableBody>
+            </TableBody> */}
+            <TableBody>
+  {loading ? (
+    <TableRow>
+      <TableCell
+        colSpan={5}
+        className="text-center py-10"
+      >
+        Loading...
+      </TableCell>
+    </TableRow>
+  ) : paginatedData.length > 0 ? (
+    paginatedData.map((row) => {
+      const isExpanded = expandedRows.has(row.vehicleId);
+
+      const sortedDetails = [...(row.objStoppageReport || [])].sort((a, b) => {
+        if (!detailsSortConfig.key) return 0;
+
+        const aValue = a[detailsSortConfig.key];
+        const bValue = b[detailsSortConfig.key];
+
+        if (aValue < bValue) {
+          return detailsSortConfig.direction === "asc" ? -1 : 1;
+        }
+
+        if (aValue > bValue) {
+          return detailsSortConfig.direction === "asc" ? 1 : -1;
+        }
+
+        return 0;
+      });
+
+      return (
+                  <React.Fragment key={row.vehicleId}>
+                    <TableRow className="bg-card hover:bg-muted/50 border-b">
+                      <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-foreground">{row.vehicleName}</TableCell>
+                      <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{row.driverName || 'N/A'}</TableCell>
+                      <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{row.idlingCount}</TableCell>
+                      <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{formatDurationForReport(row.totalIdlingTime)}</TableCell>
+                      <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-right">
+                        <Button variant="link" onClick={() => toggleRow(row.vehicleId)} className="font-medium text-brand-blue dark:text-blue-400 p-0 h-auto flex items-center gap-1">
+                          Details <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                    {isExpanded && (
+                      <TableRow className="bg-muted/20 hover:bg-muted/20">
+                        <TableCell colSpan={headers.length + 1} className="p-0">
+                          <div className="bg-muted/50 p-8">
+                            <div className="bg-card rounded-lg shadow-sm h-full flex flex-col overflow-hidden">
+                              <div className="p-6 border-b">
+                                <h5 className="text-lg font-semibold text-foreground">Idling Log for {row.vehicleName}</h5>
+                                <p className="text-sm text-muted-foreground">Detailed idling breakdown for the selected period.</p>
+                              </div>
+                              <div className="p-6">
+                                <ScrollArea className="h-[240px] pr-4">
+                                  <Table>
+                                    <TableHeader>
+                                      <TableRow>
+                                        <SortableHeader onClick={() => handleDetailsSort('startDate')} isSorted={detailsSortConfig.key === 'startDate'} sortDirection={detailsSortConfig.direction}>Start Date</SortableHeader>
+                                        <SortableHeader onClick={() => handleDetailsSort('stopDate')} isSorted={detailsSortConfig.key === 'stopDate'} sortDirection={detailsSortConfig.direction}>Stop Date</SortableHeader>
+                                        <SortableHeader onClick={() => handleDetailsSort('afterIdlingStatus')} isSorted={detailsSortConfig.key === 'afterIdlingStatus'} sortDirection={detailsSortConfig.direction}>After Idling</SortableHeader>
+                                        <SortableHeader onClick={() => handleDetailsSort('location')} isSorted={detailsSortConfig.key === 'location'} sortDirection={detailsSortConfig.direction}>Location</SortableHeader>
+                                        <SortableHeader onClick={() => handleDetailsSort('duration')} isSorted={detailsSortConfig.key === 'duration'} sortDirection={detailsSortConfig.direction}>Duration</SortableHeader>
+                                        <TableHead>Add POI</TableHead>
+                                        <TableHead>POI Location</TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {sortedDetails.length > 0 ? (
+                                        sortedDetails.map(detail => (
+                                          <TableRow key={detail.id}>
+                                            <TableCell className="font-mono text-sm">{detail.startDate}</TableCell>
+                                            <TableCell className="font-mono text-sm">{detail.stopDate}</TableCell>
+                                            <TableCell className="text-sm">{detail.afterIdlingStatus}</TableCell>
+                                            <TableCell className="text-sm truncate">{detail.location}</TableCell>
+                                            <TableCell className="text-sm">{formatDurationForReport(detail.duration)}</TableCell>
+                                            <TableCell>
+                                              <Button variant="outline" size="sm">
+                                                <PlusCircle className="h-4 w-4 mr-2" />
+                                                Add POI
+                                              </Button>
+                                            </TableCell>
+                                            <TableCell className="text-sm">{detail.poiLocation || 'N/A'}</TableCell>
+                                          </TableRow>
+                                        ))
+                                      ) : (
+                                        <TableRow>
+                                          <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                                            No idling details available for this period.
+                                          </TableCell>
+                                        </TableRow>
+                                      )}
+                                    </TableBody>
+                                  </Table>
+                                </ScrollArea>
+                              </div>
+                            </div>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </React.Fragment>
+                );
+              })
+  ) : (
+    <TableRow>
+      <TableCell
+        colSpan={5}
+        className="text-center py-10"
+      >
+        No data found
+      </TableCell>
+    </TableRow>
+  )}
+</TableBody>
           </Table>
         </div>
       </CardContent>
