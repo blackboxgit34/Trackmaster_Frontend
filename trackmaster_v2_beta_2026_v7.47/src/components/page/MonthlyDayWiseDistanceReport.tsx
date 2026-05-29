@@ -238,6 +238,20 @@ const MonthlyDayWiseDistanceReport = () => {
   const [isHelpOpen, setIsHelpOpen] =
     useState(false);
 
+  useEffect(() => {
+    setPagination((prev) => ({
+      ...prev,
+      pageIndex: 0,
+    }));
+  }, [selectedVehicle, month]);
+
+  useEffect(() => {
+    setPagination((prev) => ({
+      ...prev,
+      pageIndex: 0,
+    }));
+  }, [selectedVehicle, month, sortConfig]);
+
   const [highlightProblems, setHighlightProblems] =
     useState(false);
 
@@ -794,13 +808,13 @@ const MonthlyDayWiseDistanceReport = () => {
               </DropdownMenuTrigger>
 
               <DropdownMenuContent align="end">
-                <DropdownMenuItem  onSelect={handleExportPDF}>
-                  <FileText className="mr-2 h-4 w-4"/>
+                <DropdownMenuItem onSelect={handleExportPDF}>
+                  <FileText className="mr-2 h-4 w-4" />
                   Export as PDF
                 </DropdownMenuItem>
 
                 <DropdownMenuItem onSelect={handleExportExcel}>
-                  <FileSpreadsheet className="mr-2 h-4 w-4"/>
+                  <FileSpreadsheet className="mr-2 h-4 w-4" />
                   Export as Excel (CSV)
                 </DropdownMenuItem>
               </DropdownMenuContent>
