@@ -709,24 +709,25 @@ const BatteryDisconnectionReportTable = () => {
                         </TableCell>
 
                         <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-right">
-                          <Button
-                            variant="link"
-                            onClick={() =>
-                              toggleRow(row.vehicleId)
-                            }
-                            className="font-medium text-brand-blue dark:text-blue-400 p-0 h-auto flex items-center gap-1"
-                          >
-                            Details
-
-                            <ChevronDown
-                              className={`h-4 w-4 transition-transform duration-200 ${
-                                isExpanded
-                                  ? 'rotate-180'
-                                  : ''
-                              }`}
-                            />
-                          </Button>
-                        </TableCell>
+                            {row.details?.length > 0 ? (
+                              <Button
+                                variant="link"
+                                onClick={() => toggleRow(row.vehicleId)}
+                                className="font-medium text-brand-blue dark:text-blue-400 p-0 h-auto flex items-center gap-1"
+                              >
+                                Details
+                                <ChevronDown
+                                  className={`h-4 w-4 transition-transform duration-200 ${
+                                    expandedRows.has(row.vehicleId) ? 'rotate-180' : ''
+                                  }`}
+                                />
+                              </Button>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">
+                                No logs
+                              </span>
+                            )}
+                          </TableCell>
                       </TableRow>
 
                       {isExpanded && (
