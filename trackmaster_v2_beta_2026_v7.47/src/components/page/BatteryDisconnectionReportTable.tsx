@@ -95,7 +95,7 @@ type AggregatedData = {
 };
 
 type ReportDataKey = keyof Omit<AggregatedData, 'details'>;
-const [isSelectingEnd, setIsSelectingEnd] = useState(false);
+//const [isSelectingEnd, setIsSelectingEnd] = useState(false);
 
 const headers: { key: ReportDataKey; label: string }[] = [
   { key: 'vehicleId', label: 'Registration number' },
