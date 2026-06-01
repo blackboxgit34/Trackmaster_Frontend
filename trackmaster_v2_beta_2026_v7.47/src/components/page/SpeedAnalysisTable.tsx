@@ -32,7 +32,7 @@ const headers: { key: ReportDataKey; label: string }[] = [
   { key: 'vehicleName', label: 'Vehicle No' },
   { key: 'driverName', label: 'Driver Name' },
   { key: 'overspeedCount', label: 'Overspeed Count' },
-  { key: 'totalOverspeedDuration', label: 'Total Duration' },
+  { key: 'totalOverspeedDuration', label: 'Total Duration (s)' },
   { key: 'maxSpeed', label: 'Max. Speed (km/h)' },
   { key: 'avgSpeed', label: 'Avg. Speed (km/h)' },
 ];
