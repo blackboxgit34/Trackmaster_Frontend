@@ -285,63 +285,263 @@ const EntryExitReportTable = () => {
     }));
   };
 
-  const handleExportPDF = () => {
-    const exportData = generateExportData();
-    if (exportData.length === 0) return;
-    const doc = new jsPDF();
-    const tableColumn = Object.keys(exportData[0]);
-    const tableRows = exportData.map(row => Object.values(row).map(String));
-    doc.text("Entry/Exit Report", 14, 15);
-    autoTable(doc, { head: [tableColumn], body: tableRows, startY: 20 });
-    doc.save(`entry-exit-report-${new Date().toISOString().split('T')[0]}.pdf`);
+  const handleExportCSV = async () => {
+    setLoading(true);
+    try {
+      const authData = JSON.parse(
+        localStorage.getItem("trackmaster-auth") || "{}"
+      );
+
+      const request: DataTableRequestModel = {
+
+        CustId: authData?.custId || 0,
+
+        sEcho: 1,
+
+        iDisplayStart:
+          pagination.pageIndex *
+          pagination.pageSize,
+
+        iDisplayLength:
+          pagination.pageSize,
+
+        sSearch: searchTerm,
+
+        sortColumn:
+          sortConfig.sortColumn,
+
+        sortDirection:
+          sortConfig.sortDirection,
+        // updated interval mapping
+        interval: intervalMap[intervalFilter] || "1",
+        beginDate:
+          format(
+
+            startOfDay(
+
+              date?.from ||
+
+              new Date()
+
+            ),
+
+            "M/d/yyyy h:mm:ss a"
+
+          ),
+
+        endDate:
+          format(
+            new Date(),
+            "M/d/yyyy h:mm:ss a"
+          ),
+
+        Status: "",
+        DownloadType: "Excel"
+      };
+
+      const params =
+        new URLSearchParams();
+
+      Object.entries(request)
+        .forEach(([key, value]) => {
+
+          if (
+            value !== null &&
+            value !== undefined
+          ) {
+
+            params.append(
+              key,
+              String(value)
+            );
+
+          }
+
+        });
+      // ADD THIS
+      if (
+        selectedVehicle &&
+        selectedVehicle !== "all"
+      ) {
+
+        params.append(
+          "bbid",
+          selectedVehicle
+        );
+
+      }
+
+
+      const response = await fetch(`${API_BASE_URL}/Reports/GetEntryExitReport?${params.toString()}`, {
+        method: 'Post',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(request),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to download excel');
+      }
+
+      // Convert response to blob
+      const blob = await response.blob();
+
+      // Create download url
+      const downloadUrl = window.URL.createObjectURL(blob);
+
+      // Create temp anchor
+      const link = document.createElement('a');
+
+      link.href = downloadUrl;
+
+      link.download =
+        `EntryExitReport_${authData?.custId || 0}.xlsx`;
+
+      document.body.appendChild(link);
+
+      // Trigger download
+      link.click();
+
+      // Cleanup
+      link.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+
+    } catch (error) {
+      console.error('Export Excel Error:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-const handleExportCSV = () => {
-  if (!reportData.length) return;
+  const handleExportPDF = async () => {
+    setLoading(true);
+    try {
+      const authData = JSON.parse(
+        localStorage.getItem("trackmaster-auth") || "{}"
+      );
 
-  const exportData = reportData.map((row) => ({
-    "Vehicle No": row.vehName,
-    "Driver Name":
-      row.driverName && row.driverName !== "undefined"
-        ? row.driverName
-        : "NA",
-    "POIs Covered": row.poisCovered ?? 0,
-  }));
+      const request: DataTableRequestModel = {
 
-  const csv = Papa.unparse(exportData);
+        CustId: authData?.custId || 0,
 
-  const blob = new Blob([csv], {
-    type: "text/csv;charset=utf-8;",
-  });
+        sEcho: 1,
 
-  const link = document.createElement("a");
-  const url = URL.createObjectURL(blob);
+        iDisplayStart:
+          pagination.pageIndex *
+          pagination.pageSize,
 
-  link.href = url;
-  link.download = `entry-exit-report-${
-    new Date().toISOString().split("T")[0]
-  }.csv`;
+        iDisplayLength:
+          pagination.pageSize,
 
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-};
+        sSearch: searchTerm,
+
+        sortColumn:
+          sortConfig.sortColumn,
+
+        sortDirection:
+          sortConfig.sortDirection,
+        // updated interval mapping
+        interval: intervalMap[intervalFilter] || "1",
+        beginDate:
+          format(
+
+            startOfDay(
+
+              date?.from ||
+
+              new Date()
+
+            ),
+
+            "M/d/yyyy h:mm:ss a"
+
+          ),
+
+        endDate:
+          format(
+            new Date(),
+            "M/d/yyyy h:mm:ss a"
+          ),
+
+        Status: "",
+        DownloadType: "Pdf"
+      };
+
+      const params =
+        new URLSearchParams();
+
+      Object.entries(request)
+        .forEach(([key, value]) => {
+
+          if (
+            value !== null &&
+            value !== undefined
+          ) {
+
+            params.append(
+              key,
+              String(value)
+            );
+
+          }
+
+        });
+      // ADD THIS
+      if (
+        selectedVehicle &&
+        selectedVehicle !== "all"
+      ) {
+
+        params.append(
+          "bbid",
+          selectedVehicle
+        );
+
+      }
 
 
+      const response = await fetch(`${API_BASE_URL}/Reports/GetEntryExitReport?${params.toString()}`, {
+        method: 'Post',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(request),
+      });
 
-  // const handleExportCSV = () => {
-  //   const exportData = generateExportData();
-  //   if (exportData.length === 0) return;
-  //   const csv = Papa.unparse(exportData);
-  //   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  //   const link = document.createElement('a');
-  //   const url = URL.createObjectURL(blob);
-  //   link.setAttribute('href', url);
-  //   link.setAttribute('download', `entry-exit-report-${new Date().toISOString().split('T')[0]}.csv`);
-  //   document.body.appendChild(link);
-  //   link.click();
-  //   document.body.removeChild(link);
-  // };
+      if (!response.ok) {
+        throw new Error('Failed to download pdf');
+      }
+
+      // Convert response to blob
+      const blob = await response.blob();
+
+      // Create download url
+      const downloadUrl = window.URL.createObjectURL(blob);
+
+      // Create temp anchor
+      const link = document.createElement('a');
+
+      link.href = downloadUrl;
+
+      link.download =
+        `EntryExitReport_${authData?.custId || 0}.pdf`;
+
+      document.body.appendChild(link);
+
+      // Trigger download
+      link.click();
+
+      // Cleanup
+      link.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+
+    } catch (error) {
+      console.error('Export PDF Error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const parseDuration = (value: string) => {
     if (!value) {
@@ -458,7 +658,7 @@ const handleExportCSV = () => {
           `${API_BASE_URL}/Reports/GetEntryExitReport?${params.toString()}`,
 
           {
-            method: "GET"
+            method: "POST", 
           }
 
         );
@@ -526,6 +726,29 @@ const handleExportCSV = () => {
     intervalFilter,
 
     selectedVehicle
+
+  ]);
+
+  useEffect(() => {
+
+    setPagination(prev => {
+
+      if (prev.pageIndex === 0) return prev;
+
+      return {
+        ...prev,
+        pageIndex: 0
+      };
+
+    });
+
+  }, [
+
+    selectedVehicle,
+    date,
+    intervalFilter,
+    searchTerm,
+    sortConfig
 
   ]);
 
@@ -624,28 +847,81 @@ const handleExportCSV = () => {
                 )}
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-0 flex" align="end">
-              <div className="flex flex-col space-y-1 p-2 border-r">
-                {timeRanges.map((range) => (
-                  <Button
-                    key={range.value}
-                    variant="ghost"
-                    className="justify-start"
-                    onClick={() => handleTimeRangeClick(range.value)}
-                  >
-                    {range.label}
-                  </Button>
-                ))}
-              </div>
-              <Calendar
-                initialFocus
-                mode="range"
-                defaultMonth={tempDate?.from}
-                selected={tempDate}
-                onSelect={setTempDate}
-                numberOfMonths={1}
-              />
-            </PopoverContent>
+          <PopoverContent className="w-auto p-0" align="end">
+  <div className="flex">
+    <div className="flex flex-col space-y-1 p-2 border-r">
+      {timeRanges.map((range) => (
+        <Button
+          key={range.value}
+          variant="ghost"
+          className="justify-start"
+          onClick={() => {
+            const now = new Date();
+            let fromDate: Date;
+            let toDate: Date = now;
+
+            switch (range.value) {
+              case "today":
+                fromDate = now;
+                break;
+              case "yesterday":
+                fromDate = subDays(now, 1);
+                toDate = subDays(now, 1);
+                break;
+              case "last-week":
+                fromDate = subWeeks(now, 1);
+                break;
+              case "last-month":
+                fromDate = subMonths(now, 1);
+                break;
+              default:
+                fromDate = now;
+            }
+
+            setTempDate({
+              from: fromDate,
+              to: toDate,
+            });
+          }}
+        >
+          {range.label}
+        </Button>
+      ))}
+    </div>
+
+    <div className="flex flex-col">
+      <Calendar
+        initialFocus
+        mode="range"
+        defaultMonth={tempDate?.from}
+        selected={tempDate}
+        onSelect={setTempDate}
+        numberOfMonths={1}
+      />
+
+      <div className="flex justify-end gap-2 border-t p-3">
+        <Button
+          variant="outline"
+          onClick={() => {
+            setTempDate(date); // restore old date
+            setIsCalendarOpen(false);
+          }}
+        >
+          Cancel
+        </Button>
+
+        <Button
+          onClick={() => {
+            setDate(tempDate); // apply selected date
+            setIsCalendarOpen(false);
+          }}
+        >
+          Apply
+        </Button>
+      </div>
+    </div>
+  </div>
+</PopoverContent>
           </Popover>
           <VehicleCombobox vehicles={[{ label: 'All Vehicles', value: 'all' }, ...(vehicleList ?? []),]} value={selectedVehicle} onChange={setSelectedVehicle} className="w-full sm:w-[180px]" />
           <Select value={intervalFilter} onValueChange={setIntervalFilter}>
@@ -810,16 +1086,16 @@ const handleExportCSV = () => {
                                             <TableCell className="text-sm text-muted-foreground">
                                               <button
                                                 className="text-blue-600 hover:underline"
-                                                // onClick={() =>
-                                                //   showMapWindow(
-                                                //     detail.bbid,
-                                                //     detail.vehname,
-                                                //     detail.poiLat,
-                                                //     detail.poiLong,
-                                                //     detail.poiName,
-                                                //     "~/resources/images/legends/stop.png"
-                                                //   )
-                                                // }
+                                              // onClick={() =>
+                                              //   showMapWindow(
+                                              //     detail.bbid,
+                                              //     detail.vehname,
+                                              //     detail.poiLat,
+                                              //     detail.poiLong,
+                                              //     detail.poiName,
+                                              //     "~/resources/images/legends/stop.png"
+                                              //   )
+                                              // }
                                               >
                                                 {detail.poiName.replace(/<[^>]*>/g, "")}
                                               </button>

@@ -238,6 +238,20 @@ const MonthlyDayWiseDistanceReport = () => {
   const [isHelpOpen, setIsHelpOpen] =
     useState(false);
 
+  useEffect(() => {
+    setPagination((prev) => ({
+      ...prev,
+      pageIndex: 0,
+    }));
+  }, [selectedVehicle, month]);
+
+  useEffect(() => {
+    setPagination((prev) => ({
+      ...prev,
+      pageIndex: 0,
+    }));
+  }, [selectedVehicle, month, sortConfig]);
+
   const [highlightProblems, setHighlightProblems] =
     useState(false);
 
@@ -558,6 +572,188 @@ const MonthlyDayWiseDistanceReport = () => {
     pagination.pageSize,
     totalRecords
   );
+  const handleExportExcel = async () => {
+    setLoading(true);
+    try {
+      const auth = JSON.parse(
+        localStorage.getItem('trackmaster-auth') ||
+        '{}'
+      );
+
+      const body = {
+        sEcho: 1,
+
+        iDisplayStart:
+          pagination.pageIndex *
+          pagination.pageSize,
+
+        iDisplayLength:
+          pagination.pageSize,
+
+        sSearch:
+          selectedVehicle !== 'all'
+            ? vehicles.find(
+              (x) =>
+                x.value === selectedVehicle
+            )?.label || ''
+            : '',
+
+        sortColumn:
+          sortConfig.key === 'vehicleName'
+            ? 'VehName'
+            : sortConfig.key === 'totalDistance'
+              ? 'TotalDistance'
+              : 'TotalStoppage',
+
+        sortDirection:
+          sortConfig.direction,
+
+        CustId: auth.custId,
+
+        beginDate: format(
+          month!,
+          'MMMM yyyy'
+        ),
+
+        endDate: null,
+
+        Status: null,
+
+        DownloadType: "Excel"
+      };
+
+      const response = await fetch(`${API_BASE_URL}/Reports/GetMonthlyDistanceReportData`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to download excel');
+      }
+
+      // Convert response to blob
+      const blob = await response.blob();
+
+      // Create download url
+      const downloadUrl = window.URL.createObjectURL(blob);
+
+      // Create temp anchor
+      const link = document.createElement('a');
+
+      link.href = downloadUrl;
+
+      link.download =
+        `MonthlyDistanceReport_${auth.custId}.xlsx`;
+
+      document.body.appendChild(link);
+
+      // Trigger download
+      link.click();
+
+      // Cleanup
+      link.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+
+    } catch (error) {
+      console.error('Export Excel Error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+  const handleExportPDF = async () => {
+    try {
+      const auth = JSON.parse(
+        localStorage.getItem('trackmaster-auth') ||
+        '{}'
+      );
+
+      const body = {
+        sEcho: 1,
+
+        iDisplayStart:
+          pagination.pageIndex *
+          pagination.pageSize,
+
+        iDisplayLength:
+          pagination.pageSize,
+
+        sSearch:
+          selectedVehicle !== 'all'
+            ? vehicles.find(
+              (x) =>
+                x.value === selectedVehicle
+            )?.label || ''
+            : '',
+
+        sortColumn:
+          sortConfig.key === 'vehicleName'
+            ? 'VehName'
+            : sortConfig.key === 'totalDistance'
+              ? 'TotalDistance'
+              : 'TotalStoppage',
+
+        sortDirection:
+          sortConfig.direction,
+
+        CustId: auth.custId,
+
+        beginDate: format(
+          month!,
+          'MMMM yyyy'
+        ),
+
+        endDate: null,
+
+        Status: null,
+
+        DownloadType: "Pdf"
+      };
+
+      const response = await fetch(`${API_BASE_URL}/Reports/GetMonthlyDistanceReportData`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to download pdf');
+      }
+
+      // Convert response to blob
+      const blob = await response.blob();
+
+      // Create download url
+      const downloadUrl = window.URL.createObjectURL(blob);
+
+      // Create temp anchor
+      const link = document.createElement('a');
+
+      link.href = downloadUrl;
+
+      link.download =
+        `MonthlyDistanceReport_${auth.custId}.pdf`;
+
+      document.body.appendChild(link);
+
+      // Trigger download
+      link.click();
+
+      // Cleanup
+      link.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+
+    } catch (error) {
+      console.error('Export PDF Error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loading) return <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
     <div className="bg-white p-4 rounded-lg flex items-center gap-3 shadow-lg">
       <div className="animate-spin h-5 w-5 border-2 border-black border-t-transparent rounded-full"></div>
@@ -612,12 +808,12 @@ const MonthlyDayWiseDistanceReport = () => {
               </DropdownMenuTrigger>
 
               <DropdownMenuContent align="end">
-                <DropdownMenuItem>
+                <DropdownMenuItem onSelect={handleExportPDF}>
                   <FileText className="mr-2 h-4 w-4" />
                   Export as PDF
                 </DropdownMenuItem>
 
-                <DropdownMenuItem>
+                <DropdownMenuItem onSelect={handleExportExcel}>
                   <FileSpreadsheet className="mr-2 h-4 w-4" />
                   Export as Excel (CSV)
                 </DropdownMenuItem>

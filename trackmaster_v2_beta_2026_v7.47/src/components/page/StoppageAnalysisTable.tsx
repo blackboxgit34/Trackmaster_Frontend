@@ -71,7 +71,9 @@ const timeRanges = [
   { label: 'Yesterday', value: 'yesterday' },
   { label: 'Last Week', value: 'last-week' },
   { label: 'Last Month', value: 'last-month' },
+   { label: 'Custom Date', value: 'custom' },
 ];
+
 
 const intervalOptions = [
   { label: 'All Durations', value: '0-0' },
@@ -82,7 +84,7 @@ const intervalOptions = [
   { label: '5-10 mins', value: '5-10' },
   { label: '10 mins and more', value: '10-0' },
 ];
-
+ 
 const formatDurationForReport = (totalSeconds: number) => {
   if (isNaN(totalSeconds) || totalSeconds < 0) {
     return '0 second(s)';
@@ -160,10 +162,14 @@ const StoppageAnalysisTable = () => {
   const [vehicleList, setVehicleList] = useState<any[]>([]);
   const [selectedVehicle, setSelectedVehicle] = useState('');
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
-  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+ // const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [intervalFilter, setIntervalFilter] = useState('0-0');
   const [stoppageAboveValue, setStoppageAboveValue] = useState(0);
   const [stoppageAboveUnit, setStoppageAboveUnit] = useState<'min' | 'hr'>('min');
+  //const [date, setDate] = useState<any>();
+const [tempDate, setTempDate] = useState<any>();
+const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+const [isCustomMode, setIsCustomMode] = useState(false);
 
   const toggleRow = (rowId: string) => {
     setExpandedRows((prev) => {
@@ -173,21 +179,65 @@ const StoppageAnalysisTable = () => {
       return newSet;
     });
   };
-
   const handleTimeRangeClick = (range: string) => {
-    const now = new Date();
-    let fromDate:  Date = now;
-    let toDate: Date = now;
-    switch (range) {
-      case 'today': fromDate = now; break;
-      case 'yesterday': fromDate = subDays(now, 1); toDate = subDays(now, 1); break;
-      case 'last-week': fromDate = subWeeks(now, 1); break;
-      case 'last-month': fromDate = subMonths(now, 1); break;
-      default: fromDate = now;
-    }
-    setDate({ from: fromDate, to: toDate });
-    setIsCalendarOpen(false);
-  };
+  const now = new Date();
+
+  let fromDate: Date = now;
+  let toDate: Date = now;
+
+  switch (range) {
+    case 'today':
+      fromDate = now;
+      toDate = now;
+
+      setDate({ from: fromDate, to: toDate });
+      setIsCalendarOpen(false);
+      break;
+
+    case 'yesterday':
+      fromDate = subDays(now, 1);
+      toDate = subDays(now, 1);
+
+      setDate({ from: fromDate, to: toDate });
+      setIsCalendarOpen(false);
+      break;
+
+    case 'last-week':
+      fromDate = subWeeks(now, 1);
+      toDate = now;
+
+      setDate({ from: fromDate, to: toDate });
+      setIsCalendarOpen(false);
+      break;
+
+    case 'last-month':
+      fromDate = subMonths(now, 1);
+      toDate = now;
+
+      setDate({ from: fromDate, to: toDate });
+      setIsCalendarOpen(false);
+      break;
+
+    case 'custom':
+      setIsCustomMode(true);
+      setTempDate(date);
+      break;
+
+    default:
+      break;
+  }
+};
+
+const handleApply = () => {
+  setDate(tempDate);
+  setIsCalendarOpen(false);
+};
+
+const handleCancel = () => {
+  setTempDate(date);
+  setIsCalendarOpen(false);
+};
+
   const handleDetailsSort = (key: string) => {
     setDetailsSortConfig(prev => ({
       key,
@@ -264,13 +314,13 @@ const StoppageAnalysisTable = () => {
         const vehicles = data?.data || [];
 
         const formatted = [
-          { label: 'All', value: 'all' },
+          { label: 'All', value: '' },
           ...vehicles.map((v: any) => ({
             label: v.vehName,
             value: v.bbid
           }))
         ];
-
+ 
         setVehicleList(formatted);
       })
       .catch(err => console.error("API error:", err));
@@ -292,6 +342,7 @@ const StoppageAnalysisTable = () => {
     totalRecords
   );
   const buildRequestModel = (): DataTableRequestModel => {
+
   const start = date?.from;
   const end = date?.to;
 
@@ -419,30 +470,57 @@ const fetchStoppageReport = useCallback(async () => {
                   )}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0 flex" align="end">
-                <div className="flex flex-col space-y-1 p-2 border-r">
-                  {timeRanges.map((range) => (
-                    <Button
-                      key={range.value}
-                      variant="ghost"
-                      className="justify-start"
-                      onClick={() => handleTimeRangeClick(range.value)}
-                    >
-                      {range.label}
-                    </Button>
-                  ))}
-                </div>
-                <Calendar
-                  initialFocus
-                  mode="range"
-                  defaultMonth={date?.from}
-                  selected={date}
-                  onSelect={setDate}
-                  numberOfMonths={1}
-                />
-              </PopoverContent>
+              <PopoverContent className="w-auto p-0 flex flex-col" align="end">
+  <div className="flex">
+    
+    {/* Left Side Buttons */}
+    <div className="flex flex-col space-y-1 p-2 border-r min-w-[140px]">
+      {timeRanges.map((range) => (
+        <Button
+          key={range.value}
+          variant="ghost"
+          className="justify-start"
+          onClick={() => handleTimeRangeClick(range.value)}
+        >
+          {range.label}
+        </Button>
+      ))}
+    </div>
+
+    {/* Calendar */}
+    <div className="p-3">
+      <Calendar
+        initialFocus
+        mode="range"
+        defaultMonth={tempDate?.from || date?.from}
+        selected={tempDate}
+        onSelect={(range: any) => setTempDate(range)}
+        numberOfMonths={1}
+      />
+
+      {/* Apply / Cancel Buttons */}
+      {isCustomMode && (
+        <div className="flex justify-end gap-2 mt-4">
+          <Button
+            variant="outline"
+            onClick={handleCancel}
+          >
+            Cancel
+          </Button>
+
+          <Button onClick={handleApply}>
+            Apply
+          </Button>
+        </div>
+      )}
+    </div>
+  </div>
+</PopoverContent>            
             </Popover>
-            <VehicleCombobox vehicles={vehicleList} value={selectedVehicle} onChange={setSelectedVehicle} className="w-full sm:w-[180px]" />
+            {/* <VehicleCombobox vehicles={vehicleList} value={selectedVehicle} onChange={setSelectedVehicle} className="w-full sm:w-[180px]" /> */}
+            <VehicleCombobox vehicles={vehicleList} value={selectedVehicle} onChange={(value) => {setSelectedVehicle(value);// Reset pagination
+    setPage(0); setRowsPerPage(10);}}
+  className="w-full sm:w-[180px]"/>
             <Select value={intervalFilter} onValueChange={setIntervalFilter}>
               <SelectTrigger className="w-full sm:w-[180px]">
                 <SelectValue placeholder="Filter by duration" />

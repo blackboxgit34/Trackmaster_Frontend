@@ -106,7 +106,6 @@ export const sortAndCalculateDetails = (details: BaseDetailData[], totalDistance
 
 const generateExportData = (data: ReportRow[]) => {
   return data.map(row => ({
-    'Date': row.date,
     'Vehicle ID': row.vehicleId,
     'Vehicle Name': row.vehicleName,
     'Distance (km)': (row.distance ?? 0).toFixed(1),

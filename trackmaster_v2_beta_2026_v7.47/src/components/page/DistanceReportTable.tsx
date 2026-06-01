@@ -17,7 +17,6 @@ import { ArrowUp, ArrowDown, ChevronsUpDown } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
 import { subWeeks } from 'date-fns';
 import { useDistanceReportData } from '@/hooks/useDistanceReportData';
-import { handleExportCSV, handleExportPDF } from '@/lib/report-utils';
 import type { ReportSortKey } from '@/types/report-types';
 import DistanceReportToolbar from './reports/DistanceReportToolbar';
 import DistanceReportRows from './reports/DistanceReportRows';
@@ -63,7 +62,7 @@ const DistanceReportTable = () => {
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
-  const { reportRows, detailRows, totalRows, isLoading } = useDistanceReportData({
+  const { reportRows, detailRows, totalRows, isLoading, handleExportExcel, handleExportPDF } = useDistanceReportData({
     dateRange,
     selectedVehicle,
     pageIndex: pagination.pageIndex,
@@ -97,8 +96,7 @@ const DistanceReportTable = () => {
       return newSet;
     });
   };
-
-   if (isLoading) return <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+  if (isLoading) return <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
     <div className="bg-white p-4 rounded-lg flex items-center gap-3 shadow-lg">
       <div className="animate-spin h-5 w-5 border-2 border-black border-t-transparent rounded-full"></div>
       <span>Please wait...</span>
@@ -117,8 +115,8 @@ const DistanceReportTable = () => {
           setDateRange={setDateRange}
           selectedVehicle={selectedVehicle}
           setSelectedVehicle={setSelectedVehicle}
-          onExportPDF={() => handleExportPDF(reportRows)}
-          onExportCSV={() => handleExportCSV(reportRows)}
+          onExportPDF={handleExportPDF}
+          onExportCSV={handleExportExcel}
         />
       </CardHeader>
       <CardContent className="p-0">
