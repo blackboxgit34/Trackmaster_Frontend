@@ -65,7 +65,7 @@ const IgnitionOnOffAnalysisTable = () => {
   const [reportData, setReportData] = useState<IgnitionVehicle[]>([]);
   const [loading, setLoading] = useState(false);
   const [totalRecords, setTotalRecords] = useState(0);
-  const [search] = useState("");
+  const [search, setSearch] = useState("");
 
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
