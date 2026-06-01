@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { VehicleCombobox } from '@/components/VehicleCombobox';
@@ -9,7 +9,6 @@ import { LoadScript } from '@react-google-maps/api';
 import { GOOGLE_MAPS_API_KEY } from '@/config/maps';
 import { DateRange } from 'react-day-picker';
 import { subDays, isWithinInterval, parse, startOfDay, endOfDay, subWeeks, subMonths, format } from 'date-fns';
-import { vehicles } from '@/data/mockData';
 import { tripReportData, type TripReportData } from '@/data/tripReportData';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Filter, ArrowUp, ArrowDown, ChevronsUpDown, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight, GitBranch, PlayCircle, Calendar as CalendarIcon, Download, FileText, FileSpreadsheet } from 'lucide-react';
@@ -23,6 +22,8 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import Papa from 'papaparse';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { API_BASE_URL } from '@/config/Api';
+import { useSearchParams } from 'react-router-dom';
 
 const libraries: ('drawing' | 'places')[] = ['drawing', 'places'];
 
@@ -235,7 +236,54 @@ const TripReport = () => {
   const pageCount = Math.ceil(sortedData.length / pagination.pageSize);
   const firstRowIndex = pagination.pageIndex * pagination.pageSize + 1;
   const lastRowIndex = Math.min((pagination.pageIndex + 1) * pagination.pageSize, sortedData.length);
+  const [searchParams] = useSearchParams();
 
+  const vehicleFromUrl =
+    searchParams.get('vehicle');
+  const [vehicles, setVehicles] = useState<
+    { label: string; value: string }[]
+  >([]);
+  useEffect(() => {
+    const loadVehicles = async () => {
+      try {
+        const auth = JSON.parse(
+          localStorage.getItem('trackmaster-auth') ||
+          '{}'
+        );
+
+        const custId = auth.custId;
+
+        const response = await fetch(
+          `${API_BASE_URL}/Dashboard/GetAllVehicleListByCustId?userid=${custId}`
+        );
+
+        const data = await response.json();
+
+        const formattedVehicles = [
+          {
+            label: 'All Vehicles',
+            value: 'all',
+          },
+          ...(data.data || []).map((v: any) => ({
+            label: v.vehName,
+            value: v.bbid,
+          })),
+        ];
+
+        setVehicles(formattedVehicles);
+
+        if (vehicleFromUrl) {
+          setSelectedVehicle(vehicleFromUrl);
+        } else {
+          setSelectedVehicle('all');
+        }
+      } catch (error) {
+        console.error('Vehicle API Error', error);
+      }
+    };
+
+    loadVehicles();
+  }, []);
   return (
     <LoadScript googleMapsApiKey={GOOGLE_MAPS_API_KEY} libraries={libraries}>
       <div className="space-y-4">
