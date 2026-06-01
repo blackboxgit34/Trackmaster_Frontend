@@ -1,42 +1,13 @@
-import React, { useState, useMemo } from 'react';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import {  Table,  TableBody,  TableCell,  TableHead,  TableHeader,  TableRow,} from '@/components/ui/table';
+import {  Card,  CardContent,  CardDescription,  CardFooter,  CardHeader,  CardTitle,} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { speedAnalysisData, type VehicleSpeedSummary } from '@/data/speedData';
-import { vehicles } from '@/data/mockData';
-import {
-  ArrowUp,
-  ArrowDown,
-  ChevronLeft,
-  ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
-  Download,
-  CalendarIcon,
-  ChevronDown,
-  TrendingUp,
-  Gauge,
-  Activity,
-  ChevronsUpDown,
-} from 'lucide-react';
+import {  type VehicleSpeedSummary } from '@/data/speedData';
+import {  ArrowUp,  ArrowDown,  ChevronLeft,  ChevronRight,  ChevronsLeft,  ChevronsRight,  Download,
+  CalendarIcon,  ChevronDown,  TrendingUp,  Gauge,  Activity,  ChevronsUpDown,} from 'lucide-react';
 import { DateRange } from 'react-day-picker';
-import { subWeeks, subHours, subDays, subMonths } from 'date-fns';
+import { subWeeks, subHours, subDays, subMonths, endOfDay,format, startOfDay,  } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { VehicleCombobox } from '../VehicleCombobox';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import WhatsappPopup from '../WhatsappPopup';
@@ -45,7 +16,14 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useSettings } from '@/context/SettingsContext';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import {useVehicleList } from '@/hooks/useApi';
+import { DataTableRequestModel } from '@/hooks/DataTableRequestModel';
 import { API_BASE_URL } from '@/config/Api';
+import { useSearchParams } from 'react-router-dom';
+
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+
 
 type ReportDataKey = keyof VehicleSpeedSummary;
 
@@ -85,19 +63,140 @@ const SortableHeader = ({ children, isSorted, sortDirection, onClick }: { childr
   </TableHead>
 );
 
+
 const SpeedAnalysisTable = () => {
   const { fleetThresholds } = useSettings();
   const OVER_SPEED_LIMIT = fleetThresholds.overspeed;
-
+  const [searchTerm, setSearchText] = useState('');
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [sortConfig, setSortConfig] = useState<{ key: ReportDataKey; direction: 'asc' | 'desc'; }>({ key: 'vehicleName', direction: 'asc' });
+ const [sortConfig, setSortConfig] = useState({
+  key: 'vehicleName' as ReportDataKey,
+  direction: 'asc' as 'asc' | 'desc',
+  sortColumn: 'vehname',
+  sortDirection: 'asc' as 'asc' | 'desc',
+});
+
+const getDefaultDateRange = (): DateRange => {
+  const today = new Date();
+
+  return {
+    from: today,
+    to: today,
+  };
+};
   const [detailsSortConfig, setDetailsSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'dateTime', direction: 'desc' });
-  const [date, setDate] = useState<DateRange | undefined>({ from: subWeeks(new Date(), 1), to: new Date() });
+  const [date, setDate] = useState<DateRange | undefined>(getDefaultDateRange());
   const [selectedVehicle, setSelectedVehicle] = useState('all');
-  const [activeTimeRange, setActiveTimeRange] = useState<string | null>('last-week');
+  const [activeTimeRange, setActiveTimeRange] = useState<string | null>(null);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [showOverspeedOnly, setShowOverspeedOnly] = useState(false);
+  const [searchParams] = useSearchParams();
+  const statusFromUrl = searchParams.get('status');
+
+  //=== bind vehicle list using common API
+  const { data: vehicleOptions } = useVehicleList();
+  const vehicleSearchOptions = [{ label: 'All', value: 'all' }, ...(vehicleOptions ?? [])];
+//============================
+
+  const [speedData, setSpeedData] = useState<VehicleSpeedSummary[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [totalRecords, setTotalRecords] = useState(0);
+
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [tempDate, setTempDate] = useState<DateRange | undefined>(getDefaultDateRange());
+  const [selecting, setSelecting] = useState<'start' | 'end'>('start');
+
+  const authData = JSON.parse(
+        localStorage.getItem("trackmaster-auth") || "{}"
+      );
+  
+
+ const requestModel: DataTableRequestModel = {
+  sEcho: 1,
+  CustId: authData?.custId || 0,
+
+  iDisplayStart: page === 0 ? 0 : page * rowsPerPage + 1,
+  iDisplayLength: (page + 1) * rowsPerPage,
+
+  sSearch: searchTerm || "",
+  sortColumn: sortConfig.sortColumn,
+  sortDirection: sortConfig.sortDirection,
+  Status: statusFromUrl || null,
+  beginDate: date?.from ? format(startOfDay(date.from), "yyyy-MM-dd HH:mm:ss")  : "",
+  endDate: date?.to  ? format(endOfDay(date.to), "yyyy-MM-dd HH:mm:ss")  : "",
+ 
+};
+const getSpeedAnalysis = async (
+  requestModel: DataTableRequestModel
+): Promise<VehicleSpeedSummary[]> => {
+  try {
+    setLoading(true);
+
+    const queryParams = new URLSearchParams({
+      mode: "over",
+      sEcho:String(requestModel.sEcho),
+      CustId: String(requestModel.CustId),
+      iDisplayStart: String(requestModel.iDisplayStart),
+      iDisplayLength: String(requestModel.iDisplayLength),
+     // VehicleId: selectedVehicle === "all" ? "" : selectedVehicle,
+      sSearch: selectedVehicle === "all" ? "" : selectedVehicle,
+      sortColumn: requestModel.sortColumn || "",
+      sortDirection: requestModel.sortDirection || "",
+      Status: requestModel.Status || "",
+      beginDate: requestModel.beginDate || "",
+      endDate: requestModel.endDate || "",
+    });
+
+    const response = await fetch(`${API_BASE_URL}/Reports/getSpeedReport?${queryParams.toString()}` );
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.log("Error Response:", errorText);
+      throw new Error(`HTTP ${response.status}`);
+    }
+    
+    const result = await response.json();
+    setTotalRecords(Number(result.iTotalRecords || 0));
+  
+
+  const rows = Array.isArray(result?.aaData?.oSmainLst) ? result.aaData.oSmainLst : [];
+  return rows.map((item: any) => ({
+      vehicleId: item.bbid,
+      vehicleName: item.vehName,
+      driverName: item.driverName,
+      overSpeedVal: Number(item.overSpeedVal ?? 0),
+      overspeedCount: item.overspeedCount ?? 0,
+      maxSpeed: Number(item.maxSpeed ?? 0),
+      avgSpeed: item.overspeedCount > 0 ? parseFloat((item.totalSpeed / item.overspeedCount).toFixed(1)) : 0,
+      totalOverspeedDuration: item.overSpeedDuration ?? "",
+
+      details: Array.isArray(item.oSsublst)
+        ? item.oSsublst.map((log: any, index: number) => ({
+            id: index,
+            dateTime: log.dateTime,
+            location: log.location ?? "",
+            speed: Number(log.speed ?? 0),
+          }))
+        : [],
+    }));
+    } catch (error) {
+      console.error(error);
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  };
+
+useEffect(() => {
+  const fetchData = async () => {
+    const data = await getSpeedAnalysis(requestModel);
+    setSpeedData(data);
+  };
+
+  fetchData();
+}, [page,  rowsPerPage,  searchTerm,  sortConfig,  selectedVehicle,  date,  statusFromUrl,]);
+ 
 
   const toggleRow = (rowId: string) => {
     setExpandedRows((prev) => {
@@ -121,46 +220,52 @@ const SpeedAnalysisTable = () => {
     }
     setDate({ from: fromDate, to: now });
     setActiveTimeRange(range);
+    setPage(0);
   };
 
-  const handleDateChange = (newDate: DateRange | undefined) => {
-    setDate(newDate);
-    setActiveTimeRange(null);
-  };
+
+  // const handleDateChange = (newDate: DateRange | undefined) => {
+  //   setDate(newDate);
+  //   setActiveTimeRange(null);
+  // };
 
   const selectedTimeRangeLabel = timeRanges.find((r) => r.value === activeTimeRange)?.label || 'Select a time range';
 
   const sortedData = useMemo(() => {
-    let data = speedAnalysisData;
-    if (selectedVehicle && selectedVehicle !== 'all') {
-      data = data.filter(item => item.vehicleId === selectedVehicle);
-    }
-    if (showOverspeedOnly) {
-      data = data.filter(item => item.overspeedCount > 0);
-    }
-    const sortableData = [...data];
-    if (sortConfig) {
-      sortableData.sort((a, b) => {
-        const aValue = a[sortConfig.key];
-        const bValue = b[sortConfig.key];
-        if (aValue === null) return 1;
-        if (bValue === null) return -1;
-        if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
-        if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
-        return 0;
-      });
-    }
-    return sortableData;
-  }, [sortConfig, date, selectedVehicle, showOverspeedOnly]);
+  let data = speedData;
+
+  if (selectedVehicle && selectedVehicle !== "all") {
+    data = data.filter(item => item.vehicleId === selectedVehicle);
+  }
+
+  if (showOverspeedOnly) {
+    data = data.filter(item => item.overspeedCount > 0);
+  }
+
+  return data;
+}, [speedData, selectedVehicle, showOverspeedOnly]);
+  
 
   const handleSort = (key: ReportDataKey) => {
-    let direction: 'asc' | 'desc' = 'asc';
-    if (sortConfig.key === key && sortConfig.direction === 'asc') {
-      direction = 'desc';
-    }
-    setSortConfig({ key, direction });
-    setPage(0);
-  };
+  let direction: 'asc' | 'desc' = 'asc';
+
+  if (
+    sortConfig.key === key &&
+    sortConfig.direction === 'asc'
+  ) {
+    direction = 'desc';
+  }
+
+  setSortConfig({
+    key,
+    direction,
+
+    sortColumn: key,
+    sortDirection: direction,
+  });
+
+  setPage(0);
+};
 
   const handleDetailsSort = (key: string) => {
     setDetailsSortConfig(prev => ({
@@ -168,11 +273,11 @@ const SpeedAnalysisTable = () => {
       direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc',
     }));
   };
-
-  const paginatedData = sortedData.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
-  const totalPages = Math.ceil(sortedData.length / rowsPerPage);
+debugger
+  const paginatedData = sortedData;
+  const totalPages = Math.ceil(totalRecords / rowsPerPage);
   const firstRowIndex = page * rowsPerPage + 1;
-  const lastRowIndex = Math.min((page + 1) * rowsPerPage, sortedData.length);
+  const lastRowIndex = Math.min((page + 1) * rowsPerPage,  totalRecords);
 
   return (
     <Card className="shadow-sm overflow-hidden">
@@ -197,8 +302,115 @@ const SpeedAnalysisTable = () => {
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
-          <DateRangePicker date={date} setDate={handleDateChange} />
-          <VehicleCombobox vehicles={vehicles} value={selectedVehicle} onChange={setSelectedVehicle} className="w-full sm:w-[180px]" />
+          <Popover
+            open={isCalendarOpen}
+            onOpenChange={(open) => {
+              setIsCalendarOpen(open);
+
+              if (open) {
+                setTempDate(date);
+                setSelecting('start');
+              }
+            }}
+          >
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="w-full sm:w-[220px] justify-start text-left font-normal">
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {date?.from ? (
+                  date.to ? `${format(date.from, 'LLL dd, y')} - ${format(date.to, 'LLL dd, y')}` : format(date.from, 'LLL dd, y')
+                ) : (
+                  'Pick a date'
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent
+              className="w-auto p-0"
+              align="end"
+            >
+              <div className="p-4">
+                <Calendar
+                  mode="range"
+                  initialFocus
+                  numberOfMonths={2}
+                  selected={{
+                    from: tempDate?.from,
+                    to: tempDate?.to,
+                  }}
+                  onSelect={(range, selectedDay) => {
+                    if (!selectedDay) return;
+
+                    // FIRST CLICK → START DATE
+                    if (selecting === 'start') {
+                      setTempDate({
+                        from: selectedDay,
+                        to: undefined,
+                      });
+
+                      setSelecting('end');
+                      return;
+                    }
+
+                    // SECOND CLICK → END DATE
+                    if (selecting === 'end') {
+                      const start = tempDate?.from;
+
+                      if (!start) return;
+
+                      // IF USER PICKS EARLIER DATE
+                      if (selectedDay < start) {
+                        setTempDate({
+                          from: selectedDay,
+                          to: start,
+                        });
+                      } else {
+                        setTempDate({
+                          from: start,
+                          to: selectedDay,
+                        });
+                      }
+
+                      setSelecting('start');
+                    }
+                  }}
+                />
+              </div>
+              <div className="flex justify-end gap-2 border-t p-3">
+                <Button size="sm" variant="outline" onClick={() => setIsCalendarOpen(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  disabled={!tempDate?.from || !tempDate?.to}
+                  onClick={() => {
+                    if (tempDate?.from && tempDate?.to) {
+                      setDate(tempDate);
+                      setActiveTimeRange(null);
+                      setPage(0);
+                      setIsCalendarOpen(false);
+                    }
+                  }}
+                >
+                  Apply
+                </Button>
+              </div>
+            </PopoverContent>
+          </Popover>
+          
+          <VehicleCombobox vehicles={vehicleSearchOptions}
+           value={selectedVehicle} 
+          onChange={(value) => {
+    setSelectedVehicle(value);
+
+    // send selected vehicle in API search param
+    if (value === 'all') {
+      setSearchText('');
+    } else {
+      setSearchText(value);
+    }
+
+    setPage(0);
+  }}
+            className="w-full sm:w-[180px]" />
           <div className="flex items-center space-x-2">
             <Switch id="overspeed-only" checked={showOverspeedOnly} onCheckedChange={setShowOverspeedOnly} />
             <Label htmlFor="overspeed-only" className="text-xs whitespace-nowrap">Over-speeding Only</Label>
@@ -217,13 +429,34 @@ const SpeedAnalysisTable = () => {
           <WhatsappPopup />
         </div>
       </CardHeader>
-      <CardContent className="p-0">
+      <CardContent className="p-0 relative">
+         {loading && (
+    <div className="absolute inset-0 bg-white/70 z-10 flex items-center justify-center rounded-b-xl">
+      <div className="flex items-center gap-2">
+        <div className="animate-spin h-5 w-5 border-2 border-black border-t-transparent rounded-full"></div>
+        <span className="text-sm">Loading...</span>
+      </div>
+    </div>
+  )}
+
+  <div className="overflow-x-auto">
+    <Table>
+      {/* Existing Table Code */}
+    </Table>
+  </div>
+
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/50 hover:bg-muted/50 border-b">
                 {headers.map((header) => (
-                  <SortableHeader key={header.key as string} onClick={() => handleSort(header.key)} isSorted={sortConfig.key === header.key} sortDirection={sortConfig.key === header.key ? sortConfig.direction : undefined}>
+                  <SortableHeader key={header.key as string} onClick={() => handleSort(header.key)} 
+                  isSorted={sortConfig.sortColumn === header.key}
+                  sortDirection={
+                    sortConfig.sortColumn === header.key
+                      ? sortConfig.sortDirection
+                      : undefined
+                  }>
                     {header.label}
                   </SortableHeader>
                 ))}
@@ -255,9 +488,14 @@ const SpeedAnalysisTable = () => {
                       <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{row.maxSpeed.toFixed(1)}</TableCell>
                       <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{row.avgSpeed.toFixed(1)}</TableCell>
                       <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-right">
-                        <Button variant="link" onClick={() => toggleRow(row.vehicleId)} className="font-medium text-brand-blue dark:text-blue-400 p-0 h-auto flex items-center gap-1">
+                        {row.details?.length > 0 ? (
+                        <Button variant="link" onClick={() => toggleRow(row.vehicleId)} 
+                        className="font-medium text-brand-blue dark:text-blue-400 p-0 h-auto flex items-center gap-1">
                           Details <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
                         </Button>
+                        ) : (
+                      <span className="text-xs text-muted-foreground">No logs</span>
+                    )}
                       </TableCell>
                     </TableRow>
                     {isExpanded && (
@@ -342,13 +580,13 @@ const SpeedAnalysisTable = () => {
       <CardFooter className="flex items-center justify-between py-3 px-6 border-t bg-card">
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">Rows per page:</span>
-          <Select value={String(rowsPerPage)} onValueChange={(value) => { setRowsPerPage(Number(value)); setPage(0); }}>
+          <Select  value={String(rowsPerPage)}  onValueChange={(value) => { setRowsPerPage(Number(value));  setPage(0); }}>
             <SelectTrigger className="w-20 h-9 text-sm focus:ring-2 focus:ring-primary"><SelectValue placeholder={rowsPerPage} /></SelectTrigger>
             <SelectContent><SelectItem value="10">10</SelectItem><SelectItem value="25">25</SelectItem><SelectItem value="50">50</SelectItem></SelectContent>
           </Select>
         </div>
         <div className="flex items-center gap-4">
-          <span className="text-sm text-muted-foreground">{firstRowIndex}-{lastRowIndex} of {sortedData.length}</span>
+          <span className="text-sm text-muted-foreground">{firstRowIndex}-{lastRowIndex} of {totalRecords}</span>
           <div className="flex items-center gap-1">
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setPage(0)} disabled={page === 0}><ChevronsLeft className="h-4 w-4" /></Button>
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setPage(page - 1)} disabled={page === 0}><ChevronLeft className="h-4 w-4" /></Button>

@@ -108,7 +108,7 @@ const timeRanges = [
   { label: 'Yesterday', value: 'yesterday' },
   { label: 'Last Week', value: 'last-week' },
   { label: 'Last Month', value: 'last-month' },
-  { label: 'Last 2 Months', value: 'last-2-months' },
+  //{ label: 'Last 2 Months', value: 'last-2-months' },
 ];
 
 const formatDuration = (totalSeconds: number) => {
