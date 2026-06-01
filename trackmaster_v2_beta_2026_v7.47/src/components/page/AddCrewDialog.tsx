@@ -8,8 +8,9 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useState, useEffect } from 'react'; // ✅ ADDED // neha k
-import { API_BASE_URL } from '@/config/Api'; // neha k
+import { useState, useEffect } from 'react'; 
+import { API_BASE_URL } from '@/config/Api'; 
+import { useToast } from '@/hooks/use-toast';
 
 //============== searchable dropdown library =============
 import { Popover, PopoverContent, PopoverTrigger, } from "@/components/ui/popover";
@@ -18,16 +19,8 @@ import { Command, CommandGroup, CommandInput, CommandItem, } from "@/components/
 
 const addCrewSchema = z.object({
   custId: z.string().optional(),
-//  EmployeeId: z.number().nullable().optional(),
-
-// designation: z.number({
-//   required_error: 'Designation is required',
-// }),
-EmployeeId: z.coerce.number().nullable().optional(),
-
-designation: z.coerce
-  .number()
-  .min(1, 'Designation is required'),
+  EmployeeId: z.coerce.number().nullable().optional(),
+  designation: z.coerce.number().min(1, 'Designation is required'),
   employeeCode: z.string().min(1, 'Employee Code is required'),
   employeeType: z.string().min(1, 'Employee type is required'),
   contractDuration: z.union([z.string(), z.number()]).optional(),
@@ -36,23 +29,23 @@ designation: z.coerce
   qualification: z.string().optional(),
   experience: z.string().optional(),
   permanentAddress: z.string().optional(),
-  permanentPostalCode: z.string().optional(),
+  permanentPostalCode: z.string().regex(/^\d{6}$/, "Postal code must be exactly 6 digits").optional().or(z.literal("")),
   permanentState: z.string().optional(),
   permanentCity: z.string().optional(),
   correspondenceAddress: z.string().optional(),
-  correspondencePostalCode: z.string().optional(),
+  correspondencePostalCode: z.string().regex(/^\d{6}$/, "Postal code must be exactly 6 digits").optional().or(z.literal("")),
   correspondenceState: z.string().optional(),
   correspondenceCity: z.string().optional(),
   hireDate: z.string().optional(),
   ctc: z.string().optional(),
   role: z.string().optional(),
-  officePhone: z.string().optional(),
-  emergencyContact: z.string().optional(),
-  mobile: z.string().optional(),
+  officePhone: z.string().regex(/^\d{10}$/, "Office phone number must be exactly 10 digits").optional().or(z.literal("")),
+  emergencyContact: z.string().regex(/^\d{10}$/, "Emergency contact number must be exactly 10 digits").optional().or(z.literal("")),
+  mobile: z.string().regex(/^\d{10}$/, "Mobile number must be exactly 10 digits").optional().or(z.literal("")),
   idProofNo: z.string().optional(),
   idProofType: z.string().optional(),
   remarks: z.string().optional(),
-  bloodGroup: z.string().optional(),
+  bloodGroup: z.string().regex(/^(A|B|AB|O)[+-]$/, "Blood group must be A+, A-, B+, B-, AB+, AB-, O+ or O-").optional().or(z.literal("")),
   imagePaths: z.string().optional(),
 
 });
@@ -67,15 +60,14 @@ interface AddCrewDialogProps {
 const AddCrewDialog = ({ open, onOpenChange }: AddCrewDialogProps) => {
   const form = useForm<AddCrewFormValues>({
     resolver: zodResolver(addCrewSchema),
-    // defaultValues: {
-    //   contractDuration: "",
-    // },
     defaultValues: {
-  contractDuration: "",
-  designation: 0,
-  EmployeeId: null,
-},
+      contractDuration: "",
+      designation: 0,
+      EmployeeId: null,
+    },
+    mode: "onSubmit",
   });
+  const { toast } = useToast();
 
   //======  File upload ==================
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -86,9 +78,9 @@ const AddCrewDialog = ({ open, onOpenChange }: AddCrewDialogProps) => {
     const file = e.target.files?.[0];
     // if (!file) return;
     if (!file) {
-  form.setValue("imagePaths", "");
-  return;
-}
+      form.setValue("imagePaths", "");
+      return;
+    }
     const allowedTypes = [
       "image/jpeg",
       "image/jpg",
@@ -96,13 +88,23 @@ const AddCrewDialog = ({ open, onOpenChange }: AddCrewDialogProps) => {
       "image/gif",
     ];
     if (!allowedTypes.includes(file.type)) {
-      alert(
-        "Invalid File Type! Please upload image only."
-      );
+      alert("Invalid File Type! Please upload image only.");
+
+      e.target.value = ""; // Clear file input
+      setSelectedFile(null);
+      setImagePreview(null);
+      form.setValue("imagePaths", "");
+
       return;
     }
     if (file.size > 102400) {
       alert("File size greater than 100 KB");
+
+      e.target.value = "";
+      setSelectedFile(null);
+      setImagePreview(null);
+      form.setValue("imagePaths", "");
+
       return;
     }
     const previewUrl = URL.createObjectURL(file);
@@ -121,10 +123,16 @@ const AddCrewDialog = ({ open, onOpenChange }: AddCrewDialogProps) => {
   // =========================
   //API STATE FOR DESIGNATION,City,state neha k
   // =========================
-  const [designations, setDesignations] = useState<any[]>([]); //neha k
+  const [designations, setDesignations] = useState<any[]>([]);
+  const [designationOpen, setDesignationOpen] = useState(false);
+  const [permanentStateOpen, setPermanentStateOpen] = useState(false);
+  const [correspondenceStateOpen, setCorrespondenceStateOpen] = useState(false);
   const [crewStates, setcrewStates] = useState<any[]>([]);
   const [permanentCities, setPermanentCities] = useState<any[]>([]);
   const [correspondenceCities, setCorrespondenceCities] = useState<any[]>([]);
+  const [permanentCityOpen, setPermanentCityOpen] = useState(false);
+  const [correspondenceCityOpen, setCorrespondenceCityOpen] = useState(false);
+
 
   // =========================
   // FETCH DESIGNATIONS FROM API neha k
@@ -222,10 +230,7 @@ const AddCrewDialog = ({ open, onOpenChange }: AddCrewDialogProps) => {
         );
       const payload = {
         Custid: custId,
-        //custid: 45,
-        // EmployeeId: data.EmployeeId || null,
         EmployeeId: data.EmployeeId ?? null,
-        // designation: data.designation || "",
         designation: data.designation ?? 0,
         employeeCode: data.employeeCode || null,
         employeeType: data.employeeType || null,
@@ -243,7 +248,8 @@ const AddCrewDialog = ({ open, onOpenChange }: AddCrewDialogProps) => {
         correspondenceState: selectedCorrespondenceState?.name || null,
         correspondenceCity: selectedCorrespondenceCity?.name || null,
         hireDate: data.hireDate || null,
-        employeeCTC: Number(data.ctc) || 0,
+        //employeeCTC: Number(data.ctc) || 0,
+        employeeCTC: data.ctc ? Number(data.ctc) : null,
         role: data.role || null,
         officePhone: data.officePhone || null,
         emergencyContactInfo: data.emergencyContact || null,
@@ -259,23 +265,12 @@ const AddCrewDialog = ({ open, onOpenChange }: AddCrewDialogProps) => {
       // CREATE FORMDATA
       // =========================
       const formData = new FormData();
-      // =========================
-      // APPEND PAYLOAD FIELDS
-      // =========================
-      // Object.entries(payload).forEach(
-      //   ([key, value]) => {
-      //     formData.append(
-      //       key,
-      //       String(value)
-      //     );
-      //   }
-      // );
       Object.entries(payload).forEach(([key, value]) => {
-  formData.append(
-    key,
-    value == null ? "" : String(value)
-  );
-});
+        formData.append(
+          key,
+          value == null ? "" : String(value)
+        );
+      });
       // =========================
       // APPEND IMAGE FILE
       // =========================
@@ -296,16 +291,16 @@ const AddCrewDialog = ({ open, onOpenChange }: AddCrewDialogProps) => {
           body: formData,
         }
       );
-      const result = await response.text();
+      const result = await response.json();
       console.log("API RESPONSE:", result);
       // =========================
       // SUCCESS
       // =========================
       if (response.ok) {
-        alert(
-          result ||
-          "Employee saved successfully"
-        );
+        toast({
+          title: "Success",
+          description: result.message || "Employee saved successfully",
+        });
         // =========================
         // RESET FORM
         // =========================
@@ -360,14 +355,19 @@ const AddCrewDialog = ({ open, onOpenChange }: AddCrewDialogProps) => {
         // =========================
         onOpenChange(false);
       } else {
-        alert(
-          result || "Failed to save employee"
-        );
+         toast({
+          title: "Error",
+          description: result || "Failed to save employee",
+          variant: "destructive",
+        });
       }
     } catch (error) {
       console.error("API ERROR:", error);
-
-      alert("Something went wrong");
+      toast({
+        title: "Error",
+        description: "Something went wrong",
+        variant: "destructive",
+      });
     }
   };
 
@@ -383,8 +383,7 @@ const AddCrewDialog = ({ open, onOpenChange }: AddCrewDialogProps) => {
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
             <ScrollArea className="h-[70vh] p-1">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 px-4">
-                {/* Left Column */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 px-4"> 
                 <div className="space-y-4">
                   <FormField
                     control={form.control}
@@ -393,7 +392,11 @@ const AddCrewDialog = ({ open, onOpenChange }: AddCrewDialogProps) => {
                       <FormItem>
                         <FormLabel>Designation</FormLabel>
 
-                        <Popover>
+                        {/* <Popover> */}
+                        <Popover
+                          open={designationOpen}
+                          onOpenChange={setDesignationOpen}
+                        >
                           <PopoverTrigger asChild>
                             <FormControl>
                               <Button
@@ -403,8 +406,7 @@ const AddCrewDialog = ({ open, onOpenChange }: AddCrewDialogProps) => {
                                 {field.value
                                   ? designations.find(
                                     (d) =>
-                                      //  d.value.toString() === field.value
-                                    d.value === field.value
+                                      d.value === field.value
                                   )?.name
                                   : "Select Designation"}
                               </Button>
@@ -421,8 +423,8 @@ const AddCrewDialog = ({ open, onOpenChange }: AddCrewDialogProps) => {
                                     key={item.value}
                                     value={item.name}
                                     onSelect={() => {
-                                      // field.onChange(item.value.toString());
                                       field.onChange(Number(item.value));
+                                      setDesignationOpen(false);
                                     }}
                                   >
                                     {item.name}
@@ -446,14 +448,20 @@ const AddCrewDialog = ({ open, onOpenChange }: AddCrewDialogProps) => {
                   </FormItem>)} />
                   <FormField control={form.control} name="firstName" render={({ field }) => (<FormItem><FormLabel>First Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
                   <FormField control={form.control} name="qualification" render={({ field }) => (<FormItem><FormLabel>Qualification</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+
                   <FormField control={form.control} name="permanentAddress" render={({ field }) => (<FormItem><FormLabel>Permanent Address</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>)} />
+
                   <FormField
                     control={form.control}
                     name="permanentState"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>State</FormLabel>
-                        <Popover>
+                        {/* <Popover> */}
+                        <Popover
+                          open={permanentStateOpen}
+                          onOpenChange={setPermanentStateOpen}
+                        >
                           <PopoverTrigger asChild>
                             <FormControl>
                               <Button
@@ -486,19 +494,18 @@ const AddCrewDialog = ({ open, onOpenChange }: AddCrewDialogProps) => {
                                     key={item.value}
                                     value={item.name}
                                     onSelect={() => {
-                                      const selectedValue =
-                                        item.value.toString();
+                                      const selectedValue = item.value.toString();
 
                                       field.onChange(selectedValue);
 
-                                      // reset city
                                       form.setValue("permanentCity", "");
 
-                                      // fetch city list
                                       fetchCitiesByState(
                                         selectedValue,
                                         "permanent"
                                       );
+
+                                      setPermanentStateOpen(false);
                                     }}
                                   >
                                     {item.name}
@@ -522,8 +529,11 @@ const AddCrewDialog = ({ open, onOpenChange }: AddCrewDialogProps) => {
                     name="correspondenceState"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>State</FormLabel>
-                        <Popover>
+                        <FormLabel>State</FormLabel>                     
+                        <Popover
+                          open={correspondenceStateOpen}
+                          onOpenChange={setCorrespondenceStateOpen}
+                        >
                           <PopoverTrigger asChild>
                             <FormControl>
                               <Button
@@ -553,21 +563,20 @@ const AddCrewDialog = ({ open, onOpenChange }: AddCrewDialogProps) => {
                                 {crewStates.map((item) => (
                                   <CommandItem
                                     key={item.value}
-                                    value={item.name}
+                                    value={item.name}                                   
                                     onSelect={() => {
-                                      const selectedValue =
-                                        item.value.toString();
+                                      const selectedValue = item.value.toString();
+
                                       field.onChange(selectedValue);
-                                      // reset city
-                                      form.setValue(
-                                        "correspondenceCity",
-                                        ""
-                                      );
-                                      // fetch city list
+
+                                      form.setValue("correspondenceCity", "");
+
                                       fetchCitiesByState(
                                         selectedValue,
                                         "correspondence"
                                       );
+
+                                      setCorrespondenceStateOpen(false); // ADD THIS
                                     }}
                                   >
                                     {item.name}
@@ -585,13 +594,59 @@ const AddCrewDialog = ({ open, onOpenChange }: AddCrewDialogProps) => {
 
                   <FormField control={form.control} name="hireDate" render={({ field }) => (<FormItem><FormLabel>Hire Date</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>)} />
                   <FormField control={form.control} name="role" render={({ field }) => (<FormItem><FormLabel>Role</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-                  <FormField control={form.control} name="mobile" render={({ field }) => (<FormItem><FormLabel>Mobile</FormLabel><FormControl><Input type="tel" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                  <FormField
+                    control={form.control}
+                    name="mobile"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Mobile</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="tel"
+                            placeholder="Enter 10 digit mobile number"
+                            maxLength={10}
+                            {...field}
+                            onChange={(e) => {
+                              const value = e.target.value.replace(/\D/g, "");
+                              field.onChange(value.slice(0, 10));
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
                   <FormField control={form.control} name="idProofType" render={({ field }) => (<FormItem><FormLabel>ID Proof Type</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select Proof" /></SelectTrigger></FormControl><SelectContent>
                     <SelectItem value="aadhar">Aadhar</SelectItem>
                     <SelectItem value="pan">Pan Card</SelectItem>
                     <SelectItem value="license">Voter Id</SelectItem>
                   </SelectContent></Select><FormMessage /></FormItem>)} />
-                  <FormField control={form.control} name="bloodGroup" render={({ field }) => (<FormItem><FormLabel>Blood Group</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+ 
+                  <FormField
+                    control={form.control}
+                    name="bloodGroup"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Blood Group</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            placeholder="e.g. A+, B+, AB-, O+"
+                            maxLength={3}
+                            onChange={(e) => {
+                              const value = e.target.value
+                                .toUpperCase()
+                                .replace(/[^ABO+-]/g, "");
+
+                              field.onChange(value);
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                   <FormField
                     control={form.control}
                     name="imagePaths"
@@ -600,15 +655,7 @@ const AddCrewDialog = ({ open, onOpenChange }: AddCrewDialogProps) => {
                         <FormLabel>Upload Employee Photo</FormLabel>
 
                         <FormControl>
-                          {/* <Input
-                            type="file"
-                            accept=".jpg,.jpeg,.png,.gif"
-                            onChange={(e) => {
-                              field.onChange(e.target.files);
-
-                              handleFileChange(e);
-                            }}
-                          /> */}
+                  
                           <Input
                             type="file"
                             accept=".jpg,.jpeg,.png,.gif"
@@ -656,7 +703,31 @@ const AddCrewDialog = ({ open, onOpenChange }: AddCrewDialogProps) => {
                   <FormField control={form.control} name="contractDuration" render={({ field }) => (<FormItem><FormLabel>Contract Duration (Months)</FormLabel><FormControl><Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value, 10))} /></FormControl><FormMessage /></FormItem>)} />
                   <FormField control={form.control} name="lastName" render={({ field }) => (<FormItem><FormLabel>Last Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
                   <FormField control={form.control} name="experience" render={({ field }) => (<FormItem><FormLabel>Experience</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-                  <FormField control={form.control} name="permanentPostalCode" render={({ field }) => (<FormItem><FormLabel>Postal Code</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+
+                  {/* <FormField control={form.control} name="permanentPostalCode" render={({ field }) => (<FormItem><FormLabel>Postal Code</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} /> */}
+                  <FormField
+                    control={form.control}
+                    name="permanentPostalCode"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Postal Code</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="text"
+                            placeholder="Enter 6 digit postal code"
+                            maxLength={6}
+                            {...field}
+                            onChange={(e) => {
+                              const value = e.target.value.replace(/\D/g, "");
+                              field.onChange(value.slice(0, 6));
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
                   <FormField
                     control={form.control}
                     name="permanentCity"
@@ -664,7 +735,10 @@ const AddCrewDialog = ({ open, onOpenChange }: AddCrewDialogProps) => {
                       <FormItem>
                         <FormLabel>City</FormLabel>
 
-                        <Popover>
+                        <Popover
+                          open={permanentCityOpen}
+                          onOpenChange={setPermanentCityOpen}
+                        >
                           <PopoverTrigger asChild>
                             <FormControl>
                               <Button
@@ -696,10 +770,13 @@ const AddCrewDialog = ({ open, onOpenChange }: AddCrewDialogProps) => {
                                   <CommandItem
                                     key={item.value}
                                     value={item.name}
+                                   
                                     onSelect={() => {
                                       field.onChange(
                                         item.value.toString()
                                       );
+
+                                      setPermanentCityOpen(false);
                                     }}
                                   >
                                     {item.name}
@@ -713,7 +790,30 @@ const AddCrewDialog = ({ open, onOpenChange }: AddCrewDialogProps) => {
                       </FormItem>
                     )}
                   />
-                  <FormField control={form.control} name="correspondencePostalCode" render={({ field }) => (<FormItem><FormLabel>Postal Code</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                  {/* <FormField control={form.control} name="correspondencePostalCode" render={({ field }) => (<FormItem><FormLabel>Postal Code</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} /> */}
+                  <FormField
+                    control={form.control}
+                    name="correspondencePostalCode"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Postal Code</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="text"
+                            placeholder="Enter 6 digit postal code"
+                            maxLength={6}
+                            {...field}
+                            onChange={(e) => {
+                              const value = e.target.value.replace(/\D/g, "");
+                              field.onChange(value.slice(0, 6));
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
                   <FormField
                     control={form.control}
                     name="correspondenceCity"
@@ -721,7 +821,10 @@ const AddCrewDialog = ({ open, onOpenChange }: AddCrewDialogProps) => {
                       <FormItem>
                         <FormLabel>City</FormLabel>
 
-                        <Popover>
+                        <Popover
+                          open={correspondenceCityOpen}
+                          onOpenChange={setCorrespondenceCityOpen}
+                        >
                           <PopoverTrigger asChild>
                             <FormControl>
                               <Button
@@ -753,10 +856,10 @@ const AddCrewDialog = ({ open, onOpenChange }: AddCrewDialogProps) => {
                                   <CommandItem
                                     key={item.value}
                                     value={item.name}
+                                    
                                     onSelect={() => {
-                                      field.onChange(
-                                        item.value.toString()
-                                      );
+                                      field.onChange(item.value.toString());
+                                      setCorrespondenceCityOpen(false);
                                     }}
                                   >
                                     {item.name}
@@ -772,8 +875,53 @@ const AddCrewDialog = ({ open, onOpenChange }: AddCrewDialogProps) => {
                     )}
                   />
                   <FormField control={form.control} name="ctc" render={({ field }) => (<FormItem><FormLabel>CTC</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-                  <FormField control={form.control} name="officePhone" render={({ field }) => (<FormItem><FormLabel>Office Phone</FormLabel><FormControl><Input type="tel" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                  <FormField control={form.control} name="emergencyContact" render={({ field }) => (<FormItem><FormLabel>Emergency Contact</FormLabel><FormControl><Input type="tel" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                  {/* <FormField control={form.control} name="officePhone" render={({ field }) => (<FormItem><FormLabel>Office Phone</FormLabel><FormControl><Input type="tel" {...field} /></FormControl><FormMessage /></FormItem>)} /> */}
+
+                  <FormField
+                    control={form.control}
+                    name="officePhone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Office Phone</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="tel"
+                            placeholder="Enter 10 digit office phone number"
+                            maxLength={10}
+                            {...field}
+                            onChange={(e) => {
+                              const value = e.target.value.replace(/\D/g, "");
+                              field.onChange(value.slice(0, 10));
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  {/* <FormField control={form.control} name="emergencyContact" render={({ field }) => (<FormItem><FormLabel>Emergency Contact</FormLabel><FormControl><Input type="tel" {...field} /></FormControl><FormMessage /></FormItem>)} /> */}
+                  <FormField
+                    control={form.control}
+                    name="emergencyContact"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Emergency Contact</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="tel"
+                            placeholder="Enter 10 digit emergency contact number"
+                            maxLength={10}
+                            {...field}
+                            onChange={(e) => {
+                              const value = e.target.value.replace(/\D/g, "");
+                              field.onChange(value.slice(0, 10));
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                   <FormField control={form.control} name="idProofNo" render={({ field }) => (<FormItem><FormLabel>ID Proof No.</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
                   <FormField control={form.control} name="remarks" render={({ field }) => (<FormItem><FormLabel>Remarks</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>)} />
                 </div>
