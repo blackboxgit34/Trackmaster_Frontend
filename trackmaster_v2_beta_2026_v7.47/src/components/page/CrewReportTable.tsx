@@ -1,43 +1,62 @@
 import { useState, useEffect } from 'react';
-import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow,} from '@/components/ui/table';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle,} from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, } from '@/components/ui/table';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import {PlusCircle,ChevronUp,ChevronDown,ChevronsUpDown} from 'lucide-react';
+//import { PlusCircle, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { CrewMember } from '@/data/crewData';
 import AddCrewDialog, { type AddCrewFormValues } from './AddCrewDialog';
 import { API_BASE_URL } from '@/config/Api';
 import type { DataTableRequestModel } from '@/hooks/DataTableRequestModel';
+// import {
+//   Pagination,
+//   PaginationContent,
+//   PaginationItem,
+//   PaginationPrevious,
+//   PaginationNext,
+// } from "@/components/ui/pagination";
+
+import {
+  PlusCircle,
+  ChevronUp,
+  ChevronDown,
+  ChevronsUpDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+} from 'lucide-react';
+
 
 const CrewReportTable = ({ search }: { search: string }) => {
-const [crewMembers, setCrewMembers] = useState<CrewMember[]>([]);
-const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-const { toast } = useToast();
-const [loading, setLoading] = useState(false);
-const [sortColumn, setSortColumn] = useState<string>('vehicleName');
-const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
-const sortMap: any = {
-vehicleName: "VehName",
-driverName: "DriverName",
-conductorName: "ConductorName"
-};
+  const [crewMembers, setCrewMembers] = useState<CrewMember[]>([]);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
+  const [sortColumn, setSortColumn] = useState<string>('vehicleName');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const sortMap: any = {
+    vehicleName: "VehName",
+    driverName: "DriverName",
+    conductorName: "ConductorName"
+  };
 
-const [page, setPage] = useState(0);
-const [rowsPerPage, setRowsPerPage] = useState(10);
-const [totalRecords, setTotalRecords] = useState(0);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [totalRecords, setTotalRecords] = useState(0);
 
-useEffect(() => {
-  const maxPage = Math.max(0, Math.ceil(totalRecords / rowsPerPage) - 1);
-  if (page > maxPage) {
-    setPage(maxPage);
-  }
-}, [totalRecords, rowsPerPage]);
+  useEffect(() => {
+    const maxPage = Math.max(0, Math.ceil(totalRecords / rowsPerPage) - 1);
+    if (page > maxPage) {
+      setPage(maxPage);
+    }
+  }, [totalRecords, rowsPerPage]);
   const totalPages = Math.ceil(totalRecords / rowsPerPage);
   useEffect(() => {
-  setPage(0);
-}, [search]);
- 
-const handleSort = (column: string) => {
+    setPage(0);
+  }, [search]);
+
+  const handleSort = (column: string) => {
     if (sortColumn === column) {
       setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
     } else {
@@ -59,76 +78,76 @@ const handleSort = (column: string) => {
   };
 
 
- const getVehicleIcon = (vehicleType?: string) => {
-  debugger
+  const getVehicleIcon = (vehicleType?: string) => {
+    debugger
     const val = (vehicleType || '').toLowerCase();
     console.log("type:", vehicleType);
     if (val.includes("car")) {
-        return "/icons/vehicles/car/icon.png";
+      return "/icons/vehicles/car/icon.png";
     }
-   if (val.includes("other")) {
-        return "/icons/vehicles/truck/icon.png";
+    if (val.includes("other")) {
+      return "/icons/vehicles/truck/icon.png";
     }
     return "/icons/vehicles/car/icon.png";
-};
-
- useEffect(() => {
-  const fetchCrew = async () => {
-    try {
-      setLoading(true);
-
-      const auth = JSON.parse(
-        localStorage.getItem("trackmaster-auth") || "{}"
-      );
-
-      const requestModel: DataTableRequestModel = {
-        CustId: auth.custId,
-        sEcho: 1,
-        iDisplayStart: page * rowsPerPage,
-        iDisplayLength: rowsPerPage,
-        sSearch: search?.trim() || "",
-        sortColumn: sortMap[sortColumn],
-        sortDirection: sortDirection,
-      };
-
-      const params = new URLSearchParams();
-
-      Object.entries(requestModel).forEach(([key, value]) => {
-        params.append(key, String(value ?? ""));
-      });
-
-      const res = await fetch(
-        `${API_BASE_URL}/Reports/GetConductorInfo?${params}`
-      );
-
-      const data = await res.json();
-
-      setTotalRecords(data.iTotalRecords);
-
-      setCrewMembers(
-        (data.aaData || []).map((item: any, index: number) => ({
-          id: item.bbid || `crew-${index}`,
-          type: getVehicleIcon(item.vehicleType),
-          vehicleName: item.vehicleName,
-          driverName:
-            item.driverName === "No Driver Assigned"
-              ? null
-              : item.driverName,
-          conductorName: item.conductor,
-        }))
-      );
-    } catch (e) {
-      toast({
-        title: "Error",
-        description: "Failed to load data",
-      });
-    } finally {
-      setLoading(false);
-    }
   };
 
-  fetchCrew();
-}, [page, rowsPerPage, search, sortColumn, sortDirection]);
+  useEffect(() => {
+    const fetchCrew = async () => {
+      try {
+        setLoading(true);
+
+        const auth = JSON.parse(
+          localStorage.getItem("trackmaster-auth") || "{}"
+        );
+
+        const requestModel: DataTableRequestModel = {
+          CustId: auth.custId,
+          sEcho: 1,
+          iDisplayStart: page * rowsPerPage,
+          iDisplayLength: rowsPerPage,
+          sSearch: search?.trim() || "",
+          sortColumn: sortMap[sortColumn],
+          sortDirection: sortDirection,
+        };
+
+        const params = new URLSearchParams();
+
+        Object.entries(requestModel).forEach(([key, value]) => {
+          params.append(key, String(value ?? ""));
+        });
+
+        const res = await fetch(
+          `${API_BASE_URL}/Reports/GetConductorInfo?${params}`
+        );
+
+        const data = await res.json();
+
+        setTotalRecords(data.iTotalRecords);
+
+        setCrewMembers(
+          (data.aaData || []).map((item: any, index: number) => ({
+            id: item.bbid || `crew-${index}`,
+            type: getVehicleIcon(item.vehicleType),
+            vehicleName: item.vehicleName,
+            driverName:
+              item.driverName === "No Driver Assigned"
+                ? null
+                : item.driverName,
+            conductorName: item.conductor,
+          }))
+        );
+      } catch (e) {
+        toast({
+          title: "Error",
+          description: "Failed to load data",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCrew();
+  }, [page, rowsPerPage, search, sortColumn, sortDirection]);
 
 
 
@@ -142,53 +161,9 @@ const handleSort = (column: string) => {
     };
     setCrewMembers(prev => [...prev, newCrew]);
   };
-const Pagination = () => {
-const start = page * rowsPerPage + 1;
-const end = Math.min((page + 1) * rowsPerPage, totalRecords);
-return (
-    <div className="flex items-center justify-between mt-4 text-sm">
-      <div className="flex items-center gap-2">
-        Rows per page:
-        <select
-          value={rowsPerPage}
-          onChange={(e) => {
-            setRowsPerPage(Number(e.target.value));
-            setPage(0);
-          }}
-          className="border px-2 py-1 rounded"
-        >
-          <option value={5}>5</option>
-          <option value={10}>10</option>
-          <option value={25}>25</option>
-        </select>
-      </div>
-      <div className="flex items-center gap-4">
-        <span>
-          {start}-{end} of {totalRecords}
-        </span>
-        <div className="flex items-center gap-3 text-lg">
-          <button
-            onClick={() => setPage(p => Math.max(p - 1, 0))}
-            disabled={page === 0}
-            className="disabled:opacity-40"
-          >
-            &lt;
-          </button>
-          <button
-            onClick={() =>
-              setPage(p => Math.min(p + 1, totalPages - 1))
-            }
-            disabled={page >= totalPages - 1}
-            className="disabled:opacity-40"
-          >
-            &gt;
-          </button>
 
-        </div>
-      </div>
-    </div>
-  );
-};
+
+
   return (
     <>
       {loading && (
@@ -245,7 +220,83 @@ return (
               ))}
             </TableBody>
           </Table>
-          <Pagination />
+
+          <div className="flex items-center justify-between py-3 px-2 border-t">
+
+
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              Rows per page:
+
+              <select
+                value={rowsPerPage}
+                onChange={(e) => {
+                  setRowsPerPage(Number(e.target.value));
+                  setPage(0);
+                }}
+                className="border px-2 py-1 rounded"
+              >
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+              </select>
+            </div>
+
+
+            {/* RIGHT SIDE */}
+            <div className="flex items-center gap-4">
+
+              <div className="text-sm text-muted-foreground">
+                {totalRecords === 0
+                  ? "0-0"
+                  : `${page * rowsPerPage + 1}-${Math.min(
+                    (page + 1) * rowsPerPage,
+                    totalRecords
+                  )}`}{" "}
+                of {totalRecords}
+              </div>
+
+              <div className="flex items-center gap-2">
+
+                <button
+                  onClick={() => setPage(0)}
+                  disabled={page === 0}
+                  className="disabled:opacity-40"
+                >
+                  <ChevronsLeft className="h-4 w-4" />
+                </button>
+
+                <button
+                  onClick={() => setPage(p => Math.max(p - 1, 0))}
+                  disabled={page === 0}
+                  className="disabled:opacity-40"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+
+                <button
+                  onClick={() =>
+                    setPage(p => Math.min(p + 1, totalPages - 1))
+                  }
+                  disabled={page >= totalPages - 1}
+                  className="disabled:opacity-40"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+
+                <button
+                  onClick={() => setPage(totalPages - 1)}
+                  disabled={page >= totalPages - 1}
+                  className="disabled:opacity-40"
+                >
+                  <ChevronsRight className="h-4 w-4" />
+                </button>
+
+              </div>
+
+            </div>
+          </div>
+
+          {/* <Pagination /> */}
         </CardContent>
       </Card>
       <AddCrewDialog
