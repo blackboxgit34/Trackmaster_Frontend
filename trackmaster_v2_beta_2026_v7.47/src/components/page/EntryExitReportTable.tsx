@@ -658,7 +658,7 @@ const EntryExitReportTable = () => {
           `${API_BASE_URL}/Reports/GetEntryExitReport?${params.toString()}`,
 
           {
-            method: "POST", 
+            method: "POST",
           }
 
         );
@@ -794,19 +794,14 @@ const EntryExitReportTable = () => {
 
   return (
     <Card className="shadow-sm overflow-hidden">
-      {loading && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/70 dark:bg-black/50 rounded-xl">
-          <div className="flex items-center gap-3 bg-white dark:bg-zinc-900 px-5 py-3 rounded-lg shadow-lg border">
-
-            <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-
-            <span className="text-sm font-medium text-foreground">
-              Please wait...
-            </span>
-
+       {loading && (
+          <div className="absolute inset-0 bg-white/70 z-10 flex items-center justify-center rounded-md">
+            <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-lg shadow">
+              <div className="animate-spin h-4 w-4 border-2 border-black border-t-transparent rounded-full"></div>
+              <span className="text-sm">Please wait ...</span>
+            </div>
           </div>
-        </div>
-      )}
+        )}
       <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 px-6 py-4">
         <div>
           <CardTitle className="text-xl font-bold text-foreground">Entry / Exit Report</CardTitle>
@@ -847,81 +842,81 @@ const EntryExitReportTable = () => {
                 )}
               </Button>
             </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="end">
-  <div className="flex">
-    <div className="flex flex-col space-y-1 p-2 border-r">
-      {timeRanges.map((range) => (
-        <Button
-          key={range.value}
-          variant="ghost"
-          className="justify-start"
-          onClick={() => {
-            const now = new Date();
-            let fromDate: Date;
-            let toDate: Date = now;
+            <PopoverContent className="w-auto p-0" align="end">
+              <div className="flex">
+                <div className="flex flex-col space-y-1 p-2 border-r">
+                  {timeRanges.map((range) => (
+                    <Button
+                      key={range.value}
+                      variant="ghost"
+                      className="justify-start"
+                      onClick={() => {
+                        const now = new Date();
+                        let fromDate: Date;
+                        let toDate: Date = now;
 
-            switch (range.value) {
-              case "today":
-                fromDate = now;
-                break;
-              case "yesterday":
-                fromDate = subDays(now, 1);
-                toDate = subDays(now, 1);
-                break;
-              case "last-week":
-                fromDate = subWeeks(now, 1);
-                break;
-              case "last-month":
-                fromDate = subMonths(now, 1);
-                break;
-              default:
-                fromDate = now;
-            }
+                        switch (range.value) {
+                          case "today":
+                            fromDate = now;
+                            break;
+                          case "yesterday":
+                            fromDate = subDays(now, 1);
+                            toDate = subDays(now, 1);
+                            break;
+                          case "last-week":
+                            fromDate = subWeeks(now, 1);
+                            break;
+                          case "last-month":
+                            fromDate = subMonths(now, 1);
+                            break;
+                          default:
+                            fromDate = now;
+                        }
 
-            setTempDate({
-              from: fromDate,
-              to: toDate,
-            });
-          }}
-        >
-          {range.label}
-        </Button>
-      ))}
-    </div>
+                        setTempDate({
+                          from: fromDate,
+                          to: toDate,
+                        });
+                      }}
+                    >
+                      {range.label}
+                    </Button>
+                  ))}
+                </div>
 
-    <div className="flex flex-col">
-      <Calendar
-        initialFocus
-        mode="range"
-        defaultMonth={tempDate?.from}
-        selected={tempDate}
-        onSelect={setTempDate}
-        numberOfMonths={1}
-      />
+                <div className="flex flex-col">
+                  <Calendar
+                    initialFocus
+                    mode="range"
+                    defaultMonth={tempDate?.from}
+                    selected={tempDate}
+                    onSelect={setTempDate}
+                    numberOfMonths={1}
+                  />
 
-      <div className="flex justify-end gap-2 border-t p-3">
-        <Button
-          variant="outline"
-          onClick={() => {
-            setTempDate(date); // restore old date
-            setIsCalendarOpen(false);
-          }}
-        >
-          Cancel
-        </Button>
+                  <div className="flex justify-end gap-2 border-t p-3">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setTempDate(date); // restore old date
+                        setIsCalendarOpen(false);
+                      }}
+                    >
+                      Cancel
+                    </Button>
 
-        <Button
-          onClick={() => {
-            setDate(tempDate); // apply selected date
-            setIsCalendarOpen(false);
-          }}
-        >
-          Apply
-        </Button>
-      </div>
-    </div>
-  </div>
-</PopoverContent>
+                    <Button
+                      onClick={() => {
+                        setDate(tempDate); // apply selected date
+                        setIsCalendarOpen(false);
+                      }}
+                    >
+                      Apply
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </PopoverContent>
           </Popover>
           <VehicleCombobox vehicles={[{ label: 'All Vehicles', value: 'all' }, ...(vehicleList ?? []),]} value={selectedVehicle} onChange={setSelectedVehicle} className="w-full sm:w-[180px]" />
           <Select value={intervalFilter} onValueChange={setIntervalFilter}>

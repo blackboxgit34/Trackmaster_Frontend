@@ -64,6 +64,7 @@ import { Calendar } from '@/components/ui/calendar';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import Papa from 'papaparse';
+import { useVehicleList } from '@/hooks/useApi';
 
 const driverMap = new Map(actualVehicles.map(v => [v.id, v.driver]));
 const poiMap = new Map(poiData.map(p => [p.id, p.poiName]));
@@ -116,6 +117,14 @@ const ExitEntryReportTable = () => {
   const [selectedVehicle, setSelectedVehicle] = useState('all');
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [tempDate, setTempDate] = useState<DateRange | undefined>(date);
+  
+ const {
+    data: vehicleList,
+    loading: vehicleLoading
+  } = useVehicleList();
+
+  const vehiclesData = vehicleList ?? [];
 
   const toggleRow = (rowId: string) => {
     setExpandedRows((prev) => {
@@ -167,8 +176,8 @@ const ExitEntryReportTable = () => {
       const tripsForDay = tripReportData.filter(trip => trip.vehicleId === d.vehicleId && trip.startTime.startsWith(d.date));
       const poiIds = new Set<string>();
       tripsForDay.forEach(trip => {
-          poiIds.add(trip.startPoiId);
-          poiIds.add(trip.endPoiId);
+        poiIds.add(trip.startPoiId);
+        poiIds.add(trip.endPoiId);
       });
       const poisCovered = Array.from(poiIds).map(id => poiMap.get(id) || 'Unknown POI').join(', ');
 
@@ -285,30 +294,83 @@ const ExitEntryReportTable = () => {
                 )}
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-0 flex" align="end">
-              <div className="flex flex-col space-y-1 p-2 border-r">
-                {timeRanges.map((range) => (
-                  <Button
-                    key={range.value}
-                    variant="ghost"
-                    className="justify-start"
-                    onClick={() => handleTimeRangeClick(range.value)}
-                  >
-                    {range.label}
-                  </Button>
-                ))}
+            <PopoverContent className="w-auto p-0" align="end">
+              <div className="flex">
+                <div className="flex flex-col space-y-1 p-2 border-r">
+                  {timeRanges.map((range) => (
+                    <Button
+                      key={range.value}
+                      variant="ghost"
+                      className="justify-start"
+                      onClick={() => {
+                        const now = new Date();
+                        let fromDate: Date;
+                        let toDate: Date = now;
+
+                        switch (range.value) {
+                          case "today":
+                            fromDate = now;
+                            break;
+                          case "yesterday":
+                            fromDate = subDays(now, 1);
+                            toDate = subDays(now, 1);
+                            break;
+                          case "last-week":
+                            fromDate = subWeeks(now, 1);
+                            break;
+                          case "last-month":
+                            fromDate = subMonths(now, 1);
+                            break;
+                          default:
+                            fromDate = now;
+                        }
+
+                        setTempDate({
+                          from: fromDate,
+                          to: toDate,
+                        });
+                      }}
+                    >
+                      {range.label}
+                    </Button>
+                  ))}
+                </div>
+
+                <div className="flex flex-col">
+                  <Calendar
+                    initialFocus
+                    mode="range"
+                    defaultMonth={tempDate?.from}
+                    selected={tempDate}
+                    onSelect={setTempDate}
+                    numberOfMonths={1}
+                  />
+
+                  <div className="flex justify-end gap-2 border-t p-3">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setTempDate(date); // restore old date
+                        setIsCalendarOpen(false);
+                      }}
+                    >
+                      Cancel
+                    </Button>
+
+                    <Button
+                      onClick={() => {
+                        setDate(tempDate); // apply selected date
+                        setIsCalendarOpen(false);
+                      }}
+                    >
+                      Apply
+                    </Button>
+                  </div>
+                </div>
               </div>
-              <Calendar
-                initialFocus
-                mode="range"
-                defaultMonth={date?.from}
-                selected={date}
-                onSelect={setDate}
-                numberOfMonths={1}
-              />
             </PopoverContent>
           </Popover>
-          <VehicleCombobox vehicles={vehicles} value={selectedVehicle} onChange={setSelectedVehicle} className="w-full sm:w-[180px]" />
+            <VehicleCombobox vehicles={[{ label: 'All Vehicles', value: 'all' }, ...(vehicleList ?? []),]} value={selectedVehicle} onChange={setSelectedVehicle} className="w-full sm:w-[180px]" />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button className="bg-black text-white hover:bg-black/90 w-full sm:w-auto">
@@ -352,7 +414,7 @@ const ExitEntryReportTable = () => {
                   }
                   return 0;
                 });
-                
+
                 return (
                   <React.Fragment key={row.id}>
                     <TableRow className="bg-card hover:bg-muted/50 border-b">
