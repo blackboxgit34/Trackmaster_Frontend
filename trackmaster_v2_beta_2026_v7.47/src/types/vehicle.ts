@@ -56,3 +56,25 @@ export interface Vehicle {
   remarks: string;
   fuelTankCapacity: number;
 }
+
+//========= for Speed Analysis =============
+export interface SpeedEvent {
+  id: string;
+  dateTime: string;
+  location: string;
+  speed: number; // km/h
+  duration: number; // in seconds
+}
+
+export interface VehicleSpeedSummary {
+  vehicleId: string;
+  vehicleName: string;
+  driverName: string | null;
+  overspeedCount: number;
+  totalOverspeedDuration: number; // in seconds
+   maxSpeed: number;
+  avgSpeed: number;
+   overSpeedVal: number;
+  details: SpeedEvent[];
+}
+//=============================================

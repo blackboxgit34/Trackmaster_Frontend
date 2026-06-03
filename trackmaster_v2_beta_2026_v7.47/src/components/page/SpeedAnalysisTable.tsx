@@ -2,7 +2,8 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {  Table,  TableBody,  TableCell,  TableHead,  TableHeader,  TableRow,} from '@/components/ui/table';
 import {  Card,  CardContent,  CardDescription,  CardFooter,  CardHeader,  CardTitle,} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import {  type VehicleSpeedSummary } from '@/data/speedData';
+//import {  type VehicleSpeedSummary } from '@/data/speedData';
+import type {VehicleSpeedSummary} from '@/types';
 import {  ArrowUp,  ArrowDown,  ChevronLeft,  ChevronRight,  ChevronsLeft,  ChevronsRight,  Download,
   CalendarIcon,  ChevronDown,  TrendingUp,  Gauge,  Activity,  ChevronsUpDown,} from 'lucide-react';
 import { DateRange } from 'react-day-picker';
@@ -31,6 +32,7 @@ const headers: { key: ReportDataKey; label: string }[] = [
   { key: 'vehicleName', label: 'Vehicle No' },
   { key: 'driverName', label: 'Driver Name' },
   { key: 'overspeedCount', label: 'Overspeed Count' },
+  { key: 'totalOverspeedDuration', label: 'Total Duration (s)' },
   { key: 'maxSpeed', label: 'Max. Speed (km/h)' },
   { key: 'avgSpeed', label: 'Avg. Speed (km/h)' },
 ];
@@ -107,9 +109,7 @@ const getDefaultDateRange = (): DateRange => {
   const [tempDate, setTempDate] = useState<DateRange | undefined>(getDefaultDateRange());
   const [selecting, setSelecting] = useState<'start' | 'end'>('start');
 
-  const authData = JSON.parse(
-        localStorage.getItem("trackmaster-auth") || "{}"
-      );
+  const authData = JSON.parse(   localStorage.getItem("trackmaster-auth") || "{}"   );
   
 
  const requestModel: DataTableRequestModel = {
@@ -159,7 +159,7 @@ const getSpeedAnalysis = async (
     const result = await response.json();
     setTotalRecords(Number(result.iTotalRecords || 0));
   
-
+debugger
   const rows = Array.isArray(result?.aaData?.oSmainLst) ? result.aaData.oSmainLst : [];
   return rows.map((item: any) => ({
       vehicleId: item.bbid,
@@ -222,12 +222,6 @@ useEffect(() => {
     setActiveTimeRange(range);
     setPage(0);
   };
-
-
-  // const handleDateChange = (newDate: DateRange | undefined) => {
-  //   setDate(newDate);
-  //   setActiveTimeRange(null);
-  // };
 
   const selectedTimeRangeLabel = timeRanges.find((r) => r.value === activeTimeRange)?.label || 'Select a time range';
 
@@ -485,6 +479,7 @@ debugger
                       <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-foreground">{row.vehicleName}</TableCell>
                       <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{row.driverName || 'N/A'}</TableCell>
                       <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{row.overspeedCount}</TableCell>
+                      <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{row.totalOverspeedDuration}</TableCell>
                       <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{row.maxSpeed.toFixed(1)}</TableCell>
                       <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{row.avgSpeed.toFixed(1)}</TableCell>
                       <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-right">
@@ -559,8 +554,9 @@ debugger
                                       <TableRow key={detail.id}>
                                         <TableCell className="font-mono text-sm">{detail.dateTime}</TableCell>
                                         <TableCell className="text-sm truncate">{detail.location}</TableCell>
-                                        <TableCell className={cn("font-semibold", detail.speed > OVER_SPEED_LIMIT ? "text-red-500" : "text-foreground")}>{detail.speed}</TableCell>
+                                        <TableCell className={cn("font-semibold", detail.speed > row.overSpeedVal  ? "text-red-500" : "text-foreground")}>{detail.speed}</TableCell>
                                       </TableRow>
+                                      
                                     ))}
                                   </TableBody>
                                 </Table>
