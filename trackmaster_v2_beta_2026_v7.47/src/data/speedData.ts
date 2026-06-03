@@ -14,6 +14,7 @@ export interface VehicleSpeedSummary {
   vehicleName: string;
   driverName: string | null;
   overspeedCount: number;
+  overSpeedVal: number;
   maxSpeed: number;
   avgSpeed: number;
   totalOverspeedDuration: number; // in seconds
@@ -64,6 +65,7 @@ const generateSpeedData = (): VehicleSpeedSummary[] => {
         vehicleName: vehicle.name,
         driverName: vehicle.driver,
         overspeedCount,
+        overSpeedVal: overspeedCount > 0 ? Math.max(...overspeedEvents.map(e => e.speed)) : 0,
         maxSpeed,
         avgSpeed: speedReadingCount > 0 ? parseFloat((totalSpeed / speedReadingCount).toFixed(1)) : 0,
         totalOverspeedDuration,

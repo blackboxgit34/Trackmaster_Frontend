@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Table,
   TableBody,
@@ -24,14 +24,10 @@ import {
 import { Button } from '@/components/ui/button';
 import {
   consolidatedReportTableData,
-  workingHourDetails,
-  actualVehicles,
 } from '@/data/mockData';
 
 import { useVehicleList } from '@/hooks/useApi';
 
-import { tripReportData } from '@/data/tripReportData';
-import { poiData } from '@/data/poiData';
 import {
   ArrowUp,
   ArrowDown,
@@ -47,9 +43,8 @@ import {
   ChevronsUpDown,
 } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
-import { subWeeks, subHours, subDays, subMonths, isWithinInterval, parseISO, startOfDay, endOfDay, format } from 'date-fns';
+import { subWeeks, subDays, subMonths, startOfDay, format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { DateRangePicker } from '@/components/ui/date-range-picker';
 import WhatsappPopup from '../WhatsappPopup';
 import { VehicleCombobox } from '../VehicleCombobox';
 import {
@@ -60,17 +55,20 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
-import Papa from 'papaparse';
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import { LoadScript, GoogleMap, Marker, InfoWindow } from '@react-google-maps/api';
+import { GOOGLE_MAPS_API_KEY } from '@/config/maps';
 import { DataTableRequestModel } from '@/hooks/DataTableRequestModel';
 import { API_BASE_URL } from '@/config/Api';
-
-const driverMap = new Map(actualVehicles.map(v => [v.id, v.driver]));
-const poiMap = new Map(poiData.map(p => [p.id, p.poiName]));
 
 type ReportData = (typeof consolidatedReportTableData)[0] & { distance: number; driverName: string; poisCovered: string; };
 type ReportDataKey = keyof ReportData;
@@ -87,12 +85,6 @@ const timeRanges = [
   { label: 'Last Week', value: 'last-week' },
   { label: 'Last Month', value: 'last-month' },
 ];
-
-const formatDuration = (hours: number) => {
-  const h = Math.floor(hours);
-  const m = Math.round((hours - h) * 60);
-  return `${h}h ${m}m`;
-};
 
 const SortableHeader = ({ children, isSorted, sortDirection, onClick }: { children: React.ReactNode; isSorted?: boolean; sortDirection?: 'asc' | 'desc'; onClick: () => void; }) => (
   <TableHead className="cursor-pointer px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider group" onClick={onClick}>
@@ -111,6 +103,15 @@ const SortableHeader = ({ children, isSorted, sortDirection, onClick }: { childr
   </TableHead>
 );
 
+const locationMapOptions: google.maps.MapOptions = {
+  disableDefaultUI: false,
+  zoomControl: true,
+  mapTypeControl: true,
+  fullscreenControl: true,
+  streetViewControl: true,
+  gestureHandling: 'cooperative',
+};
+
 const EntryExitReportTable = () => {
   // const [sortConfig, setSortConfig] = useState<{ key: ReportDataKey; direction: 'asc' | 'desc'; }>({ key: 'date', direction: 'desc' });
   const [detailsSortConfig, setDetailsSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'startTime', direction: 'asc' });
@@ -126,12 +127,15 @@ const EntryExitReportTable = () => {
   const [loading, setLoading] = useState(false);
   const [totalRecords, setTotalRecords] = useState(0);
   const [tempDate, setTempDate] = useState<DateRange | undefined>(date);
+  const [selectedLocation, setSelectedLocation] = useState<any>(null);
+  const [isLocationDialogOpen, setIsLocationDialogOpen] = useState(false);
+  const [isInfoWindowOpen, setIsInfoWindowOpen] = useState(false);
   const [pagination, setPagination] = useState({
     pageIndex: 0,
     pageSize: 10,
   });
 
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm] = useState("");
   const [sortConfig, setSortConfig] = useState({
     sortColumn: "vehname",
     sortDirection: "asc" as "asc" | "desc",
@@ -146,10 +150,7 @@ const EntryExitReportTable = () => {
 
   const {
     data: vehicleList,
-    loading: vehicleLoading
   } = useVehicleList();
-
-  const vehiclesData = vehicleList ?? [];
   const toggleRow = (rowId: string) => {
     setExpandedRows((prev) => {
       const newSet = new Set(prev);
@@ -162,30 +163,9 @@ const EntryExitReportTable = () => {
     });
   };
 
-  const handleTimeRangeClick = (range: string) => {
-    const now = new Date();
-    let fromDate: Date;
-    let toDate: Date = now;
-
-    switch (range) {
-      case 'today':
-        fromDate = now;
-        break;
-      case 'yesterday':
-        fromDate = subDays(now, 1);
-        toDate = subDays(now, 1);
-        break;
-      case 'last-week':
-        fromDate = subWeeks(now, 1);
-        break;
-      case 'last-month':
-        fromDate = subMonths(now, 1);
-        break;
-      default:
-        fromDate = now;
-    }
-    setDate({ from: fromDate, to: toDate });
-    setIsCalendarOpen(false);
+  const handleLocationClick = (detail: any, vehicleName: string) => {
+    setSelectedLocation({ ...detail, vehicleName });
+    setIsLocationDialogOpen(true);
   };
 
   const handleDetailsSort = (key: string) => {
@@ -194,61 +174,6 @@ const EntryExitReportTable = () => {
       direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc',
     }));
   };
-
-  const sortedData = useMemo(() => {
-    let data = consolidatedReportTableData.map(d => {
-      const tripsForDay = tripReportData.filter(trip => trip.vehicleId === d.vehicleId && trip.startTime.startsWith(d.date));
-      const poiIds = new Set<string>();
-      tripsForDay.forEach(trip => {
-        poiIds.add(trip.startPoiId);
-        poiIds.add(trip.endPoiId);
-      });
-      const poisCovered = Array.from(poiIds).map(id => poiMap.get(id) || 'Unknown POI').join(', ');
-
-      return {
-        ...d,
-        distance: d.distance || 0,
-        driverName: driverMap.get(d.vehicleId) || 'N/A',
-        poisCovered: poisCovered || 'No POIs',
-      };
-    });
-
-    if (date?.from) {
-      const start = startOfDay(date.from);
-      const end = date.to ? endOfDay(date.to) : endOfDay(date.from);
-      data = data.filter(item => {
-        const itemDate = parseISO(item.date);
-        return isWithinInterval(itemDate, { start, end });
-      });
-    }
-
-    if (selectedVehicle && selectedVehicle !== 'all') {
-      data = data.filter(item => item.vehicleId === selectedVehicle);
-    }
-
-    if (intervalFilter !== 'all') {
-      const minDurationMinutes = parseInt(intervalFilter, 10);
-      data = data.filter(row => {
-        const detailsForThisRow = workingHourDetails.filter(
-          detail => detail.vehicleId === row.vehicleId && detail.date === row.date
-        );
-        return detailsForThisRow.some(detail => (detail.duration * 60) >= minDurationMinutes);
-      });
-    }
-
-    const sortableData = [...data];
-    if (sortConfig) {
-      sortableData.sort((a, b) => {
-        const aValue = a[sortConfig.key as keyof typeof a];
-        const bValue = b[sortConfig.key as keyof typeof b];
-        if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
-        if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
-        return 0;
-      });
-    }
-    return sortableData;
-  }, [sortConfig, date, selectedVehicle, intervalFilter]);
-
 
   const handleSort = (
     column: string
@@ -276,14 +201,6 @@ const EntryExitReportTable = () => {
 
   };
 
-
-  const generateExportData = () => {
-    return sortedData.map(row => ({
-      'Vehicle No': row.vehicleName,
-      'Driver Name': row.driverName,
-      'POIs Covered': row.poisCovered,
-    }));
-  };
 
   const handleExportCSV = async () => {
     setLoading(true);
@@ -658,7 +575,7 @@ const EntryExitReportTable = () => {
           `${API_BASE_URL}/Reports/GetEntryExitReport?${params.toString()}`,
 
           {
-            method: "POST", 
+            method: "POST",
           }
 
         );
@@ -793,20 +710,20 @@ const EntryExitReportTable = () => {
     );
 
   return (
-    <Card className="shadow-sm overflow-hidden">
-      {loading && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/70 dark:bg-black/50 rounded-xl">
-          <div className="flex items-center gap-3 bg-white dark:bg-zinc-900 px-5 py-3 rounded-lg shadow-lg border">
-
-            <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-
-            <span className="text-sm font-medium text-foreground">
-              Please wait...
-            </span>
-
+    <LoadScript
+      googleMapsApiKey={GOOGLE_MAPS_API_KEY}
+      libraries={['places']}
+      loadingElement={<div className="w-full h-full" />}
+    >
+      <Card className="shadow-sm overflow-hidden">
+       {loading && (
+          <div className="absolute inset-0 bg-white/70 z-10 flex items-center justify-center rounded-md">
+            <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-lg shadow">
+              <div className="animate-spin h-4 w-4 border-2 border-black border-t-transparent rounded-full"></div>
+              <span className="text-sm">Please wait ...</span>
+            </div>
           </div>
-        </div>
-      )}
+        )}
       <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 px-6 py-4">
         <div>
           <CardTitle className="text-xl font-bold text-foreground">Entry / Exit Report</CardTitle>
@@ -847,81 +764,81 @@ const EntryExitReportTable = () => {
                 )}
               </Button>
             </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="end">
-  <div className="flex">
-    <div className="flex flex-col space-y-1 p-2 border-r">
-      {timeRanges.map((range) => (
-        <Button
-          key={range.value}
-          variant="ghost"
-          className="justify-start"
-          onClick={() => {
-            const now = new Date();
-            let fromDate: Date;
-            let toDate: Date = now;
+            <PopoverContent className="w-auto p-0" align="end">
+              <div className="flex">
+                <div className="flex flex-col space-y-1 p-2 border-r">
+                  {timeRanges.map((range) => (
+                    <Button
+                      key={range.value}
+                      variant="ghost"
+                      className="justify-start"
+                      onClick={() => {
+                        const now = new Date();
+                        let fromDate: Date;
+                        let toDate: Date = now;
 
-            switch (range.value) {
-              case "today":
-                fromDate = now;
-                break;
-              case "yesterday":
-                fromDate = subDays(now, 1);
-                toDate = subDays(now, 1);
-                break;
-              case "last-week":
-                fromDate = subWeeks(now, 1);
-                break;
-              case "last-month":
-                fromDate = subMonths(now, 1);
-                break;
-              default:
-                fromDate = now;
-            }
+                        switch (range.value) {
+                          case "today":
+                            fromDate = now;
+                            break;
+                          case "yesterday":
+                            fromDate = subDays(now, 1);
+                            toDate = subDays(now, 1);
+                            break;
+                          case "last-week":
+                            fromDate = subWeeks(now, 1);
+                            break;
+                          case "last-month":
+                            fromDate = subMonths(now, 1);
+                            break;
+                          default:
+                            fromDate = now;
+                        }
 
-            setTempDate({
-              from: fromDate,
-              to: toDate,
-            });
-          }}
-        >
-          {range.label}
-        </Button>
-      ))}
-    </div>
+                        setTempDate({
+                          from: fromDate,
+                          to: toDate,
+                        });
+                      }}
+                    >
+                      {range.label}
+                    </Button>
+                  ))}
+                </div>
 
-    <div className="flex flex-col">
-      <Calendar
-        initialFocus
-        mode="range"
-        defaultMonth={tempDate?.from}
-        selected={tempDate}
-        onSelect={setTempDate}
-        numberOfMonths={1}
-      />
+                <div className="flex flex-col">
+                  <Calendar
+                    initialFocus
+                    mode="range"
+                    defaultMonth={tempDate?.from}
+                    selected={tempDate}
+                    onSelect={setTempDate}
+                    numberOfMonths={1}
+                  />
 
-      <div className="flex justify-end gap-2 border-t p-3">
-        <Button
-          variant="outline"
-          onClick={() => {
-            setTempDate(date); // restore old date
-            setIsCalendarOpen(false);
-          }}
-        >
-          Cancel
-        </Button>
+                  <div className="flex justify-end gap-2 border-t p-3">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setTempDate(date); // restore old date
+                        setIsCalendarOpen(false);
+                      }}
+                    >
+                      Cancel
+                    </Button>
 
-        <Button
-          onClick={() => {
-            setDate(tempDate); // apply selected date
-            setIsCalendarOpen(false);
-          }}
-        >
-          Apply
-        </Button>
-      </div>
-    </div>
-  </div>
-</PopoverContent>
+                    <Button
+                      onClick={() => {
+                        setDate(tempDate); // apply selected date
+                        setIsCalendarOpen(false);
+                      }}
+                    >
+                      Apply
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </PopoverContent>
           </Popover>
           <VehicleCombobox vehicles={[{ label: 'All Vehicles', value: 'all' }, ...(vehicleList ?? []),]} value={selectedVehicle} onChange={setSelectedVehicle} className="w-full sm:w-[180px]" />
           <Select value={intervalFilter} onValueChange={setIntervalFilter}>
@@ -1085,19 +1002,11 @@ const EntryExitReportTable = () => {
                                             {/* Entry Location (lat used here as you requested) */}
                                             <TableCell className="text-sm text-muted-foreground">
                                               <button
+                                                type="button"
                                                 className="text-blue-600 hover:underline"
-                                              // onClick={() =>
-                                              //   showMapWindow(
-                                              //     detail.bbid,
-                                              //     detail.vehname,
-                                              //     detail.poiLat,
-                                              //     detail.poiLong,
-                                              //     detail.poiName,
-                                              //     "~/resources/images/legends/stop.png"
-                                              //   )
-                                              // }
+                                                onClick={() => handleLocationClick(detail, row.vehicleName || row.vehName)}
                                               >
-                                                {detail.poiName.replace(/<[^>]*>/g, "")}
+                                                {detail.poiName?.replace(/<[^>]*>/g, "")}
                                               </button>
                                             </TableCell>
 
@@ -1146,6 +1055,71 @@ const EntryExitReportTable = () => {
           </Table>
         </div>
       </CardContent>
+      <Dialog open={isLocationDialogOpen} onOpenChange={(open) => {
+        setIsLocationDialogOpen(open);
+        if (!open) setIsInfoWindowOpen(false);
+      }}>
+        <DialogContent className="sm:max-w-3xl w-full p-0">
+          <DialogHeader className="p-6">
+            <DialogTitle>Location On Map</DialogTitle>
+            <DialogDescription>
+              View the selected entry location and map details.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="px-6 pb-6">
+            {selectedLocation?.poiLat && selectedLocation?.poiLong ? (
+              <div className="overflow-hidden rounded-lg border border-slate-200">
+                <GoogleMap
+                  mapContainerClassName="w-full h-[320px]"
+                  center={{
+                    lat: Number(selectedLocation.poiLat),
+                    lng: Number(selectedLocation.poiLong),
+                  }}
+                  zoom={16}
+                  options={locationMapOptions}
+                >
+                  <Marker
+                    position={{
+                      lat: Number(selectedLocation.poiLat),
+                      lng: Number(selectedLocation.poiLong),
+                    }}
+                    onMouseOver={() => setIsInfoWindowOpen(true)}
+                  />
+                  {isInfoWindowOpen && (
+                    <InfoWindow
+                      position={{
+                        lat: Number(selectedLocation.poiLat),
+                        lng: Number(selectedLocation.poiLong),
+                      }}
+                      onCloseClick={() => setIsInfoWindowOpen(false)}
+                    >
+                      <div className="text-xs text-slate-900" onMouseLeave={() => setIsInfoWindowOpen(false)}>
+                        <div className="font-semibold">Vehicle:</div>
+                        <div>{selectedLocation?.vehicleName || 'Unknown'}</div>
+                        <div className="mt-1 font-semibold">Location:</div>
+                        <div>{selectedLocation?.poiName?.replace(/<[^>]*>/g, '') || 'Unknown location'}</div>
+                      </div>
+                    </InfoWindow>
+                  )}
+                </GoogleMap>
+              </div>
+            ) : (
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+                Location coordinates are not available for this POI.
+              </div>
+            )}
+          </div>
+          <DialogFooter className="flex justify-end px-6 py-4 border-t">
+            <button
+              type="button"
+              className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700"
+              onClick={() => setIsLocationDialogOpen(false)}
+            >
+              Close
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <CardFooter className="flex items-center justify-between py-3 px-6 border-t bg-card">
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">Rows per page:</span>
@@ -1277,6 +1251,7 @@ const EntryExitReportTable = () => {
         </div>
       </CardFooter>
     </Card>
+    </LoadScript>
   );
 };
 
