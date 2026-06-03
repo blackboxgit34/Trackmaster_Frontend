@@ -75,7 +75,7 @@ const timeRanges = [
 ];
 
 const intervalOptions = [
-  { label: 'All Durations', value: 'all' },
+  { label: 'All Durations', value: '0-0' },
   { label: '< 1 min', value: '0-1' },
   { label: '1-2 mins', value: '1-2' },
   { label: '2-3 mins', value: '2-3' },
@@ -164,7 +164,7 @@ const IdlingAnalysisTable = () => {
  const [tempDate, setTempDate] = useState<any>();
  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
  const [isCustomMode, setIsCustomMode] = useState(false);
-  const [intervalFilter, setIntervalFilter] = useState('all');
+  const [intervalFilter, setIntervalFilter] = useState('0-0');
   const [idlingAboveValue, setIdlingAboveValue] = useState(0);
   const [idlingAboveUnit, setIdlingAboveUnit] = useState<'min' | 'hr'>('min');
 
@@ -387,7 +387,7 @@ sortColumn:columnMap[sortConfig?.key as string] || "VehName",
 
 const fetchStoppageReport = useCallback(async () => {
   setLoading(true);
-
+debugger;
   try {
     const requestModel = buildRequestModel();
 
@@ -584,112 +584,6 @@ const fetchStoppageReport = useCallback(async () => {
                 <TableHead className="px-6 py-3"></TableHead>
               </TableRow>
             </TableHeader>
-            {/* <TableBody>
-                            { loading ? (
-                              <TableRow>
-                                <TableCell
-                                  colSpan={5}
-                                  className="text-center py-10"
-                                >
-                                  Loading...
-                                </TableCell>
-                              </TableRow>
-                             ) : paginatedData.length > 0 ? (
-                              paginatedData.map((row) => {
-                                const isExpanded = expandedRows.has(row.bbid);
-              
-                               // const sortedDetails = row.objStoppageReport || [];
-              const sortedDetails = [...(row.objStoppageReport || [])].sort((a, b) => {
-                if (!detailsSortConfig.key) return 0;
-              
-                const aValue = a[detailsSortConfig.key];
-                const bValue = b[detailsSortConfig.key];
-              
-                if (aValue < bValue) {
-                  return detailsSortConfig.direction === "asc" ? -1 : 1;
-                }
-              
-                if (aValue > bValue) {
-                  return detailsSortConfig.direction === "asc" ? 1 : -1;
-                }
-              
-                return 0;
-              });
-
-                return (
-                  <React.Fragment key={row.vehicleId}>
-                    <TableRow className="bg-card hover:bg-muted/50 border-b">
-                      <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-foreground">{row.vehicleName}</TableCell>
-                      <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{row.driverName || 'N/A'}</TableCell>
-                      <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{row.idlingCount}</TableCell>
-                      <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{formatDurationForReport(row.totalIdlingTime)}</TableCell>
-                      <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-right">
-                        <Button variant="link" onClick={() => toggleRow(row.vehicleId)} className="font-medium text-brand-blue dark:text-blue-400 p-0 h-auto flex items-center gap-1">
-                          Details <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                    {isExpanded && (
-                      <TableRow className="bg-muted/20 hover:bg-muted/20">
-                        <TableCell colSpan={headers.length + 1} className="p-0">
-                          <div className="bg-muted/50 p-8">
-                            <div className="bg-card rounded-lg shadow-sm h-full flex flex-col overflow-hidden">
-                              <div className="p-6 border-b">
-                                <h5 className="text-lg font-semibold text-foreground">Idling Log for {row.vehicleName}</h5>
-                                <p className="text-sm text-muted-foreground">Detailed idling breakdown for the selected period.</p>
-                              </div>
-                              <div className="p-6">
-                                <ScrollArea className="h-[240px] pr-4">
-                                  <Table>
-                                    <TableHeader>
-                                      <TableRow>
-                                        <SortableHeader onClick={() => handleDetailsSort('startDate')} isSorted={detailsSortConfig.key === 'startDate'} sortDirection={detailsSortConfig.direction}>Start Date</SortableHeader>
-                                        <SortableHeader onClick={() => handleDetailsSort('stopDate')} isSorted={detailsSortConfig.key === 'stopDate'} sortDirection={detailsSortConfig.direction}>Stop Date</SortableHeader>
-                                        <SortableHeader onClick={() => handleDetailsSort('afterIdlingStatus')} isSorted={detailsSortConfig.key === 'afterIdlingStatus'} sortDirection={detailsSortConfig.direction}>After Idling</SortableHeader>
-                                        <SortableHeader onClick={() => handleDetailsSort('location')} isSorted={detailsSortConfig.key === 'location'} sortDirection={detailsSortConfig.direction}>Location</SortableHeader>
-                                        <SortableHeader onClick={() => handleDetailsSort('duration')} isSorted={detailsSortConfig.key === 'duration'} sortDirection={detailsSortConfig.direction}>Duration</SortableHeader>
-                                        <TableHead>Add POI</TableHead>
-                                        <TableHead>POI Location</TableHead>
-                                      </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                      {sortedDetails.length > 0 ? (
-                                        sortedDetails.map(detail => (
-                                          <TableRow key={detail.id}>
-                                            <TableCell className="font-mono text-sm">{detail.startDate}</TableCell>
-                                            <TableCell className="font-mono text-sm">{detail.stopDate}</TableCell>
-                                            <TableCell className="text-sm">{detail.afterIdlingStatus}</TableCell>
-                                            <TableCell className="text-sm truncate">{detail.location}</TableCell>
-                                            <TableCell className="text-sm">{formatDurationForReport(detail.duration)}</TableCell>
-                                            <TableCell>
-                                              <Button variant="outline" size="sm">
-                                                <PlusCircle className="h-4 w-4 mr-2" />
-                                                Add POI
-                                              </Button>
-                                            </TableCell>
-                                            <TableCell className="text-sm">{detail.poiLocation || 'N/A'}</TableCell>
-                                          </TableRow>
-                                        ))
-                                      ) : (
-                                        <TableRow>
-                                          <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
-                                            No idling details available for this period.
-                                          </TableCell>
-                                        </TableRow>
-                                      )}
-                                    </TableBody>
-                                  </Table>
-                                </ScrollArea>
-                              </div>
-                            </div>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </React.Fragment>
-                );
-              })}
-            </TableBody> */}
             <TableBody>
   {loading ? (
     <TableRow>
@@ -702,9 +596,9 @@ const fetchStoppageReport = useCallback(async () => {
     </TableRow>
   ) : paginatedData.length > 0 ? (
     paginatedData.map((row) => {
-      const isExpanded = expandedRows.has(row.vehicleId);
+      const isExpanded = expandedRows.has(row.bbid);
 
-      const sortedDetails = [...(row.objStoppageReport || [])].sort((a, b) => {
+      const sortedDetails = [...(row.idlingSubStatuslist || [])].sort((a, b) => {
         if (!detailsSortConfig.key) return 0;
 
         const aValue = a[detailsSortConfig.key];
@@ -722,14 +616,14 @@ const fetchStoppageReport = useCallback(async () => {
       });
 
       return (
-                  <React.Fragment key={row.vehicleId}>
+                  <React.Fragment key={row.bbid}>
                     <TableRow className="bg-card hover:bg-muted/50 border-b">
                       <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-foreground">{row.vehicleName}</TableCell>
                       <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{row.driverName || 'N/A'}</TableCell>
                       <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{row.idlingCount}</TableCell>
-                      <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{formatDurationForReport(row.totalIdlingTime)}</TableCell>
+                     <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{row.totalIdlingTime || "N/A"}</TableCell>
                       <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-right">
-                        <Button variant="link" onClick={() => toggleRow(row.vehicleId)} className="font-medium text-brand-blue dark:text-blue-400 p-0 h-auto flex items-center gap-1">
+                        <Button variant="link" onClick={() => toggleRow(row.bbid)} className="font-medium text-brand-blue dark:text-blue-400 p-0 h-auto flex items-center gap-1">
                           Details <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
                         </Button>
                       </TableCell>
@@ -764,8 +658,8 @@ const fetchStoppageReport = useCallback(async () => {
                                             <TableCell className="font-mono text-sm">{detail.startDate}</TableCell>
                                             <TableCell className="font-mono text-sm">{detail.stopDate}</TableCell>
                                             <TableCell className="text-sm">{detail.afterIdlingStatus}</TableCell>
-                                            <TableCell className="text-sm truncate">{detail.location}</TableCell>
-                                            <TableCell className="text-sm">{formatDurationForReport(detail.duration)}</TableCell>
+                                         <TableCell className="text-sm truncate w-[300px] whitespace-normal break-words">{detail.location}</TableCell>
+                                            <TableCell className="text-sm ">{detail.duration}</TableCell>
                                             <TableCell>
                                               <Button variant="outline" size="sm">
                                                 <PlusCircle className="h-4 w-4 mr-2" />
@@ -798,12 +692,11 @@ const fetchStoppageReport = useCallback(async () => {
     <TableRow>
       <TableCell
         colSpan={5}
-        className="text-center py-10"
-      >
+        className="text-center py-10">
         No data found
       </TableCell>
     </TableRow>
-  )}
+  )} 
 </TableBody>
           </Table>
         </div>
