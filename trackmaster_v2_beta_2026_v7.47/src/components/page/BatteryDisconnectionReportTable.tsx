@@ -617,13 +617,10 @@ const BatteryDisconnectionReportTable = () => {
       <CardContent className="p-0">
         <div className="relative">
           {loading && (
-            <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-              <div className="inline-flex items-center gap-2 rounded-full border border-border bg-white/90 px-4 py-2 shadow">
-                <Loader className="h-4 w-4 animate-spin" />
-
-                <span className="text-sm font-medium text-foreground">
-                  Loading battery disconnection report...
-                </span>
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+              <div className="bg-white p-4 rounded-lg flex items-center gap-3 shadow-lg">
+                <div className="animate-spin h-5 w-5 border-2 border-black border-t-transparent rounded-full"></div>
+                <span>Please wait...</span>
               </div>
             </div>
           )}
@@ -733,11 +730,11 @@ const BatteryDisconnectionReportTable = () => {
                       {isExpanded && (
                         <TableRow className="bg-muted/20 hover:bg-muted/20">
                           <TableCell
-                            colSpan={headers.length + 2}
+                            colSpan={headers.length + 5}
                             className="p-0"
                           >
-                            <div className="bg-muted/50 p-8">
-                              <div className="bg-card rounded-lg shadow-sm h-full flex flex-col overflow-hidden">
+                            <div className="bg-muted/50 px-2 py-3">
+                              <div className="bg-card rounded-md border flex flex-col overflow-hidden">
                                 <div className="p-6 border-b">
                                   <h5 className="text-lg font-semibold text-foreground">
                                     Disconnection Log for{' '}
@@ -750,15 +747,14 @@ const BatteryDisconnectionReportTable = () => {
                                   </p>
                                 </div>
 
-                                <ScrollArea className="h-[240px]">
-                                  <Table>
+                                <div className="max-h-[500px] overflow-y-auto w-full rounded-md">
+                                  <div className="w-full">
+                                    <Table className="w-full table-fixed">
                                     <TableHeader className="sticky top-0 bg-card z-10">
                                       <TableRow>
                                         <SortableHeader
                                           onClick={() =>
-                                            handleDetailsSort(
-                                              'startTime'
-                                            )
+                                            handleDetailsSort('startTime')
                                           }
                                           isSorted={
                                             detailsSortConfig.key ===
@@ -768,7 +764,9 @@ const BatteryDisconnectionReportTable = () => {
                                             detailsSortConfig.direction
                                           }
                                         >
-                                          Disconnection Date
+                                          <div className="w-[170px]">
+                                            Disconnection Date
+                                          </div>
                                         </SortableHeader>
 
                                         <SortableHeader
@@ -785,8 +783,9 @@ const BatteryDisconnectionReportTable = () => {
                                             detailsSortConfig.direction
                                           }
                                         >
-                                          Disconnection
-                                          Location
+                                          <div className="w-[300px]">
+                                            Disconnection Location
+                                          </div>
                                         </SortableHeader>
 
                                         <SortableHeader
@@ -803,7 +802,9 @@ const BatteryDisconnectionReportTable = () => {
                                             detailsSortConfig.direction
                                           }
                                         >
-                                          Connection Date
+                                          <div className="w-[170px]">
+                                            Connection Date
+                                          </div>
                                         </SortableHeader>
 
                                         <SortableHeader
@@ -820,25 +821,23 @@ const BatteryDisconnectionReportTable = () => {
                                             detailsSortConfig.direction
                                           }
                                         >
-                                          Connection Location
+                                          <div className="w-[300px]">
+                                            Connection Location
+                                          </div>
                                         </SortableHeader>
 
                                         <SortableHeader
                                           onClick={() =>
-                                            handleDetailsSort(
-                                              'duration'
-                                            )
+                                            handleDetailsSort('duration')
                                           }
                                           isSorted={
-                                            detailsSortConfig.key ===
-                                            'duration'
+                                            detailsSortConfig.key === 'duration'
                                           }
-                                          sortDirection={
-                                            detailsSortConfig.direction
-                                          }
+                                          sortDirection={detailsSortConfig.direction}
                                         >
-                                          Disconnection
-                                          Duration
+                                          <div className="w-[140px] text-left">
+                                            Disconnection Duration
+                                          </div>
                                         </SortableHeader>
 
                                         <TableHead className="w-[120px]">
@@ -861,47 +860,47 @@ const BatteryDisconnectionReportTable = () => {
                                             <TableRow
                                               key={detail.id}
                                             >
-                                              <TableCell className="font-mono text-sm">
+                                              <TableCell className="font-mono text-sm whitespace-nowrap">
                                                 {detail.startTime
                                                   ? format(
                                                       startTime,
-                                                      'dd-MM-yyyy HH:mm:ss'
+                                                      'MMM dd yyyy hh:mm a'
                                                     )
                                                   : '-'}
                                               </TableCell>
 
-                                              <TableCell className="text-sm truncate">
+                                              <TableCell className="text-sm whitespace-normal break-words">
                                                 {
                                                   detail.startLocation
                                                 }
                                               </TableCell>
 
-                                              <TableCell className="font-mono text-sm">
+                                              <TableCell className="font-mono text-sm whitespace-nowrap">
                                                 {detail.endTime &&
                                                 detail.endTime !== '0001-01-01T00:00:00' &&
                                                 detail.endTime !== '0001-01-01 00:00:00' ? (
                                                   format(
                                                     new Date(detail.endTime),
-                                                    'dd-MM-yyyy HH:mm:ss'
+                                                    'MMM dd yyyy hh:mm a'
                                                   )
                                                 ) : (
                                                   'N/A'
                                                 )}
                                               </TableCell>
 
-                                              <TableCell className="text-sm truncate">
+                                              <TableCell className="text-sm whitespace-normal break-words">
                                                 {
                                                   detail.endLocation
                                                 }
                                               </TableCell>
 
-                                              <TableCell className="text-right">
-                                               <p className="font-mono text-sm">
-                                                 {formatDuration(Number(detail.duration) || 0)}
-                                               </p>
+                                              <TableCell className="w-[140px] text-center">
+                                                <p className="font-mono text-sm">
+                                                  {formatDuration(Number(detail.duration) || 0)}
+                                                </p>
                                               </TableCell>
 
-                                              <TableCell>
+                                              <TableCell className="w-[120px]">
                                                 <span
                                                   className={cn(
                                                     'w-28 inline-flex justify-center px-2.5 py-1 text-xs font-semibold rounded-full',
@@ -921,7 +920,8 @@ const BatteryDisconnectionReportTable = () => {
                                       )}
                                     </TableBody>
                                   </Table>
-                                </ScrollArea>
+                                  </div>
+                                </div>
                               </div>
                             </div>
                           </TableCell>

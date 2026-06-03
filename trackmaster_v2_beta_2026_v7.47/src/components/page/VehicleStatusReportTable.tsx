@@ -355,50 +355,50 @@ const totalCount = apiData?.count ?? 0;
             >
               <div className="p-4">
                 <Calendar
-  mode="range"
-  initialFocus
-  numberOfMonths={2}
-  selected={{
-    from: tempDate?.from,
-    to: tempDate?.to,
-  }}
-  onSelect={(range, selectedDay) => {
-    if (!selectedDay) return;
+                  mode="range"
+                  initialFocus
+                  numberOfMonths={2}
+                  selected={{
+                    from: tempDate?.from,
+                    to: tempDate?.to,
+                  }}
+                  onSelect={(range, selectedDay) => {
+                    if (!selectedDay) return;
 
-    // FIRST CLICK → START DATE
-    if (selecting === 'start') {
-      setTempDate({
-        from: selectedDay,
-        to: undefined,
-      });
+                    // FIRST CLICK → START DATE
+                    if (selecting === 'start') {
+                      setTempDate({
+                        from: selectedDay,
+                        to: undefined,
+                      });
 
-      setSelecting('end');
-      return;
-    }
+                      setSelecting('end');
+                      return;
+                    }
 
-    // SECOND CLICK → END DATE
-    if (selecting === 'end') {
-      const start = tempDate?.from;
+                    // SECOND CLICK → END DATE
+                    if (selecting === 'end') {
+                      const start = tempDate?.from;
 
-      if (!start) return;
+                      if (!start) return;
 
-      // IF USER PICKS EARLIER DATE
-      if (selectedDay < start) {
-        setTempDate({
-          from: selectedDay,
-          to: start,
-        });
-      } else {
-        setTempDate({
-          from: start,
-          to: selectedDay,
-        });
-      }
+                      // IF USER PICKS EARLIER DATE
+                      if (selectedDay < start) {
+                        setTempDate({
+                          from: selectedDay,
+                          to: start,
+                        });
+                      } else {
+                        setTempDate({
+                          from: start,
+                          to: selectedDay,
+                        });
+                      }
 
-      setSelecting('start');
-    }
-  }}
-/>
+                      setSelecting('start');
+                    }
+                  }}
+                />
               </div>
               <div className="flex justify-end gap-2 border-t p-3">
                 <Button size="sm" variant="outline" onClick={() => setIsCalendarOpen(false)}>
@@ -456,10 +456,10 @@ const totalCount = apiData?.count ?? 0;
       <CardContent className="p-0">
         <div className="relative">
           {loading && (
-            <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-              <div className="inline-flex items-center gap-2 rounded-full border border-border bg-white/90 px-4 py-2 shadow">
-                <Loader className="h-4 w-4 animate-spin" />
-                <span className="text-sm font-medium text-foreground">Loading vehicle status...</span>
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+              <div className="bg-white p-4 rounded-lg flex items-center gap-3 shadow-lg">
+                <div className="animate-spin h-5 w-5 border-2 border-black border-t-transparent rounded-full"></div>
+                <span>Please wait...</span>
               </div>
             </div>
           )}
@@ -528,22 +528,63 @@ const totalCount = apiData?.count ?? 0;
                                   Detailed status changes for the selected period.
                                 </p>
                               </div>
-                              <ScrollArea className="h-[240px]">
-                                <Table>
+                              <ScrollArea className="h-[500px]">
+                                <Table className="table-fixed w-full">
                                   <TableHeader className="sticky top-0 bg-card z-10">
                                     <TableRow>
-                                      <SortableHeader onClick={() => handleDetailsSort('dateTime')} isSorted={detailsSortConfig.key === 'dateTime'} sortDirection={detailsSortConfig.direction}>Date Time</SortableHeader>
-                                      <SortableHeader onClick={() => handleDetailsSort('location')} isSorted={detailsSortConfig.key === 'location'} sortDirection={detailsSortConfig.direction}>Location</SortableHeader>
-                                      <SortableHeader onClick={() => handleDetailsSort('speed')} isSorted={detailsSortConfig.key === 'speed'} sortDirection={detailsSortConfig.direction}>Speed</SortableHeader>
-                                      <SortableHeader onClick={() => handleDetailsSort('status')} isSorted={detailsSortConfig.key === 'status'} sortDirection={detailsSortConfig.direction}>Status</SortableHeader>
+                                     <SortableHeader
+                                        onClick={() => handleDetailsSort('dateTime')}
+                                        isSorted={detailsSortConfig.key === 'dateTime'}
+                                        sortDirection={detailsSortConfig.direction}
+                                      >
+                                        <div className="w-[180px]">
+                                          Date Time
+                                        </div>
+                                      </SortableHeader>
+                                      <SortableHeader
+                                        onClick={() => handleDetailsSort('location')}
+                                        isSorted={detailsSortConfig.key === 'location'}
+                                        sortDirection={detailsSortConfig.direction}
+                                      >
+                                        <div className="w-[400px]">
+                                          Location
+                                        </div>
+                                      </SortableHeader>
+                                      <SortableHeader
+                                        onClick={() => handleDetailsSort('speed')}
+                                        isSorted={detailsSortConfig.key === 'speed'}
+                                        sortDirection={detailsSortConfig.direction}
+                                      >
+                                        <div className="w-[120px] text-center">
+                                          Speed
+                                        </div>
+                                      </SortableHeader>
+                                      <SortableHeader
+                                        onClick={() => handleDetailsSort('status')}
+                                        isSorted={detailsSortConfig.key === 'status'}
+                                        sortDirection={detailsSortConfig.direction}
+                                      >
+                                        <div className="w-[140px] text-center">
+                                          Status
+                                        </div>
+                                      </SortableHeader>
                                     </TableRow>
                                   </TableHeader>
                                   <TableBody>
                                     {sortedDetails.map(detail => (
                                       <TableRow key={detail.id} className="hover:bg-muted/50">
-                                        <TableCell className="font-mono text-sm">{detail.dateTime}</TableCell>
-                                        <TableCell className="text-sm truncate">{detail.location}</TableCell>
-                                        <TableCell className="text-sm">{detail.speed} km/h</TableCell>
+                                        <TableCell className="font-mono text-sm whitespace-nowrap">
+                                          {detail.dateTime
+                                            ? format(
+                                                new Date(detail.dateTime),
+                                                'MMM dd yyyy hh:mm a'
+                                              )
+                                                                                          : '-'}
+                                        </TableCell>
+                                        <TableCell className="text-sm whitespace-normal break-words">
+                                          {detail.location || '-'}
+                                        </TableCell>
+                                        <TableCell className="text-sm pl-12">{detail.speed} km/h</TableCell>
                                         <TableCell><StatusBadge status={detail.status} /></TableCell>
                                       </TableRow>
                                     ))}
