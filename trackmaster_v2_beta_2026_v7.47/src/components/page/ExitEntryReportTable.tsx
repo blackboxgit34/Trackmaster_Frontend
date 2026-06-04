@@ -109,7 +109,7 @@ const SortableHeader = ({ children, isSorted, sortDirection, onClick }: { childr
 const ExitEntryReportTable = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-const [detailsSortConfig, setDetailsSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'startTime', direction: 'asc' });
+  const [detailsSortConfig, setDetailsSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'startTime', direction: 'asc' });
   const [date, setDate] = useState<DateRange | undefined>({
     from: new Date(),
     to: new Date(),
@@ -131,15 +131,15 @@ const [detailsSortConfig, setDetailsSortConfig] = useState<{ key: string; direct
     sortColumn: "vehname",
     sortDirection: "asc" as "asc" | "desc",
   });
-const formatDateTime = (value: string | Date | null | undefined) => {
-  if (!value) return "";
+  const formatDateTime = (value: string | Date | null | undefined) => {
+    if (!value) return "";
 
-  const date = new Date(value);
+    const date = new Date(value);
 
-  if (isNaN(date.getTime())) return "";
+    if (isNaN(date.getTime())) return "";
 
-  return format(date, "MMM dd yyyy hh:mm a");
-};
+    return format(date, "MMM dd yyyy hh:mm a");
+  };
 
   const toggleRow = (rowId: string) => {
     setExpandedRows((prev) => {
@@ -388,8 +388,6 @@ const formatDateTime = (value: string | Date | null | undefined) => {
 
 
 
-
-
   const handleSort = (
     column: string
   ) => {
@@ -417,7 +415,7 @@ const formatDateTime = (value: string | Date | null | undefined) => {
   };
 
 
- const handleExportPDF = async () => {
+  const handleExportPDF = async () => {
     setLoading(true);
     try {
       const authData = JSON.parse(
@@ -430,8 +428,8 @@ const formatDateTime = (value: string | Date | null | undefined) => {
 
         sEcho: 1,
 
-         iDisplayStart: 0,
-        iDisplayLength: 1000000, 
+        iDisplayStart: 0,
+        iDisplayLength: 1000000,
 
         sSearch: searchTerm,
 
@@ -441,7 +439,7 @@ const formatDateTime = (value: string | Date | null | undefined) => {
         sortDirection:
           sortConfig.sortDirection,
         // updated interval mapping
-   
+
         beginDate:
           format(
 
@@ -558,8 +556,8 @@ const formatDateTime = (value: string | Date | null | undefined) => {
 
         sEcho: 1,
 
-         iDisplayStart: 0,
-        iDisplayLength: 1000000, 
+        iDisplayStart: 0,
+        iDisplayLength: 1000000,
 
         sSearch: searchTerm,
 
@@ -592,7 +590,7 @@ const formatDateTime = (value: string | Date | null | undefined) => {
         Status: "",
         DownloadType: "Excel"
       };
-     
+
       const params =
         new URLSearchParams();
 
@@ -627,7 +625,7 @@ const formatDateTime = (value: string | Date | null | undefined) => {
 
       // ensure report type is set
       params.append('rtype', 'ExitEntryReport');
-    
+
       const response = await fetch(`${API_BASE_URL}/Reports/GetEntryExitReport?${params.toString()}`, {
         method: 'Post',
         headers: {
@@ -863,138 +861,138 @@ const formatDateTime = (value: string | Date | null | undefined) => {
               </TableRow>
             </TableHeader>
             <TableBody>
-                         {paginatedData.map((row) => {
-                           const isExpanded = expandedRows.has(row.bbid);
-                           const details = row.poisCoveredList || [];
-                           const sortedDetails = [...details].sort((a, b) => {
-                             const key = detailsSortConfig.key as keyof typeof a;
-                             let aValue = a[key];
-                             let bValue = b[key];
-                             if (typeof aValue === 'string' && typeof bValue === 'string') {
-                               return detailsSortConfig.direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
-                             }
-                             if (typeof aValue === 'number' && typeof bValue === 'number') {
-                               return detailsSortConfig.direction === 'asc' ? aValue - bValue : bValue - aValue;
-                             }
-                             return 0;
-                           });
-           
-                           return (
-                             <React.Fragment key={row.bbid}>
-                               <TableRow className="bg-card hover:bg-muted/50 border-b">
-                                 <TableCell
-                                   className="px-6 py-4"
-           
-                                 >
-           
-                                   {row.vehName}
-           
-                                 </TableCell>
-           
-                                 <TableCell
-                                   className="px-6 py-4"
-                                 >
-           
-                                   {
-                                     row.driverName &&
-                                       row.driverName !== "undefined"
-                                       ? row.driverName
-                                       : "NA"
-                                   }
-           
-                                 </TableCell>
-           
-                                 <TableCell className="px-6 py-4">
-                                   {row.poisCovered ?? 0}
-                                 </TableCell>
-                                 <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-right">
-                                   <Button variant="link" onClick={() => toggleRow(row.bbid)} className="font-medium text-brand-blue dark:text-blue-400 p-0 h-auto flex items-center gap-1">
-                                     Details
-                                     <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
-                                   </Button>
-                                 </TableCell>
-                               </TableRow>
-                               {isExpanded && (
-                                 <TableRow className="bg-muted/20 hover:bg-muted/20">
-                                   <TableCell colSpan={headers.length + 1} className="p-0">
-                                     <div className="bg-muted/50 p-8">
-                                       <div className="bg-card rounded-lg shadow-sm h-full flex flex-col overflow-hidden">
-                                         <div className="p-6 border-b">
-                                           <h5 className="text-lg font-semibold text-foreground">
-                                             Trip Details for {row.vehicleName}
-                                           </h5>
-                                           <p className="text-sm text-muted-foreground">
-                                             Detailed trip breakdown for {row.date}
-                                           </p>
-                                         </div>
-                                         <div className="p-6">
-                                           <ScrollArea className="h-[200px] pr-4">
-                                             <Table>
-                                               <TableHeader>
-                                                 <TableRow>
-                                                   <SortableHeader onClick={() => handleDetailsSort('startTime')} isSorted={detailsSortConfig.key === 'intime'} sortDirection={detailsSortConfig.direction}>Entry Time</SortableHeader>
-                                                   <SortableHeader onClick={() => handleDetailsSort('location')} isSorted={detailsSortConfig.key === 'location'} sortDirection={detailsSortConfig.direction}>Entry Location</SortableHeader>
-                                                   <SortableHeader onClick={() => handleDetailsSort('endTime')} isSorted={detailsSortConfig.key === 'endTime'} sortDirection={detailsSortConfig.direction}>Exit Time</SortableHeader>
-                                                   {/* <SortableHeader onClick={() => handleDetailsSort('location')} isSorted={detailsSortConfig.key === 'location'} sortDirection={detailsSortConfig.direction}>Exit Location</SortableHeader> */}
-                                                   <SortableHeader onClick={() => handleDetailsSort('duration')} isSorted={detailsSortConfig.key === 'duration'} sortDirection={detailsSortConfig.direction}>Duration</SortableHeader>
-                                                 </TableRow>
-                                               </TableHeader>
-                                               <TableBody>
-                                                 {sortedDetails.length > 0 ? (
-                                                   sortedDetails.map((detail: any, index: number) => (
-                                                     <TableRow key={index}>
-           
-                                                       {/* Entry Time */}
-                                                       <TableCell className="font-mono text-sm text-foreground">
-                                                      {formatDateTime(detail.intime)}
-                                                       </TableCell>
-           
-                                                       {/* Entry Location (lat used here as you requested) */}
-                                                       <TableCell className="text-sm text-muted-foreground">
-                                                         
-                                                           {detail.poiName?.replace(/<[^>]*>/g, "")}
-                                                      
-                                                       </TableCell>
-           
-                                                       {/* Exit Time */}
-                                                       <TableCell className="font-mono text-sm text-foreground">
-                                                       {formatDateTime(detail.outTime)}
-                                                       </TableCell>
-           
-                                                       {/* Exit Location (long used here as you requested) */}
-                                                       {/* <TableCell className="text-sm text-muted-foreground">
+              {paginatedData.map((row) => {
+                const isExpanded = expandedRows.has(row.bbid);
+                const details = row.poisCoveredList || [];
+                const sortedDetails = [...details].sort((a, b) => {
+                  const key = detailsSortConfig.key as keyof typeof a;
+                  let aValue = a[key];
+                  let bValue = b[key];
+                  if (typeof aValue === 'string' && typeof bValue === 'string') {
+                    return detailsSortConfig.direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+                  }
+                  if (typeof aValue === 'number' && typeof bValue === 'number') {
+                    return detailsSortConfig.direction === 'asc' ? aValue - bValue : bValue - aValue;
+                  }
+                  return 0;
+                });
+
+                return (
+                  <React.Fragment key={row.bbid}>
+                    <TableRow className="bg-card hover:bg-muted/50 border-b">
+                      <TableCell
+                        className="px-6 py-4"
+
+                      >
+
+                        {row.vehName}
+
+                      </TableCell>
+
+                      <TableCell
+                        className="px-6 py-4"
+                      >
+
+                        {
+                          row.driverName &&
+                            row.driverName !== "undefined"
+                            ? row.driverName
+                            : "NA"
+                        }
+
+                      </TableCell>
+
+                      <TableCell className="px-6 py-4">
+                        {row.poisCovered ?? 0}
+                      </TableCell>
+                      <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-right">
+                        <Button variant="link" onClick={() => toggleRow(row.bbid)} className="font-medium text-brand-blue dark:text-blue-400 p-0 h-auto flex items-center gap-1">
+                          Details
+                          <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                    {isExpanded && (
+                      <TableRow className="bg-muted/20 hover:bg-muted/20">
+                        <TableCell colSpan={headers.length + 1} className="p-0">
+                          <div className="bg-muted/50 p-8">
+                            <div className="bg-card rounded-lg shadow-sm h-full flex flex-col overflow-hidden">
+                              <div className="p-6 border-b">
+                                <h5 className="text-lg font-semibold text-foreground">
+                                  Trip Details for {row.vehicleName}
+                                </h5>
+                                <p className="text-sm text-muted-foreground">
+                                  Detailed trip breakdown for {row.date}
+                                </p>
+                              </div>
+                              <div className="p-6">
+                                <ScrollArea className="h-[200px] pr-4">
+                                  <Table>
+                                    <TableHeader>
+                                      <TableRow>
+                                        <SortableHeader onClick={() => handleDetailsSort('startTime')} isSorted={detailsSortConfig.key === 'intime'} sortDirection={detailsSortConfig.direction}>Entry Time</SortableHeader>
+                                        <SortableHeader onClick={() => handleDetailsSort('location')} isSorted={detailsSortConfig.key === 'location'} sortDirection={detailsSortConfig.direction}>Entry Location</SortableHeader>
+                                        <SortableHeader onClick={() => handleDetailsSort('endTime')} isSorted={detailsSortConfig.key === 'endTime'} sortDirection={detailsSortConfig.direction}>Exit Time</SortableHeader>
+                                        {/* <SortableHeader onClick={() => handleDetailsSort('location')} isSorted={detailsSortConfig.key === 'location'} sortDirection={detailsSortConfig.direction}>Exit Location</SortableHeader> */}
+                                        <SortableHeader onClick={() => handleDetailsSort('duration')} isSorted={detailsSortConfig.key === 'duration'} sortDirection={detailsSortConfig.direction}>Duration</SortableHeader>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {sortedDetails.length > 0 ? (
+                                        sortedDetails.map((detail: any, index: number) => (
+                                          <TableRow key={index}>
+
+                                            {/* Entry Time */}
+                                            <TableCell className="font-mono text-sm text-foreground">
+                                              {formatDateTime(detail.intime)}
+                                            </TableCell>
+
+                                            {/* Entry Location (lat used here as you requested) */}
+                                            <TableCell className="text-sm text-muted-foreground">
+
+                                              {detail.poiName?.replace(/<[^>]*>/g, "")}
+
+                                            </TableCell>
+
+                                            {/* Exit Time */}
+                                            <TableCell className="font-mono text-sm text-foreground">
+                                              {formatDateTime(detail.outTime)}
+                                            </TableCell>
+
+                                            {/* Exit Location (long used here as you requested) */}
+                                            {/* <TableCell className="text-sm text-muted-foreground">
                                                          {detail.poiLong}
                                                        </TableCell> */}
-           
-                                                       {/* Duration */}
-                                                       <TableCell
-                                                         className="text-sm font-normal"
-                                                         >
-                                                         {parseDuration(detail.duration).text}
-                                                       </TableCell>
-           
-                                                     </TableRow>
-                                                   ))
-                                                 ) : (
-                                                   <TableRow>
-                                                     <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
-                                                       No trip details available for this day.
-                                                     </TableCell>
-                                                   </TableRow>
-                                                 )}
-                                               </TableBody>
-                                             </Table>
-                                           </ScrollArea>
-                                         </div>
-                                       </div>
-                                     </div>
-                                   </TableCell>
-                                 </TableRow>
-                               )}
-                             </React.Fragment>
-                           );
-                         })}
-                       </TableBody>
+
+                                            {/* Duration */}
+                                            <TableCell
+                                              className="text-sm font-normal"
+                                            >
+                                              {parseDuration(detail.duration).text}
+                                            </TableCell>
+
+                                          </TableRow>
+                                        ))
+                                      ) : (
+                                        <TableRow>
+                                          <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                                            No trip details available for this day.
+                                          </TableCell>
+                                        </TableRow>
+                                      )}
+                                    </TableBody>
+                                  </Table>
+                                </ScrollArea>
+                              </div>
+                            </div>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </React.Fragment>
+                );
+              })}
+            </TableBody>
           </Table>
         </div>
       </CardContent>
