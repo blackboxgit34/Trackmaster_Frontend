@@ -8,13 +8,16 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useState, useEffect } from 'react'; 
-import { API_BASE_URL } from '@/config/Api'; 
+import { useState, useEffect } from 'react';
+import { API_BASE_URL } from '@/config/Api';
 import { useToast } from '@/hooks/use-toast';
 
 //============== searchable dropdown library =============
 import { Popover, PopoverContent, PopoverTrigger, } from "@/components/ui/popover";
 import { Command, CommandGroup, CommandInput, CommandItem, } from "@/components/ui/command";
+
+//import { Command } from "@/components/ui/command";
+
 //============== searchable dropdown library =============
 
 const addCrewSchema = z.object({
@@ -132,6 +135,23 @@ const AddCrewDialog = ({ open, onOpenChange }: AddCrewDialogProps) => {
   const [correspondenceCities, setCorrespondenceCities] = useState<any[]>([]);
   const [permanentCityOpen, setPermanentCityOpen] = useState(false);
   const [correspondenceCityOpen, setCorrespondenceCityOpen] = useState(false);
+
+
+  useEffect(() => {
+  if (!open) {
+    form.reset({
+      designation: 0,
+      EmployeeId: null,
+      permanentState: "",
+      permanentCity: "",
+      correspondenceState: "",
+      correspondenceCity: "",
+    });
+
+    setPermanentCities([]);
+    setCorrespondenceCities([]);
+  }
+}, [open]);
 
 
   // =========================
@@ -355,7 +375,7 @@ const AddCrewDialog = ({ open, onOpenChange }: AddCrewDialogProps) => {
         // =========================
         onOpenChange(false);
       } else {
-         toast({
+        toast({
           title: "Error",
           description: result || "Failed to save employee",
           variant: "destructive",
@@ -383,7 +403,7 @@ const AddCrewDialog = ({ open, onOpenChange }: AddCrewDialogProps) => {
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
             <ScrollArea className="h-[70vh] p-1">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 px-4"> 
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 px-4">
                 <div className="space-y-4">
                   <FormField
                     control={form.control}
@@ -406,7 +426,7 @@ const AddCrewDialog = ({ open, onOpenChange }: AddCrewDialogProps) => {
                                 {field.value
                                   ? designations.find(
                                     (d) =>
-                                      d.value === field.value
+                                      Number(d.value) === Number(field.value)
                                   )?.name
                                   : "Select Designation"}
                               </Button>
@@ -414,7 +434,28 @@ const AddCrewDialog = ({ open, onOpenChange }: AddCrewDialogProps) => {
                           </PopoverTrigger>
 
                           <PopoverContent className="p-0 w-full min-w-[var(--radix-popover-trigger-width)]">
-                            <Command>
+                            <Command
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+
+                                  const input = e.currentTarget.querySelector(
+                                    "input"
+                                  ) as HTMLInputElement;
+
+                                  const searchText = input?.value?.trim().toLowerCase();
+
+                                  const selectedItem = designations.find(
+                                    (d) => d.name.toLowerCase() === searchText
+                                  );
+
+                                  if (selectedItem) {
+                                    field.onChange(Number(selectedItem.value));
+                                    setDesignationOpen(false);
+                                  }
+                                }
+                              }}
+                            >
                               <CommandInput placeholder="Search..." />
 
                               <CommandGroup>
@@ -485,7 +526,36 @@ const AddCrewDialog = ({ open, onOpenChange }: AddCrewDialogProps) => {
                               width: "var(--radix-popover-trigger-width)",
                             }}
                           >
-                            <Command>
+
+                            <Command
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+
+                                  const input = e.currentTarget.querySelector(
+                                    "input"
+                                  ) as HTMLInputElement;
+
+                                  const searchText = input?.value?.trim().toLowerCase();
+
+                                  const selectedItem = crewStates.find(
+                                    (s) => s.name.toLowerCase() === searchText
+                                  );
+
+                                  if (selectedItem) {
+                                    const selectedValue = selectedItem.value.toString();
+
+                                    field.onChange(selectedValue);
+
+                                    form.setValue("permanentCity", "");
+
+                                    fetchCitiesByState(selectedValue, "permanent");
+
+                                    setPermanentStateOpen(false);
+                                  }
+                                }
+                              }}
+                            >
                               <CommandInput placeholder="Search state..." />
 
                               <CommandGroup className="max-h-64 overflow-y-auto">
@@ -500,10 +570,7 @@ const AddCrewDialog = ({ open, onOpenChange }: AddCrewDialogProps) => {
 
                                       form.setValue("permanentCity", "");
 
-                                      fetchCitiesByState(
-                                        selectedValue,
-                                        "permanent"
-                                      );
+                                      fetchCitiesByState(selectedValue, "permanent");
 
                                       setPermanentStateOpen(false);
                                     }}
@@ -513,6 +580,7 @@ const AddCrewDialog = ({ open, onOpenChange }: AddCrewDialogProps) => {
                                 ))}
                               </CommandGroup>
                             </Command>
+
                           </PopoverContent>
                         </Popover>
 
@@ -529,7 +597,7 @@ const AddCrewDialog = ({ open, onOpenChange }: AddCrewDialogProps) => {
                     name="correspondenceState"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>State</FormLabel>                     
+                        <FormLabel>State</FormLabel>
                         <Popover
                           open={correspondenceStateOpen}
                           onOpenChange={setCorrespondenceStateOpen}
@@ -557,13 +625,43 @@ const AddCrewDialog = ({ open, onOpenChange }: AddCrewDialogProps) => {
                               width: "var(--radix-popover-trigger-width)",
                             }}
                           >
-                            <Command>
+
+                            <Command
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+
+                                  const input = e.currentTarget.querySelector(
+                                    "input"
+                                  ) as HTMLInputElement;
+
+                                  const searchText = input?.value?.trim().toLowerCase();
+
+                                  const selectedItem = crewStates.find(
+                                    (s) => s.name.toLowerCase() === searchText
+                                  );
+
+                                  if (selectedItem) {
+                                    const selectedValue = selectedItem.value.toString();
+
+                                    field.onChange(selectedValue);
+
+                                    form.setValue("correspondenceCity", "");
+
+                                    fetchCitiesByState(selectedValue, "correspondence");
+
+                                    setCorrespondenceStateOpen(false);
+                                  }
+                                }
+                              }}
+                            >
                               <CommandInput placeholder="Search state..." />
+
                               <CommandGroup className="max-h-64 overflow-y-auto">
                                 {crewStates.map((item) => (
                                   <CommandItem
                                     key={item.value}
-                                    value={item.name}                                   
+                                    value={item.name}
                                     onSelect={() => {
                                       const selectedValue = item.value.toString();
 
@@ -571,12 +669,9 @@ const AddCrewDialog = ({ open, onOpenChange }: AddCrewDialogProps) => {
 
                                       form.setValue("correspondenceCity", "");
 
-                                      fetchCitiesByState(
-                                        selectedValue,
-                                        "correspondence"
-                                      );
+                                      fetchCitiesByState(selectedValue, "correspondence");
 
-                                      setCorrespondenceStateOpen(false); // ADD THIS
+                                      setCorrespondenceStateOpen(false);
                                     }}
                                   >
                                     {item.name}
@@ -622,7 +717,7 @@ const AddCrewDialog = ({ open, onOpenChange }: AddCrewDialogProps) => {
                     <SelectItem value="pan">Pan Card</SelectItem>
                     <SelectItem value="license">Voter Id</SelectItem>
                   </SelectContent></Select><FormMessage /></FormItem>)} />
- 
+
                   <FormField
                     control={form.control}
                     name="bloodGroup"
@@ -655,7 +750,7 @@ const AddCrewDialog = ({ open, onOpenChange }: AddCrewDialogProps) => {
                         <FormLabel>Upload Employee Photo</FormLabel>
 
                         <FormControl>
-                  
+
                           <Input
                             type="file"
                             accept=".jpg,.jpeg,.png,.gif"
@@ -756,13 +851,35 @@ const AddCrewDialog = ({ open, onOpenChange }: AddCrewDialogProps) => {
                             </FormControl>
                           </PopoverTrigger>
 
+
                           <PopoverContent
                             className="p-0"
                             style={{
                               width: "var(--radix-popover-trigger-width)",
                             }}
                           >
-                            <Command>
+                            <Command
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+
+                                  const input = e.currentTarget.querySelector(
+                                    "input"
+                                  ) as HTMLInputElement;
+
+                                  const searchText = input?.value?.trim().toLowerCase();
+
+                                  const selectedItem = permanentCities.find(
+                                    (c) => c.name.toLowerCase() === searchText
+                                  );
+
+                                  if (selectedItem) {
+                                    field.onChange(selectedItem.value.toString());
+                                    setPermanentCityOpen(false);
+                                  }
+                                }
+                              }}
+                            >
                               <CommandInput placeholder="Search city..." />
 
                               <CommandGroup className="max-h-64 overflow-y-auto">
@@ -770,12 +887,8 @@ const AddCrewDialog = ({ open, onOpenChange }: AddCrewDialogProps) => {
                                   <CommandItem
                                     key={item.value}
                                     value={item.name}
-                                   
                                     onSelect={() => {
-                                      field.onChange(
-                                        item.value.toString()
-                                      );
-
+                                      field.onChange(item.value.toString());
                                       setPermanentCityOpen(false);
                                     }}
                                   >
@@ -848,7 +961,30 @@ const AddCrewDialog = ({ open, onOpenChange }: AddCrewDialogProps) => {
                               width: "var(--radix-popover-trigger-width)",
                             }}
                           >
-                            <Command>
+
+
+                            <Command
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+
+                                  const input = e.currentTarget.querySelector(
+                                    "input"
+                                  ) as HTMLInputElement;
+
+                                  const searchText = input?.value?.trim().toLowerCase();
+
+                                  const selectedItem = correspondenceCities.find(
+                                    (c) => c.name.toLowerCase() === searchText
+                                  );
+
+                                  if (selectedItem) {
+                                    field.onChange(selectedItem.value.toString());
+                                    setCorrespondenceCityOpen(false);
+                                  }
+                                }
+                              }}
+                            >
                               <CommandInput placeholder="Search city..." />
 
                               <CommandGroup className="max-h-64 overflow-y-auto">
@@ -856,7 +992,6 @@ const AddCrewDialog = ({ open, onOpenChange }: AddCrewDialogProps) => {
                                   <CommandItem
                                     key={item.value}
                                     value={item.name}
-                                    
                                     onSelect={() => {
                                       field.onChange(item.value.toString());
                                       setCorrespondenceCityOpen(false);
@@ -928,7 +1063,27 @@ const AddCrewDialog = ({ open, onOpenChange }: AddCrewDialogProps) => {
               </div>
             </ScrollArea>
             <DialogFooter className="pt-4">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+             
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  form.reset({
+                    designation: 0,
+                    EmployeeId: null,
+                    permanentState: "",
+                    permanentCity: "",
+                    correspondenceState: "",
+                    correspondenceCity: "",
+                  });
+
+                  setPermanentCities([]);
+                  setCorrespondenceCities([]);
+
+                  form.clearErrors();
+                  onOpenChange(false);
+                }}
+              >
                 Cancel
               </Button>
               <Button type="submit">Submit</Button>
