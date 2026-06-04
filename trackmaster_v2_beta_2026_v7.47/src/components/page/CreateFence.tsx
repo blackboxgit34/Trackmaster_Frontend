@@ -6,9 +6,10 @@ import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 import { Search, Tag, ChevronsUpDown, Undo } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { GoogleMap, DrawingManager } from '@react-google-maps/api';
+import { GoogleMap, DrawingManager, StandaloneSearchBox } from '@react-google-maps/api';
 import { useToast } from '@/hooks/use-toast';
 import { Checkbox } from '@/components/ui/checkbox';
+import { API_BASE_URL } from '@/config/Api';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Select,
@@ -46,11 +47,11 @@ interface CreateFenceProps {
 
 const CreateFence = ({ onAddFence }: CreateFenceProps) => {
   const { toast } = useToast();
-  
+
   // Fetch vehicle and type data from API
   const { data: apiVehicles, loading: vehiclesLoading } = useRawVehicleList();
   const { data: apiVehicleTypes, loading: typesLoading } = useVehicleTypes();
-  
+
   const [fenceType, setFenceType] = useState<'circle' | 'polygon'>('polygon');
   const [drawingMode, setDrawingMode] = useState<google.maps.drawing.OverlayType | null>(google.maps.drawing.OverlayType.POLYGON);
   const [alertOnEnter, setAlertOnEnter] = useState(true);
@@ -58,6 +59,7 @@ const CreateFence = ({ onAddFence }: CreateFenceProps) => {
   const [radius, setRadius] = useState(200);
   const [drawnShape, setDrawnShape] = useState<google.maps.Polygon | google.maps.Circle | null>(null);
   const [fenceName, setFenceName] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
   // Vehicle selection states
   const [isVehicleSelectorOpen, setIsVehicleSelectorOpen] = useState(false);
@@ -155,7 +157,7 @@ const CreateFence = ({ onAddFence }: CreateFenceProps) => {
     setPathHistory(newHistory);
   };
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!fenceName.trim()) {
       toast({ title: "Error", description: "Please enter a fence name.", variant: "destructive" });
       return;
@@ -169,42 +171,74 @@ const CreateFence = ({ onAddFence }: CreateFenceProps) => {
       return;
     }
 
-    let newFence: GeofenceShape;
-    const newFenceBase = {
-      id: Date.now(),
-      name: fenceName,
-      machines: Array.from(selectedVehicles),
-      isActive: true,
-    };
-
+    let latLongList: { latitude: number; longitude: number }[] = [];
     if (fenceType === 'circle' && drawnShape instanceof window.google.maps.Circle) {
       const center = drawnShape.getCenter();
       if (!center) {
         toast({ title: "Error", description: "Could not get circle center.", variant: "destructive" });
         return;
       }
-      newFence = {
-        ...newFenceBase,
-        type: 'circle',
-        center: { lat: center.lat(), lng: center.lng() },
-        radius: drawnShape.getRadius(),
-      };
+      latLongList = [{ latitude: Number(center.lat()), longitude: Number(center.lng()) }];
     } else if (fenceType === 'polygon' && drawnShape instanceof window.google.maps.Polygon) {
-      const path = drawnShape.getPath().getArray().map(p => ({ lat: p.lat(), lng: p.lng() }));
-      newFence = {
-        ...newFenceBase,
-        type: 'polygon',
-        paths: path,
-      };
+      latLongList = drawnShape.getPath().getArray().map(p => ({ latitude: Number(p.lat()), longitude: Number(p.lng()) }));
     } else {
       toast({ title: "Error", description: "Invalid shape data.", variant: "destructive" });
       return;
     }
 
-    onAddFence(newFence);
+    const payload = {
+      FenceId: 0,
+      FenceName: fenceName,
+      vehicleLists: selectedVehicleLists,
+      latLongList,
+    };
 
-    toast({ variant: "success", title: "Success", description: `Fence "${fenceName}" has been created and assigned to ${selectedVehicles.size} vehicle(s).` });
-    handleReset();
+    setIsSaving(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/Geofence/SaveGeofence`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || 'Failed to save geofence');
+      }
+
+      const result = await response.json();
+      if (result && result.success === false) {
+        throw new Error(result.message || 'Failed to save geofence');
+      }
+
+      const newFence: GeofenceShape = {
+        id: Date.now(),
+        name: fenceName,
+        machines: Array.from(selectedVehicles),
+        isActive: true,
+        type: fenceType,
+        ...(fenceType === 'circle' ? {
+          center: {
+            lat: latLongList[0].latitude,
+            lng: latLongList[0].longitude,
+          },
+          radius,
+        } : {
+          paths: latLongList.map(item => ({ lat: item.latitude, lng: item.longitude })),
+        }),
+      } as GeofenceShape;
+
+      onAddFence(newFence);
+      toast({ variant: "success", title: "Success", description: `Fence "${fenceName}" has been saved and assigned to ${selectedVehicles.size} vehicle(s).` });
+      handleReset();
+    } catch (error) {
+      toast({ title: "Save Failed", description: (error as Error).message || 'Unable to save fence.', variant: "destructive" });
+      console.error('SaveGeofence error:', error);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const vehicleTypes = useMemo(() => {
@@ -218,17 +252,28 @@ const CreateFence = ({ onAddFence }: CreateFenceProps) => {
 
   const filteredVehicles = useMemo(() => {
     if (!apiVehicles || apiVehicles.length === 0) return [];
-    
+
     return apiVehicles.filter(vehicle => {
       // Case-insensitive type comparison
-      const matchesType = selectedType === 'All Types' || 
+      const matchesType = selectedType === 'All Types' ||
         (vehicle.type && vehicle.type.trim().toLowerCase() === selectedType.toLowerCase());
-      
+
       const matchesSearch = vehicle.vehName.toLowerCase().includes(vehicleSearchTerm.toLowerCase()) ||
         vehicle.bbid.toLowerCase().includes(vehicleSearchTerm.toLowerCase());
       return matchesType && matchesSearch;
     });
   }, [vehicleSearchTerm, selectedType, apiVehicles]);
+
+  const selectedVehicleLists = useMemo(() => {
+    if (!apiVehicles || apiVehicles.length === 0) return [];
+    return apiVehicles
+      .filter(vehicle => selectedVehicles.has(vehicle.bbid))
+      .map(vehicle => ({
+        VehName: vehicle.vehName,
+        BBID: vehicle.bbid,
+        Type: vehicle.type || '',
+      }));
+  }, [apiVehicles, selectedVehicles]);
 
   const handleSelectVehicle = (vehicleId: string) => {
     setSelectedVehicles(prev => {
@@ -253,6 +298,11 @@ const CreateFence = ({ onAddFence }: CreateFenceProps) => {
 
   const allFilteredSelected = filteredVehicles.length > 0 && filteredVehicles.every(m => selectedVehicles.has(m.bbid));
   const someFilteredSelected = filteredVehicles.some(m => selectedVehicles.has(m.bbid));
+  const [searchBox, setSearchBox] = useState<google.maps.places.SearchBox | null>(null);
+
+  const onSearchBoxLoad = useCallback((ref: google.maps.places.SearchBox) => {
+    setSearchBox(ref);
+  }, []);
 
   return (
     <div className="grid grid-cols-1 grid-rows-2 lg:grid-cols-[1fr_350px] lg:grid-rows-1 gap-6 h-full">
@@ -301,14 +351,26 @@ const CreateFence = ({ onAddFence }: CreateFenceProps) => {
 
         <div className="flex-1 overflow-y-auto pr-2">
           <div className="space-y-4">
-            <div className="hidden">
-              <div className="bg-muted p-1 rounded-lg grid grid-cols-2 gap-1">
-                <Button variant="ghost" onClick={() => handleFenceTypeChange('circle')} className={cn('w-full h-9', fenceType === 'circle' ? 'bg-brand-blue text-white hover:bg-brand-blue/90' : 'hover:bg-muted-foreground/10')}>Circle</Button>
-                <Button variant="ghost" onClick={() => handleFenceTypeChange('polygon')} className={cn('w-full h-9', fenceType === 'polygon' ? 'bg-brand-blue text-white hover:bg-brand-blue/90' : 'hover:bg-muted-foreground/10')}>Polygon</Button>
-              </div>
-
-              <p className="text-xs text-muted-foreground">Select a tool from the map's top-center controls to start drawing.</p>
+            <div>
+              <StandaloneSearchBox
+                onLoad={onSearchBoxLoad}
+              >
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="search-location"
+                    placeholder="Search Location"
+                    className="pl-9 w-full"
+                  />
+                </div>
+              </StandaloneSearchBox>
             </div>
+            <div className="bg-muted p-1 rounded-lg grid grid-cols-2 gap-1">
+              <Button variant="ghost" onClick={() => handleFenceTypeChange('circle')} className={cn('w-full h-9', fenceType === 'circle' ? 'bg-brand-blue text-white hover:bg-brand-blue/90' : 'hover:bg-muted-foreground/10')}>Circle</Button>
+              <Button variant="ghost" onClick={() => handleFenceTypeChange('polygon')} className={cn('w-full h-9', fenceType === 'polygon' ? 'bg-brand-blue text-white hover:bg-brand-blue/90' : 'hover:bg-muted-foreground/10')}>Polygon</Button>
+            </div>
+
+            <p className="text-xs text-muted-foreground">Select a tool from the map's top-center controls to start drawing.</p>
             <div className="relative">
               <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input placeholder="Fence Name" className="pl-9 h-9 text-sm" value={fenceName} onChange={e => setFenceName(e.target.value)} />
@@ -395,13 +457,15 @@ const CreateFence = ({ onAddFence }: CreateFenceProps) => {
             fenceType === 'polygon' ? "grid-cols-3" : "grid-cols-2"
           )}>
             {fenceType === 'polygon' && (
-              <Button variant="outline" onClick={handleUndo} disabled={pathHistory.length <= 1}>
+              <Button variant="outline" onClick={handleUndo} disabled={pathHistory.length <= 1 || isSaving}>
                 <Undo className="h-4 w-4 mr-2" />
                 Undo
               </Button>
             )}
-            <Button variant="outline" onClick={handleReset}>Reset</Button>
-            <Button className="bg-brand-blue text-white hover:bg-brand-blue/90" onClick={handleCreate}>Create</Button>
+            <Button variant="outline" onClick={handleReset} disabled={isSaving}>Reset</Button>
+            <Button className="bg-brand-blue text-white hover:bg-brand-blue/90" onClick={handleCreate} disabled={isSaving}>
+              {isSaving ? 'Saving...' : 'Create'}
+            </Button>
           </div>
         </div>
       </div>
