@@ -526,7 +526,7 @@ const formatDateTime = (value: string | Date | null | undefined) => {
       link.href = downloadUrl;
 
       link.download =
-        `EntryExitReport_${authData?.custId || 0}.pdf`;
+        `ExitEntryReport_${authData?.custId || 0}.pdf`;
 
       document.body.appendChild(link);
 
@@ -559,7 +559,7 @@ const formatDateTime = (value: string | Date | null | undefined) => {
         sEcho: 1,
 
          iDisplayStart: 0,
-      iDisplayLength: 1000000, 
+        iDisplayLength: 1000000, 
 
         sSearch: searchTerm,
 
@@ -592,9 +592,7 @@ const formatDateTime = (value: string | Date | null | undefined) => {
         Status: "",
         DownloadType: "Excel"
       };
-      // ensure server receives report type in body
-      (request as any).rtype = 'ExitEntryReport';
-
+     
       const params =
         new URLSearchParams();
 
