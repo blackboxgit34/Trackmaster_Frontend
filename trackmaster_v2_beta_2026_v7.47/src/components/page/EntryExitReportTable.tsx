@@ -28,6 +28,7 @@ import {
 
 import { useVehicleList } from '@/hooks/useApi';
 
+
 import {
   ArrowUp,
   ArrowDown,
@@ -134,7 +135,15 @@ const EntryExitReportTable = () => {
     pageIndex: 0,
     pageSize: 10,
   });
+const formatDateTime = (value: string | Date | null | undefined) => {
+  if (!value) return "";
 
+  const date = new Date(value);
+
+  if (isNaN(date.getTime())) return "";
+
+  return format(date, "MMM dd yyyy hh:mm a");
+};
   const [searchTerm] = useState("");
   const [sortConfig, setSortConfig] = useState({
     sortColumn: "vehname",
@@ -215,12 +224,8 @@ const EntryExitReportTable = () => {
 
         sEcho: 1,
 
-        iDisplayStart:
-          pagination.pageIndex *
-          pagination.pageSize,
-
-        iDisplayLength:
-          pagination.pageSize,
+      iDisplayStart: 0,
+      iDisplayLength: 1000000, 
 
         sSearch: searchTerm,
 
@@ -289,27 +294,8 @@ const EntryExitReportTable = () => {
         );
 
       }
-
         // ensure report type is set
         params.append('rtype', 'EntryExitReport');
-
-        // debug
-        console.debug('GetEntryExitReport (data fetch) URL:', `${API_BASE_URL}/Reports/GetEntryExitReport?${params.toString()}`);
-
-        // ensure report type is set
-        params.append('rtype', 'EntryExitReport');
-
-        // debug
-        console.debug('GetEntryExitReport (PDF) URL:', `${API_BASE_URL}/Reports/GetEntryExitReport?${params.toString()}`);
-        console.debug('GetEntryExitReport (PDF) body:', request);
-
-        // ensure report type is set
-        params.append('rtype', 'EntryExitReport');
-
-        // debug
-        console.debug('GetEntryExitReport (Excel) URL:', `${API_BASE_URL}/Reports/GetEntryExitReport?${params.toString()}`);
-        console.debug('GetEntryExitReport (Excel) body:', request);
-
 
       const response = await fetch(`${API_BASE_URL}/Reports/GetEntryExitReport?${params.toString()}`, {
         method: 'Post',
@@ -366,12 +352,8 @@ const EntryExitReportTable = () => {
 
         sEcho: 1,
 
-        iDisplayStart:
-          pagination.pageIndex *
-          pagination.pageSize,
-
-        iDisplayLength:
-          pagination.pageSize,
+          iDisplayStart: 0,
+        iDisplayLength: 1000000, 
 
         sSearch: searchTerm,
 
@@ -1024,7 +1006,7 @@ const EntryExitReportTable = () => {
 
                                             {/* Entry Time */}
                                             <TableCell className="font-mono text-sm text-foreground">
-                                              {detail.intime}
+                                             {formatDateTime(detail.intime)}
                                             </TableCell>
 
                                             {/* Entry Location (lat used here as you requested) */}
@@ -1040,7 +1022,7 @@ const EntryExitReportTable = () => {
 
                                             {/* Exit Time */}
                                             <TableCell className="font-mono text-sm text-foreground">
-                                              {detail.outTime}
+                                              {formatDateTime(detail.outTime)}
                                             </TableCell>
 
                                             {/* Exit Location (long used here as you requested) */}

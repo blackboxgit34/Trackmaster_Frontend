@@ -131,7 +131,15 @@ const [detailsSortConfig, setDetailsSortConfig] = useState<{ key: string; direct
     sortColumn: "vehname",
     sortDirection: "asc" as "asc" | "desc",
   });
+const formatDateTime = (value: string | Date | null | undefined) => {
+  if (!value) return "";
 
+  const date = new Date(value);
+
+  if (isNaN(date.getTime())) return "";
+
+  return format(date, "MMM dd yyyy hh:mm a");
+};
 
   const toggleRow = (rowId: string) => {
     setExpandedRows((prev) => {
@@ -409,7 +417,7 @@ const [detailsSortConfig, setDetailsSortConfig] = useState<{ key: string; direct
   };
 
 
-  const handleExportPDF = async () => {
+ const handleExportPDF = async () => {
     setLoading(true);
     try {
       const authData = JSON.parse(
@@ -422,12 +430,8 @@ const [detailsSortConfig, setDetailsSortConfig] = useState<{ key: string; direct
 
         sEcho: 1,
 
-        iDisplayStart:
-          pagination.pageIndex *
-          pagination.pageSize,
-
-        iDisplayLength:
-          pagination.pageSize,
+         iDisplayStart: 0,
+        iDisplayLength: 1000000, 
 
         sSearch: searchTerm,
 
@@ -437,7 +441,7 @@ const [detailsSortConfig, setDetailsSortConfig] = useState<{ key: string; direct
         sortDirection:
           sortConfig.sortDirection,
         // updated interval mapping
-        interval: intervalMap[intervalFilter] || "1",
+   
         beginDate:
           format(
 
@@ -522,7 +526,7 @@ const [detailsSortConfig, setDetailsSortConfig] = useState<{ key: string; direct
       link.href = downloadUrl;
 
       link.download =
-        `ExitEntryReport_${authData?.custId || 0}.pdf`;
+        `EntryExitReport_${authData?.custId || 0}.pdf`;
 
       document.body.appendChild(link);
 
@@ -554,12 +558,8 @@ const [detailsSortConfig, setDetailsSortConfig] = useState<{ key: string; direct
 
         sEcho: 1,
 
-        iDisplayStart:
-          pagination.pageIndex *
-          pagination.pageSize,
-
-        iDisplayLength:
-          pagination.pageSize,
+         iDisplayStart: 0,
+      iDisplayLength: 1000000, 
 
         sSearch: searchTerm,
 
@@ -629,12 +629,6 @@ const [detailsSortConfig, setDetailsSortConfig] = useState<{ key: string; direct
 
       // ensure report type is set
       params.append('rtype', 'ExitEntryReport');
-      // ensure report type is set
-      params.append('rtype', 'ExitEntryReport');
-
-      // ensure report type is set
-      params.append('rtype', 'ExitEntryReport');
-
     
       const response = await fetch(`${API_BASE_URL}/Reports/GetEntryExitReport?${params.toString()}`, {
         method: 'Post',
@@ -954,7 +948,7 @@ const [detailsSortConfig, setDetailsSortConfig] = useState<{ key: string; direct
            
                                                        {/* Entry Time */}
                                                        <TableCell className="font-mono text-sm text-foreground">
-                                                         {detail.intime}
+                                                      {formatDateTime(detail.intime)}
                                                        </TableCell>
            
                                                        {/* Entry Location (lat used here as you requested) */}
@@ -966,7 +960,7 @@ const [detailsSortConfig, setDetailsSortConfig] = useState<{ key: string; direct
            
                                                        {/* Exit Time */}
                                                        <TableCell className="font-mono text-sm text-foreground">
-                                                         {detail.outTime}
+                                                       {formatDateTime(detail.outTime)}
                                                        </TableCell>
            
                                                        {/* Exit Location (long used here as you requested) */}
