@@ -72,6 +72,70 @@ export function useVehicleList() {
 }
 
 // ==============================
+// RAW VEHICLE LIST HOOK (for CreateFence filtering)
+// ==============================
+type RawVehicle = {
+  vehName: string;
+  bbid: string;
+  type: string;
+};
+
+export function useRawVehicleList() {
+
+  const custId =
+    JSON.parse(localStorage.getItem("trackmaster-auth") ?? "{}")?.custId;
+
+  const apiCall = useCallback(async () => {
+
+    if (!custId) return [];
+
+    const res = await fetch(
+      `${API_BASE_URL}/Dashboard/GetAllVehicleListByCustId?userid=${custId}`
+    );
+
+    const text = await res.text();
+
+    if (!text) return [];
+
+    const data = JSON.parse(text);
+
+    return data?.data || [];
+
+  }, [custId]);
+
+  return useApi<RawVehicle[]>(apiCall);
+}
+
+// ==============================
+// VEHICLE TYPES HOOK
+// ==============================
+type VehicleTypeOption = {
+  id: number;
+  typeName: string;
+};
+
+export function useVehicleTypes() {
+
+  const apiCall = useCallback(async () => {
+
+    const res = await fetch(
+      `${API_BASE_URL}/Dashboard/GetAllVehicleTypes`
+    );
+
+    const text = await res.text();
+
+    if (!text) return [];
+
+    const data = JSON.parse(text);
+
+    return data?.data || [];
+
+  }, []);
+
+  return useApi<VehicleTypeOption[]>(apiCall);
+}
+
+// ==============================
 // VEHICLE STATUS & LIVE STATUS HOOK
 // ==============================
 
