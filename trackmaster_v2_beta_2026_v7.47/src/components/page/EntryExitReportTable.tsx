@@ -255,6 +255,8 @@ const EntryExitReportTable = () => {
         Status: "",
         DownloadType: "Excel"
       };
+      // ensure server receives report type in body
+      (request as any).rtype = 'EntryExitReport';
 
       const params =
         new URLSearchParams();
@@ -287,6 +289,26 @@ const EntryExitReportTable = () => {
         );
 
       }
+
+        // ensure report type is set
+        params.append('rtype', 'EntryExitReport');
+
+        // debug
+        console.debug('GetEntryExitReport (data fetch) URL:', `${API_BASE_URL}/Reports/GetEntryExitReport?${params.toString()}`);
+
+        // ensure report type is set
+        params.append('rtype', 'EntryExitReport');
+
+        // debug
+        console.debug('GetEntryExitReport (PDF) URL:', `${API_BASE_URL}/Reports/GetEntryExitReport?${params.toString()}`);
+        console.debug('GetEntryExitReport (PDF) body:', request);
+
+        // ensure report type is set
+        params.append('rtype', 'EntryExitReport');
+
+        // debug
+        console.debug('GetEntryExitReport (Excel) URL:', `${API_BASE_URL}/Reports/GetEntryExitReport?${params.toString()}`);
+        console.debug('GetEntryExitReport (Excel) body:', request);
 
 
       const response = await fetch(`${API_BASE_URL}/Reports/GetEntryExitReport?${params.toString()}`, {
@@ -384,6 +406,8 @@ const EntryExitReportTable = () => {
         Status: "",
         DownloadType: "Pdf"
       };
+      // ensure server receives report type in body
+      (request as any).rtype = 'EntryExitReport';
 
       const params =
         new URLSearchParams();
@@ -536,6 +560,8 @@ const EntryExitReportTable = () => {
 
         Status: ""
       };
+      // ensure server receives report type in body
+      (request as any).rtype = 'EntryExitReport';
 
       const params =
         new URLSearchParams();
@@ -669,6 +695,8 @@ const EntryExitReportTable = () => {
 
   ]);
 
+
+  
   const paginatedData =
     Array.isArray(reportData)
       ? reportData
@@ -982,7 +1010,7 @@ const EntryExitReportTable = () => {
                                   <Table>
                                     <TableHeader>
                                       <TableRow>
-                                        <SortableHeader onClick={() => handleDetailsSort('startTime')} isSorted={detailsSortConfig.key === 'startTime'} sortDirection={detailsSortConfig.direction}>Entry Time</SortableHeader>
+                                        <SortableHeader onClick={() => handleDetailsSort('startTime')} isSorted={detailsSortConfig.key === 'intime'} sortDirection={detailsSortConfig.direction}>Entry Time</SortableHeader>
                                         <SortableHeader onClick={() => handleDetailsSort('location')} isSorted={detailsSortConfig.key === 'location'} sortDirection={detailsSortConfig.direction}>Entry Location</SortableHeader>
                                         <SortableHeader onClick={() => handleDetailsSort('endTime')} isSorted={detailsSortConfig.key === 'endTime'} sortDirection={detailsSortConfig.direction}>Exit Time</SortableHeader>
                                         {/* <SortableHeader onClick={() => handleDetailsSort('location')} isSorted={detailsSortConfig.key === 'location'} sortDirection={detailsSortConfig.direction}>Exit Location</SortableHeader> */}
