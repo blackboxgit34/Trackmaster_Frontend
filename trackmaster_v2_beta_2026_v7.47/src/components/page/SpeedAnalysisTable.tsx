@@ -304,7 +304,8 @@ useEffect(() => {
 //======= DOWNLOAD HANDLERS (PDF & EXCEL) ========
 const { exportExcel, exportPdf } = useReportDownload(
   "/Reports/getSpeedReport",
-  requestModel
+  requestModel,
+  { mode: "over" }
 );
   //=====================
 

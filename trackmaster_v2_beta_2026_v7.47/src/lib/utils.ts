@@ -12,14 +12,18 @@ import { API_BASE_URL } from "@/config/Api";
 export const downloadReport = async (
   endpoint: string,
   requestModel: any,
-  downloadType: "Excel" | "Pdf"
+  downloadType: "Excel" | "Pdf",
+  extraParams?: Record<string, string>
 ) => {
   const queryParams = new URLSearchParams();
 
   Object.entries({
     mode: "over",
     ...requestModel,
+    iDisplayStart: 0,
+  iDisplayLength: 100000,
     DownloadType: downloadType,
+     ...extraParams,
   }).forEach(([key, value]) => {
     if (value !== null && value !== undefined) {
       queryParams.append(key, String(value));

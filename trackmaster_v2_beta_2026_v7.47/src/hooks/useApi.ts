@@ -225,13 +225,15 @@ export const getVehicleStatusList = async ({
 
 export const useReportDownload = (
   endpoint: string,
-  requestModel: any
+  requestModel: any,
+  extraParams?: Record<string, string>
 ) => {
   const exportExcel = async () => {
     await downloadReport(
       endpoint,
       requestModel,
-      "Excel"
+      "Excel",
+       extraParams
     );
   };
 
@@ -239,7 +241,8 @@ export const useReportDownload = (
     await downloadReport(
       endpoint,
       requestModel,
-      "Pdf"
+      "Pdf",
+       extraParams
     );
   };
 
