@@ -657,11 +657,11 @@ debugger;
                                           <TableRow key={detail.id}>
                                             <TableCell className="font-mono text-sm">{detail.startDate}</TableCell>
                                             <TableCell className="font-mono text-sm">{detail.stopDate}</TableCell>
-                                            <TableCell className="text-sm">{detail.afterIdlingStatus}</TableCell>
+                                            <TableCell className="text-sm">{detail.Vstatus}</TableCell>
                                          <TableCell className="text-sm truncate w-[300px] whitespace-normal break-words">{detail.location}</TableCell>
                                             <TableCell className="text-sm ">{detail.duration}</TableCell>
                                             <TableCell>
-                                              <Button variant="outline" size="sm">
+                                              <Button variant="outline" size="sm">-
                                                 <PlusCircle className="h-4 w-4 mr-2" />
                                                 Add POI
                                               </Button>

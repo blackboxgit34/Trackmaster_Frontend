@@ -62,6 +62,8 @@ export interface SpeedEvent {
   id: string;
   dateTime: string;
   location: string;
+  latitude: number;
+  longitude: number;
   speed: number; // km/h
   duration: number; // in seconds
 }
@@ -76,5 +78,20 @@ export interface VehicleSpeedSummary {
   avgSpeed: number;
    overSpeedVal: number;
   details: SpeedEvent[];
+}
+export interface locationOnMap {
+  id: string;
+  vehicle: string;
+  dateTime: string;
+  driverName: string;
+  // type: string;
+  // status:VehicleStatus;
+  lat: number;
+  lng: number;
+  speed: number;
+   latLongHistory?: {
+    lat: number;
+    lng: number;
+  }[];
 }
 //=============================================
