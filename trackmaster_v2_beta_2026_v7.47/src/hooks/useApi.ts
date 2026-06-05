@@ -2,6 +2,7 @@ import { API_BASE_URL } from '@/config/Api';
 import { useState, useEffect, useCallback } from 'react';
 import type { LiveVehicleStatus, VehicleStatus } from '@/types';
 import type { DataTableRequestModel } from '@/hooks/DataTableRequestModel';
+import { downloadReport } from "@/lib/utils";
 
 type VehicleOption = {
   label: string;
@@ -154,5 +155,35 @@ export const getVehicleStatusList = async ({
   }));
 };
 
+// ==============================
+// EXCEL PDF & EXCEL DOWNLOAD HOOK
+// ==============================
+
+export const useReportDownload = (
+  endpoint: string,
+  requestModel: any
+) => {
+  const exportExcel = async () => {
+    await downloadReport(
+      endpoint,
+      requestModel,
+      "Excel"
+    );
+  };
+
+  const exportPdf = async () => {
+    await downloadReport(
+      endpoint,
+      requestModel,
+      "Pdf"
+    );
+  };
+
+  return {
+    exportExcel,
+    exportPdf,
+  };
+};
+//===========================================
 
 

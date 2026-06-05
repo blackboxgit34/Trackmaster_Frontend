@@ -2,10 +2,11 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {  Table,  TableBody,  TableCell,  TableHead,  TableHeader,  TableRow,} from '@/components/ui/table';
 import {  Card,  CardContent,  CardDescription,  CardFooter,  CardHeader,  CardTitle,} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-//import {  type VehicleSpeedSummary } from '@/data/speedData';
 import type {VehicleSpeedSummary} from '@/types';
 import {  ArrowUp,  ArrowDown,  ChevronLeft,  ChevronRight,  ChevronsLeft,  ChevronsRight,  Download,
-  CalendarIcon,  ChevronDown,  TrendingUp,  Gauge,  Activity,  ChevronsUpDown,} from 'lucide-react';
+  CalendarIcon,  ChevronDown,  TrendingUp,  Gauge,  Activity,  ChevronsUpDown,
+  FileSpreadsheet,
+  FileText,} from 'lucide-react';
 import { DateRange } from 'react-day-picker';
 import { subWeeks, subHours, subDays, subMonths, endOfDay,format, startOfDay,  } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -14,7 +15,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import WhatsappPopup from '../WhatsappPopup';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useSettings } from '@/context/SettingsContext';
+
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import {useVehicleList } from '@/hooks/useApi';
@@ -25,6 +26,11 @@ import { useSearchParams } from 'react-router-dom';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 
+import LocationDialogCommon from './LocationDialogCommon';
+import { GOOGLE_MAPS_API_KEY } from '@/config/maps';
+import { LoadScript} from '@react-google-maps/api';
+
+import { useReportDownload } from '@/hooks/useApi';
 
 type ReportDataKey = keyof VehicleSpeedSummary;
 
@@ -67,8 +73,7 @@ const SortableHeader = ({ children, isSorted, sortDirection, onClick }: { childr
 
 
 const SpeedAnalysisTable = () => {
-  const { fleetThresholds } = useSettings();
-  const OVER_SPEED_LIMIT = fleetThresholds.overspeed;
+ 
   const [searchTerm, setSearchText] = useState('');
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -81,12 +86,12 @@ const SpeedAnalysisTable = () => {
 
 const getDefaultDateRange = (): DateRange => {
   const today = new Date();
-
   return {
     from: today,
     to: today,
   };
 };
+
   const [detailsSortConfig, setDetailsSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'dateTime', direction: 'desc' });
   const [date, setDate] = useState<DateRange | undefined>(getDefaultDateRange());
   const [selectedVehicle, setSelectedVehicle] = useState('all');
@@ -109,16 +114,17 @@ const getDefaultDateRange = (): DateRange => {
   const [tempDate, setTempDate] = useState<DateRange | undefined>(getDefaultDateRange());
   const [selecting, setSelecting] = useState<'start' | 'end'>('start');
 
+  // For Live Location Dialog
+  const [selectedLocation, setSelectedLocation] = useState<any>(null);
+  const [isLiveLocationOpen, setIsLiveLocationOpen] = useState(false);
+  //==========================
   const authData = JSON.parse(   localStorage.getItem("trackmaster-auth") || "{}"   );
   
-
- const requestModel: DataTableRequestModel = {
+  const requestModel: DataTableRequestModel = {
   sEcho: 1,
   CustId: authData?.custId || 0,
-
   iDisplayStart: page === 0 ? 0 : page * rowsPerPage + 1,
   iDisplayLength: (page + 1) * rowsPerPage,
-
   sSearch: searchTerm || "",
   sortColumn: sortConfig.sortColumn,
   sortDirection: sortConfig.sortDirection,
@@ -127,6 +133,7 @@ const getDefaultDateRange = (): DateRange => {
   endDate: date?.to  ? format(endOfDay(date.to), "yyyy-MM-dd HH:mm:ss")  : "",
  
 };
+
 const getSpeedAnalysis = async (
   requestModel: DataTableRequestModel
 ): Promise<VehicleSpeedSummary[]> => {
@@ -139,7 +146,6 @@ const getSpeedAnalysis = async (
       CustId: String(requestModel.CustId),
       iDisplayStart: String(requestModel.iDisplayStart),
       iDisplayLength: String(requestModel.iDisplayLength),
-     // VehicleId: selectedVehicle === "all" ? "" : selectedVehicle,
       sSearch: selectedVehicle === "all" ? "" : selectedVehicle,
       sortColumn: requestModel.sortColumn || "",
       sortDirection: requestModel.sortDirection || "",
@@ -159,7 +165,7 @@ const getSpeedAnalysis = async (
     const result = await response.json();
     setTotalRecords(Number(result.iTotalRecords || 0));
   
-debugger
+
   const rows = Array.isArray(result?.aaData?.oSmainLst) ? result.aaData.oSmainLst : [];
   return rows.map((item: any) => ({
       vehicleId: item.bbid,
@@ -176,13 +182,15 @@ debugger
             id: index,
             dateTime: log.dateTime,
             location: log.location ?? "",
+            latitude: Number(log.latitude ?? 0),
+            longitude: Number(log.longitude ?? 0) ,
             speed: Number(log.speed ?? 0),
           }))
         : [],
     }));
     } catch (error) {
       console.error(error);
-      return [];
+      return [ ];
     } finally {
       setLoading(false);
     }
@@ -267,13 +275,49 @@ useEffect(() => {
       direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc',
     }));
   };
-debugger
+
+  const handleOpenLiveLocation = (
+  vehicle: VehicleSpeedSummary,
+  detail: any
+) => {
+  setSelectedLocation({
+    vehicleId: vehicle.vehicleId,
+    vehicle: vehicle.vehicleName,
+    driverName: vehicle.driverName,
+    dateTime: detail.dateTime,
+    location: detail.location,
+    lat: detail.latitude,
+    lng: detail.longitude,
+    speed: detail.speed,
+    // status: "Running", // or whatever default
+    // type:"truck",
+    latLongHistory: [
+      {
+        lat: detail.latitude,
+        lng: detail.longitude,
+      },
+    ],
+  });
+
+  setIsLiveLocationOpen(true);
+};
+//======= DOWNLOAD HANDLERS (PDF & EXCEL) ========
+const { exportExcel, exportPdf } = useReportDownload(
+  "/Reports/getSpeedReport",
+  requestModel
+);
+  //=====================
+
   const paginatedData = sortedData;
   const totalPages = Math.ceil(totalRecords / rowsPerPage);
   const firstRowIndex = page * rowsPerPage + 1;
   const lastRowIndex = Math.min((page + 1) * rowsPerPage,  totalRecords);
-
   return (
+    <LoadScript
+      googleMapsApiKey={GOOGLE_MAPS_API_KEY}
+      libraries={['places']}
+      loadingElement={<div className="w-full h-full" />}
+    >
     <Card className="shadow-sm overflow-hidden">
       <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 px-6 py-4">
         <div>
@@ -300,7 +344,6 @@ debugger
             open={isCalendarOpen}
             onOpenChange={(open) => {
               setIsCalendarOpen(open);
-
               if (open) {
                 setTempDate(date);
                 setSelecting('start');
@@ -416,8 +459,8 @@ debugger
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem>Export as PDF</DropdownMenuItem>
-              <DropdownMenuItem>Export as Excel</DropdownMenuItem>
+              <DropdownMenuItem onSelect={exportPdf}><FileText className="mr-2 h-4 w-4" />Export as PDF</DropdownMenuItem>
+              <DropdownMenuItem onSelect={exportExcel}><FileSpreadsheet className="mr-2 h-4 w-4" />Export as Excel</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           <WhatsappPopup />
@@ -425,12 +468,12 @@ debugger
       </CardHeader>
       <CardContent className="p-0 relative">
          {loading && (
-    <div className="absolute inset-0 bg-white/70 z-10 flex items-center justify-center rounded-b-xl">
-      <div className="flex items-center gap-2">
-        <div className="animate-spin h-5 w-5 border-2 border-black border-t-transparent rounded-full"></div>
-        <span className="text-sm">Loading...</span>
-      </div>
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+    <div className="bg-white p-4 rounded-lg flex items-center gap-3 shadow-lg">
+      <div className="animate-spin h-5 w-5 border-2 border-black border-t-transparent rounded-full"></div>
+      <span>Please wait...</span>
     </div>
+  </div>
   )}
 
   <div className="overflow-x-auto">
@@ -438,7 +481,6 @@ debugger
       {/* Existing Table Code */}
     </Table>
   </div>
-
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
@@ -552,8 +594,30 @@ debugger
                                   <TableBody>
                                     {sortedDetails.map(detail => (
                                       <TableRow key={detail.id}>
-                                        <TableCell className="font-mono text-sm">{detail.dateTime}</TableCell>
-                                        <TableCell className="text-sm truncate">{detail.location}</TableCell>
+                                        <TableCell className="font-mono text-sm whitespace-nowrap">
+                                          {detail.dateTime
+                                            ? format(
+                                                new Date(detail.dateTime),
+                                                'dd-MM-yyyy HH:mm:ss'
+                                              )
+                                            : '-'}
+                                        </TableCell>
+                                        <TableCell className="text-sm  whitespace-normal break-words">
+                                          <div
+                                          className="font-medium text-brand-blue dark:text-blue-400 cursor-pointer hover:underline max-w-xs "
+                                            onClick={() =>
+                                              handleOpenLiveLocation(row, detail)
+                                            }
+                                          >
+                                            <div
+                                              dangerouslySetInnerHTML={{
+                                                __html: detail.location,
+                                              }}
+                                            />
+                                          </div>
+                                          
+                                      
+                                          </TableCell>
                                         <TableCell className={cn("font-semibold", detail.speed > row.overSpeedVal  ? "text-red-500" : "text-foreground")}>{detail.speed}</TableCell>
                                       </TableRow>
                                       
@@ -590,8 +654,16 @@ debugger
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setPage(totalPages - 1)} disabled={page >= totalPages - 1}><ChevronsRight className="h-4 w-4" /></Button>
           </div>
         </div>
+        
       </CardFooter>
+      
+      <LocationDialogCommon
+          open={isLiveLocationOpen}
+          onOpenChange={setIsLiveLocationOpen}
+          vehicle={selectedLocation}
+        />
     </Card>
+    </LoadScript>
   );
 };
 
