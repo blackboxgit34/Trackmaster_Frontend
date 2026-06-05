@@ -252,10 +252,10 @@ const BatteryDisconnectionReportTable = () => {
       };
     }
 
-    const lower = page * rowsPerPage;
-    const upper = (page + 1) * rowsPerPage;
+    const iDisplayStart = page === 0 ? 0 : page * rowsPerPage + 1;
+    const iDisplayLength = (page + 1) * rowsPerPage;
 
-    const startDate = date?.from
+    const beginDate = date?.from
       ? startOfDay(date.from)
       : startOfDay(new Date());
 
@@ -265,10 +265,10 @@ const BatteryDisconnectionReportTable = () => {
 
     const params = new URLSearchParams({
       custId: String(custId),
-      lower: String(lower),
-      upper: String(upper),
-      start: format(startDate, 'yyyy-MM-dd HH:mm:ss'),
-      end: format(endDate, 'yyyy-MM-dd HH:mm:ss'),
+      iDisplayStart: String(iDisplayStart),
+      iDisplayLength: String(iDisplayLength),
+      beginDate: format(beginDate, 'yyyy-MM-dd HH:mm:ss'),
+      endDate: format(endDate, 'yyyy-MM-dd HH:mm:ss'),
     });
 
     if (selectedVehicle !== 'all') {
