@@ -613,7 +613,7 @@ const fetchStoppageReport = useCallback(async () => {
   </TableRow>
 </TableHeader>
             <TableBody>
-              {loading ? (
+              { loading ? (
                 <TableRow>
                   <TableCell
                     colSpan={5}
@@ -622,7 +622,7 @@ const fetchStoppageReport = useCallback(async () => {
                     Loading...
                   </TableCell>
                 </TableRow>
-              ) : paginatedData.length > 0 ? (
+               ) : paginatedData.length > 0 ? (
                 paginatedData.map((row) => {
                   const isExpanded = expandedRows.has(row.bbid);
 
@@ -711,7 +711,7 @@ const sortedDetails = [...(row.objStoppageReport || [])].sort((a, b) => {
                                             {detail.stopDateAndTime}
                                           </TableCell>
 
-                                          <TableCell>
+                                          <TableCell  className="text-sm w-[300px] whitespace-normal break-words">
                                             {detail.location}
                                           </TableCell>
 
@@ -748,7 +748,7 @@ const sortedDetails = [...(row.objStoppageReport || [])].sort((a, b) => {
                     </React.Fragment>
                   );
                 })
-              ) : (
+               ) : (
                 <TableRow>
                   <TableCell
                     colSpan={5}

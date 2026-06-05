@@ -681,13 +681,10 @@ useEffect(() => {
     <>
       <Card>
         {loading && (
-          <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/70 dark:bg-black/50 rounded-xl">
-            <div className="flex items-center gap-3 bg-white dark:bg-zinc-900 px-5 py-3 rounded-lg shadow-lg border">
-              <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
-
-              <span className="text-sm font-medium text-foreground">
-                Please wait...
-              </span>
+          <div className="absolute inset-0 bg-white/70 z-10 flex items-center justify-center rounded-md">
+            <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-lg shadow">
+              <div className="animate-spin h-4 w-4 border-2 border-black border-t-transparent rounded-full"></div>
+              <span className="text-sm">Please wait ...</span>
             </div>
           </div>
         )}
@@ -983,40 +980,37 @@ useEffect(() => {
                         </TableCell>
 
                         {/* SAME ANALYSIS UI */}
-                        <TableCell className="px-6 py-4 whitespace-nowrap text-center">
+                       <TableCell className="px-6 py-4 whitespace-nowrap text-center">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                              >
+                              <Button variant="ghost" size="icon">
                                 <MoreHorizontal className="h-5 w-5" />
                               </Button>
                             </DropdownMenuTrigger>
-
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem asChild>
-                                <Link
-                                  to={`/vehicle-status/route-playback?vehicle=${row.vehName}`}
-                                >
-                                  Route Playback
-                                </Link>
+                                <Link to={`/vehicle-status/route-playback?vehicle=${row.bbid}`}>Route Playback</Link>
                               </DropdownMenuItem>
-
                               <DropdownMenuItem asChild>
-                                <Link
-                                  to={`/reports/speed-driving/speed-analysis?vehicle=${row.vehName}`}
-                                >
-                                  Speed Analysis
-                                </Link>
+                                <Link to={`/reports/speed-driving/speed-analysis?vehicle=${row.bbid}`}>Speed Analysis</Link>
                               </DropdownMenuItem>
-
                               <DropdownMenuItem asChild>
-                                <Link
-                                  to={`/reports/trip-distance/distance?vehicle=${row.vehName}`}
-                                >
-                                  Distance Report
-                                </Link>
+                                <Link to={`/reports/trip-distance/distance?vehicle=${row.bbid}`}>Distance Report</Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem asChild>
+                                <Link to={`/reports/trip-distance/trip-report?vehicle=${row.bbid}`}>Trip Report</Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem asChild>
+                                <Link to={`/reports/time-activity/stoppage-analysis?vehicle=${row.bbid}`}>Stoppage Analysis</Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem asChild>
+                                <Link to={`/reports/time-activity/idling-analysis?vehicle=${row.bbid}`}>Idling Analysis</Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem asChild>
+                                <Link to={`/reports/time-activity/ignition-on-off-analysis?vehicle=${row.bbid}`}>Ignition Analysis</Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem asChild>
+                                <Link to={`/reports/summary-management/daily-summary?vehicle=${row.bbid}`}>Summary Report</Link>
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
