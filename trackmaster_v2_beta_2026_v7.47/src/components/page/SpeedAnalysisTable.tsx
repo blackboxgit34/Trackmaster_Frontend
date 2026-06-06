@@ -119,7 +119,9 @@ const getDefaultDateRange = (): DateRange => {
   const [isLiveLocationOpen, setIsLiveLocationOpen] = useState(false);
   //==========================
   const authData = JSON.parse(   localStorage.getItem("trackmaster-auth") || "{}"   );
-  
+  const [downloadLoading, setDownloadLoading] = useState(false);
+
+
   const requestModel: DataTableRequestModel = {
   sEcho: 1,
   CustId: authData?.custId || 0,
@@ -302,11 +304,37 @@ useEffect(() => {
   setIsLiveLocationOpen(true);
 };
 //======= DOWNLOAD HANDLERS (PDF & EXCEL) ========
-const { exportExcel, exportPdf } = useReportDownload(
+// const { exportExcel, exportPdf } = useReportDownload(
+//   "/Reports/getSpeedReport",
+//   requestModel,
+//   { mode: "over" }
+// );
+const {
+  exportExcel: originalExportExcel,
+  exportPdf: originalExportPdf,
+} = useReportDownload(
   "/Reports/getSpeedReport",
   requestModel,
   { mode: "over" }
 );
+
+const exportExcel = async () => {
+  try {
+    setLoading(true);
+    await originalExportExcel();
+  } finally {
+    setLoading(false);
+  }
+};
+
+const exportPdf = async () => {
+  try {
+   setLoading(true);
+    await originalExportPdf();
+  } finally {
+    setLoading(false);
+  }
+};
   //=====================
 
   const paginatedData = sortedData;
