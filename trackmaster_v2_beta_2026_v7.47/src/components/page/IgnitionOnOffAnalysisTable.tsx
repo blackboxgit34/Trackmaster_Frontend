@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Download, CalendarIcon, ChevronDown } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
 import { subWeeks, subDays, subMonths, format } from 'date-fns';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/utils'; // excel and pdf download 06.06.2026
 import { VehicleCombobox } from '../VehicleCombobox';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import WhatsappPopup from '../WhatsappPopup';
@@ -14,7 +14,9 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { API_BASE_URL } from '@/config/Api';
+//import { downloadReport } from '@/hooks/downloadReport'; //
 import type { DataTableRequestModel } from '@/hooks/DataTableRequestModel';
+import { useReportDownload } from '@/hooks/useApi';//excel 06.06.2026
 
 
 
@@ -178,6 +180,58 @@ const IgnitionOnOffAnalysisTable = () => {
 
   const paginatedData = reportData;
   const totalPages = Math.ceil(totalRecords / rowsPerPage);
+
+
+
+  const requestModel = {
+    CustId: custId,
+    sEcho: 1,
+    sSearch:
+      selectedVehicle !== "all"
+        ? vehicleList.find(v => v.value === selectedVehicle)?.label || ""
+        : "",
+    sortColumn: "vehicleName",
+    sortDirection: "asc",
+  };
+
+  const extraParams = {
+    beginDate: date?.from
+      ? date.from.toLocaleString("en-US").replace(",", "")
+      : "",
+    endDate: date?.to
+      ? date.to.toLocaleString("en-US").replace(",", "")
+      : "",
+    bbid: selectedVehicle === "all" ? "null" : selectedVehicle,
+    reportName: "null",
+  };
+
+  const {
+    exportExcel,
+    exportPdf,
+  } = useReportDownload(
+    "/Reports/GetConsolidatedIgnitionStatus",
+    requestModel,
+    extraParams
+  );
+
+  const handlePdfExport = async () => {
+    setLoading(true);
+    try {
+      await exportPdf();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleExcelExport = async () => {
+    setLoading(true);
+    try {
+      await exportExcel();
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
 
     <>
@@ -257,8 +311,17 @@ const IgnitionOnOffAnalysisTable = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem>Export as PDF</DropdownMenuItem>
-                <DropdownMenuItem>Export as Excel</DropdownMenuItem>
+                {/* <DropdownMenuItem>Export as PDF</DropdownMenuItem>
+                <DropdownMenuItem>Export as Excel</DropdownMenuItem> */}
+                {/* excel and pdf download 06.06.2026 */}
+                <DropdownMenuItem onClick={handlePdfExport}>
+                  Export as PDF
+                </DropdownMenuItem>
+
+                <DropdownMenuItem onClick={handleExcelExport}>
+                  Export as Excel
+                </DropdownMenuItem>
+
               </DropdownMenuContent>
             </DropdownMenu>
             <WhatsappPopup />
