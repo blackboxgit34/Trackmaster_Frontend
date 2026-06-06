@@ -189,6 +189,8 @@ const CreateFence = ({ onAddFence }: CreateFenceProps) => {
     const payload = {
       FenceId: 0,
       FenceName: fenceName,
+      Radius: fenceType === 'circle' ? radius.toString() : '',
+      FenceType: fenceType === 'circle' ? 'Circle' : 'Polygon',
       vehicleLists: selectedVehicleLists,
       latLongList,
     };
@@ -298,11 +300,35 @@ const CreateFence = ({ onAddFence }: CreateFenceProps) => {
 
   const allFilteredSelected = filteredVehicles.length > 0 && filteredVehicles.every(m => selectedVehicles.has(m.bbid));
   const someFilteredSelected = filteredVehicles.some(m => selectedVehicles.has(m.bbid));
+  const mapRef = useRef<google.maps.Map | null>(null);
   const [searchBox, setSearchBox] = useState<google.maps.places.SearchBox | null>(null);
+
+  const onMapLoad = useCallback((map: google.maps.Map) => {
+    mapRef.current = map;
+  }, []);
+
+  const onMapUnmount = useCallback(() => {
+    mapRef.current = null;
+  }, []);
 
   const onSearchBoxLoad = useCallback((ref: google.maps.places.SearchBox) => {
     setSearchBox(ref);
   }, []);
+
+  const handlePlacesChanged = useCallback(() => {
+    if (!searchBox || !mapRef.current) return;
+    const places = searchBox.getPlaces();
+    if (!places || places.length === 0) return;
+    const place = places[0];
+    if (!place.geometry) return;
+
+    if (place.geometry.viewport) {
+      mapRef.current.fitBounds(place.geometry.viewport);
+    } else if (place.geometry.location) {
+      mapRef.current.panTo(place.geometry.location);
+      mapRef.current.setZoom(12);
+    }
+  }, [searchBox]);
 
   return (
     <div className="grid grid-cols-1 grid-rows-2 lg:grid-cols-[1fr_350px] lg:grid-rows-1 gap-6 h-full">
@@ -313,6 +339,8 @@ const CreateFence = ({ onAddFence }: CreateFenceProps) => {
           center={center}
           zoom={5}
           options={mapOptions}
+          onLoad={onMapLoad}
+          onUnmount={onMapUnmount}
         >
           <DrawingManager
             onOverlayComplete={onOverlayComplete}
@@ -354,6 +382,7 @@ const CreateFence = ({ onAddFence }: CreateFenceProps) => {
             <div>
               <StandaloneSearchBox
                 onLoad={onSearchBoxLoad}
+                onPlacesChanged={handlePlacesChanged}
               >
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
