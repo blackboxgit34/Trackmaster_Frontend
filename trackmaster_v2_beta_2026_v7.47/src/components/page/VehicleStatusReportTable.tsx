@@ -148,35 +148,26 @@ const VehicleStatusReportTable = () => {
   };
 }
 
-    const lower = page * rowsPerPage;
-    const upper = (page + 1) * rowsPerPage;
-    const startDate = date?.from ? startOfDay(date.from) : undefined;
-    const endDate = date?.to ? endOfDay(date.to) : undefined;
-    const start = startDate
-      ? format(startDate, 'yyyy-MM-dd HH:mm:ss')
-      : '';
-
-    const end = endDate
-      ? format(endDate, 'yyyy-MM-dd HH:mm:ss')
-      : '';
-
+    const iDisplayStart = page === 0 ? 0 : page * rowsPerPage + 1;
+    const iDisplayLength = (page + 1) * rowsPerPage;    
     const params = new URLSearchParams({
-      custId: String(custId),
-      lower: String(lower),
-      upper: String(upper),
-    });
+    CustId: String(custId),
+    iDisplayStart: String(iDisplayStart),
+    iDisplayLength: String(iDisplayLength),
+});
 
     // Ignore vehicle dropdown selection; send explicit searchText or 'null'
-    if (searchText.trim()) {
-  params.append('search', searchText.trim());
+   if (searchText.trim()) {
+  params.append('sSearch', searchText.trim());
 }
 
-    if (start) {
-      params.append('start', start);
-    }
-    if (end) {
-      params.append('end', end);
-    }
+if (date?.from) {
+  params.append('beginDate', format(startOfDay(date.from), 'yyyy-MM-dd HH:mm:ss'));
+}
+
+if (date?.to) {
+  params.append('endDate', format(endOfDay(date.to), 'yyyy-MM-dd HH:mm:ss'));
+}
 
     try {
       const response = await fetch(`${API_BASE_URL}/Reports/VehicleStatus?${params}`);
@@ -519,7 +510,7 @@ const totalCount = apiData?.count ?? 0;
                       <TableRow className="bg-muted/20 hover:bg-muted/20">
                         <TableCell colSpan={headers.length + 1} className="p-0">
                           <div className="bg-muted/50 p-8">
-                            <div className="bg-card rounded-lg shadow-sm h-full flex flex-col overflow-hidden">
+                            <div className="bg-card rounded-lg shadow-sm flex flex-col overflow-hidden">
                               <div className="p-6 border-b">
                                 <h5 className="text-lg font-semibold text-foreground">
                                   Status Log for {row.vehicleName}
@@ -528,7 +519,7 @@ const totalCount = apiData?.count ?? 0;
                                   Detailed status changes for the selected period.
                                 </p>
                               </div>
-                              <ScrollArea className="h-[500px]">
+                              <div className="max-h-[500px] overflow-y-auto">
                                 <Table className="table-fixed w-full">
                                   <TableHeader className="sticky top-0 bg-card z-10">
                                     <TableRow>
@@ -590,7 +581,7 @@ const totalCount = apiData?.count ?? 0;
                                     ))}
                                   </TableBody>
                                 </Table>
-                              </ScrollArea>
+                              </div>
                             </div>
                           </div>
                         </TableCell>
