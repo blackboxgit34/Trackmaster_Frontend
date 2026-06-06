@@ -29,7 +29,8 @@ import {
   CalendarIcon,
   ChevronDown,
   PlusCircle,
-  ChevronsUpDown,
+  ChevronsUpDown,FileSpreadsheet,
+  FileText,
 } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
 import { subWeeks, subDays, subMonths, format } from 'date-fns';
@@ -46,6 +47,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { API_BASE_URL } from '@/config/Api';
 import { DataTableRequestModel } from '@/hooks/DataTableRequestModel';
+import { useReportDownload } from '@/hooks/useApi';
 
 type IdlingReportData = {
   vehicleId: string;
@@ -344,7 +346,7 @@ const IdlingAnalysisTable = () => {
     totalRecords
   );
   const buildRequestModel = (): DataTableRequestModel => {
-
+debugger;
   const start = date?.from;
   const end = date?.to;
 
@@ -384,12 +386,7 @@ sortColumn:columnMap[sortConfig?.key as string] || "VehName",
 };
   // ================= API CALL =================
   const [loading, setLoading] = useState(true);
-
-const fetchStoppageReport = useCallback(async () => {
-  setLoading(true);
-debugger;
-  try {
-    const requestModel = buildRequestModel();
+const requestModel = buildRequestModel();
 
     const params = new URLSearchParams(
       Object.entries(requestModel).reduce(
@@ -403,6 +400,11 @@ debugger;
       )
     );
 
+const fetchStoppageReport = useCallback(async () => {
+  setLoading(true);
+debugger;
+  try {
+    
     const url = `${API_BASE_URL}/Reports/GetIdlingStatusReport?${params.toString()}`;
 
     const res = await fetch(url);
@@ -429,6 +431,34 @@ debugger;
   selectedVehicle,
   sortConfig,
 ]);
+
+//======= DOWNLOAD HANDLERS (PDF & EXCEL) ========
+const {
+  exportExcel: originalExportExcel,
+  exportPdf: originalExportPdf,
+} = useReportDownload(
+  "/Reports/GetIdlingStatusReport",
+  requestModel
+);
+
+const exportExcel = async () => {
+  try {
+    setLoading(true);
+    await originalExportExcel();
+  } finally {
+    setLoading(false);
+  }
+};
+
+const exportPdf = async () => {
+  try {
+   setLoading(true);  
+    await originalExportPdf();
+  } finally {
+    setLoading(false);
+  }
+};
+  //=====================
   useEffect(() => {
     fetchStoppageReport();
   }, [fetchStoppageReport]);
@@ -542,8 +572,8 @@ debugger;
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem>Export as PDF</DropdownMenuItem>
-                <DropdownMenuItem>Export as Excel</DropdownMenuItem>
+                 <DropdownMenuItem onSelect={exportPdf}><FileText className="mr-2 h-4 w-4" />Export as PDF</DropdownMenuItem>
+              <DropdownMenuItem onSelect={exportExcel}><FileSpreadsheet className="mr-2 h-4 w-4" />Export as Excel</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
             <WhatsappPopup />
@@ -657,7 +687,7 @@ debugger;
                                           <TableRow key={detail.id}>
                                             <TableCell className="font-mono text-sm">{detail.startDate}</TableCell>
                                             <TableCell className="font-mono text-sm">{detail.stopDate}</TableCell>
-                                            <TableCell className="text-sm">{detail.Vstatus}</TableCell>
+                                            <TableCell className="text-sm">{detail.vstatus}</TableCell>
                                          <TableCell className="text-sm truncate w-[300px] whitespace-normal break-words">{detail.location}</TableCell>
                                             <TableCell className="text-sm ">{detail.duration}</TableCell>
                                             <TableCell>
@@ -701,24 +731,26 @@ debugger;
           </Table>
         </div>
       </CardContent>
-      <CardFooter className="flex items-center justify-between py-3 px-6 border-t bg-card">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Rows per page:</span>
-          <Select value={String(rowsPerPage)} onValueChange={(value) => { setRowsPerPage(Number(value)); setPage(0); }}>
-            <SelectTrigger className="w-20 h-9 text-sm focus:ring-2 focus:ring-primary"><SelectValue placeholder={rowsPerPage} /></SelectTrigger>
-            <SelectContent><SelectItem value="10">10</SelectItem><SelectItem value="25">25</SelectItem><SelectItem value="50">50</SelectItem></SelectContent>
-          </Select>
-        </div>
-        <div className="flex items-center gap-4">
-          <span className="text-sm text-muted-foreground">{firstRowIndex}-{lastRowIndex} of {sortedData.length}</span>
-          <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setPage(0)} disabled={page === 0}><ChevronsLeft className="h-4 w-4" /></Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setPage(page - 1)} disabled={page === 0}><ChevronLeft className="h-4 w-4" /></Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setPage(page + 1)} disabled={page >= totalPages - 1}><ChevronRight className="h-4 w-4" /></Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setPage(totalPages - 1)} disabled={page >= totalPages - 1}><ChevronsRight className="h-4 w-4" /></Button>
-          </div>
-        </div>
-      </CardFooter>
+     <CardFooter className="flex items-center justify-between py-3 px-6 border-t bg-card">
+             <div className="flex items-center gap-2">
+               <span className="text-sm text-muted-foreground">Rows per page:</span>
+               <Select value={String(rowsPerPage)} onValueChange={(value) => { setRowsPerPage(Number(value)); setPage(0); }}>
+                 <SelectTrigger className="w-20 h-9 text-sm focus:ring-2 focus:ring-primary"><SelectValue placeholder={rowsPerPage} /></SelectTrigger>
+                 <SelectContent><SelectItem value="10">10</SelectItem><SelectItem value="25">25</SelectItem><SelectItem value="50">50</SelectItem></SelectContent>
+               </Select>
+             </div>
+             <div className="flex items-center gap-4">
+               <span className="text-sm text-muted-foreground">
+                 {firstRowIndex}-{lastRowIndex} of {totalRecords}
+               </span>
+               <div className="flex items-center gap-1">
+                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setPage(0)} disabled={page === 0}><ChevronsLeft className="h-4 w-4" /></Button>
+                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setPage(page - 1)} disabled={page === 0}><ChevronLeft className="h-4 w-4" /></Button>
+                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setPage(page + 1)} disabled={page >= totalPages - 1}><ChevronRight className="h-4 w-4" /></Button>
+                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setPage(totalPages - 1)} disabled={page >= totalPages - 1}><ChevronsRight className="h-4 w-4" /></Button>
+               </div>
+             </div>
+           </CardFooter>
     </Card>
   );
 };

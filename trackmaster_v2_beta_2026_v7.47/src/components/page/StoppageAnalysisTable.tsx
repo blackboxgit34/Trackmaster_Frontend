@@ -29,7 +29,8 @@ import {
   CalendarIcon,
   ChevronDown,
   PlusCircle,
-  ChevronsUpDown,
+  ChevronsUpDown,FileSpreadsheet,
+  FileText,
 } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
 import { subWeeks, subDays, subMonths, format } from 'date-fns';
@@ -46,7 +47,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { API_BASE_URL } from '@/config/Api';
 import { DataTableRequestModel } from '@/hooks/DataTableRequestModel';
-
+import { useReportDownload } from '@/hooks/useApi';
 
 type StoppageReportData = {
   vehicleId: string;
@@ -380,14 +381,7 @@ sortColumn:columnMap[sortConfig?.key as string] || "VehName",
       : "",
   };
 };
-  // ================= API CALL =================
-  const [loading, setLoading] = useState(true);
-
-const fetchStoppageReport = useCallback(async () => {
-  setLoading(true);
-
-  try {
-    const requestModel = buildRequestModel();
+const requestModel = buildRequestModel();
 
     const params = new URLSearchParams(
       Object.entries(requestModel).reduce(
@@ -400,6 +394,14 @@ const fetchStoppageReport = useCallback(async () => {
         {} as Record<string, string>
       )
     );
+  // ================= API CALL =================
+  const [loading, setLoading] = useState(true);
+
+const fetchStoppageReport = useCallback(async () => {
+  setLoading(true);
+
+  try {
+    
 
     const url = `${API_BASE_URL}/Reports/GetAllStoppageReport?${params.toString()}`;
 
@@ -427,6 +429,34 @@ const fetchStoppageReport = useCallback(async () => {
   selectedVehicle,
   sortConfig,
 ]);
+
+//======= DOWNLOAD HANDLERS (PDF & EXCEL) ========
+const {
+  exportExcel: originalExportExcel,
+  exportPdf: originalExportPdf,
+} = useReportDownload(
+  "/Reports/GetIdlingStatusReport",
+  requestModel
+);
+
+const exportExcel = async () => {
+  try {
+    setLoading(true);
+    await originalExportExcel();
+  } finally {
+    setLoading(false);
+  }
+};
+
+const exportPdf = async () => {
+  try {
+   setLoading(true);  
+    await originalExportPdf();
+  } finally {
+    setLoading(false);
+  }
+};
+  //=====================
   useEffect(() => {
     fetchStoppageReport();
   }, [fetchStoppageReport]);
@@ -540,8 +570,8 @@ const fetchStoppageReport = useCallback(async () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem>Export as PDF</DropdownMenuItem>
-                <DropdownMenuItem>Export as Excel</DropdownMenuItem>
+                <DropdownMenuItem onSelect={exportPdf}><FileText className="mr-2 h-4 w-4" />Export as PDF</DropdownMenuItem>
+              <DropdownMenuItem onSelect={exportExcel}><FileSpreadsheet className="mr-2 h-4 w-4" />Export as Excel</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
             <WhatsappPopup />
