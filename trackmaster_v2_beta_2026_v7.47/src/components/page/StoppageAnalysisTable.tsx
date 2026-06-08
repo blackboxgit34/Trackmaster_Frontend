@@ -33,7 +33,7 @@ import {
   FileText,
 } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
-import { subWeeks, subDays, subMonths, format } from 'date-fns';
+import { subWeeks, subDays, subMonths, format, startOfDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { VehicleCombobox } from '../VehicleCombobox';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -171,7 +171,8 @@ const StoppageAnalysisTable = () => {
 const [tempDate, setTempDate] = useState<any>();
 const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 const [isCustomMode, setIsCustomMode] = useState(false);
-
+ const [loading, setLoading] = useState(true);
+ 
   const toggleRow = (rowId: string) => {
     setExpandedRows((prev) => {
       const newSet = new Set(prev);
@@ -343,10 +344,6 @@ const handleCancel = () => {
     totalRecords
   );
   const buildRequestModel = (): DataTableRequestModel => {
-
-  const start = date?.from;
-  const end = date?.to;
-
   return {
     CustId: custId,
 
@@ -368,17 +365,26 @@ sortColumn:columnMap[sortConfig?.key as string] || "VehName",
 
     interval: intervalFilter || undefined,
 
-    beginDate: start
-      ? new Date(
-          new Date(start).setHours(0, 0, 0, 0)
-        ).toISOString()
-      : "",
-
-    endDate: end
-      ? new Date(
-          new Date(end).setHours(23, 59, 59, 999)
-        ).toISOString()
-      : "",
+    beginDate:
+              format(
+     
+                startOfDay(
+     
+                  date?.from ||
+     
+                  new Date()
+     
+                ),
+     
+                "M/d/yyyy h:mm:ss a"
+     
+              ),
+     
+            endDate:
+              format(
+                new Date(),
+                "M/d/yyyy h:mm:ss a"
+              ),
   };
 };
 const requestModel = buildRequestModel();
@@ -395,7 +401,7 @@ const requestModel = buildRequestModel();
       )
     );
   // ================= API CALL =================
-  const [loading, setLoading] = useState(true);
+ 
 
 const fetchStoppageReport = useCallback(async () => {
   setLoading(true);
