@@ -194,6 +194,7 @@ const AddPoi = ({ onAddPoi }: AddPoiProps) => {
   }, []);
 
   const loadPOI = async () => {
+    debugger
     try {
       const authData = JSON.parse(
         localStorage.getItem("trackmaster-auth") || "{}"
@@ -269,7 +270,7 @@ const AddPoi = ({ onAddPoi }: AddPoiProps) => {
               <Marker
                 position={{
                   lat: Number(poi.lat),
-                  lng: Number(poi.longi),
+                  lng: Number(poi.lng),
                 }}
                 title={poi.details}
                 label={{
@@ -285,7 +286,7 @@ const AddPoi = ({ onAddPoi }: AddPoiProps) => {
               <Circle
                 center={{
                   lat: Number(poi.lat),
-                  lng: Number(poi.longi),
+                  lng: Number(poi.lng),
                 }}
                 radius={Number(poi.standardDistance)}
                 options={{
