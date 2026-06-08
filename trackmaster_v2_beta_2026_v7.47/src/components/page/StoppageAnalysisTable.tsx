@@ -29,10 +29,11 @@ import {
   CalendarIcon,
   ChevronDown,
   PlusCircle,
-  ChevronsUpDown,
+  ChevronsUpDown,FileSpreadsheet,
+  FileText,
 } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
-import { subWeeks, subDays, subMonths, format } from 'date-fns';
+import { subWeeks, subDays, subMonths, format, startOfDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { VehicleCombobox } from '../VehicleCombobox';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -46,7 +47,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { API_BASE_URL } from '@/config/Api';
 import { DataTableRequestModel } from '@/hooks/DataTableRequestModel';
-
+import { useReportDownload } from '@/hooks/useApi';
 
 type StoppageReportData = {
   vehicleId: string;
@@ -170,7 +171,8 @@ const StoppageAnalysisTable = () => {
 const [tempDate, setTempDate] = useState<any>();
 const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 const [isCustomMode, setIsCustomMode] = useState(false);
-
+ const [loading, setLoading] = useState(true);
+ 
   const toggleRow = (rowId: string) => {
     setExpandedRows((prev) => {
       const newSet = new Set(prev);
@@ -342,10 +344,6 @@ const handleCancel = () => {
     totalRecords
   );
   const buildRequestModel = (): DataTableRequestModel => {
-
-  const start = date?.from;
-  const end = date?.to;
-
   return {
     CustId: custId,
 
@@ -367,27 +365,29 @@ sortColumn:columnMap[sortConfig?.key as string] || "VehName",
 
     interval: intervalFilter || undefined,
 
-    beginDate: start
-      ? new Date(
-          new Date(start).setHours(0, 0, 0, 0)
-        ).toISOString()
-      : "",
-
-    endDate: end
-      ? new Date(
-          new Date(end).setHours(23, 59, 59, 999)
-        ).toISOString()
-      : "",
+    beginDate:
+              format(
+     
+                startOfDay(
+     
+                  date?.from ||
+     
+                  new Date()
+     
+                ),
+     
+                "M/d/yyyy h:mm:ss a"
+     
+              ),
+     
+            endDate:
+              format(
+                new Date(),
+                "M/d/yyyy h:mm:ss a"
+              ),
   };
 };
-  // ================= API CALL =================
-  const [loading, setLoading] = useState(true);
-
-const fetchStoppageReport = useCallback(async () => {
-  setLoading(true);
-
-  try {
-    const requestModel = buildRequestModel();
+const requestModel = buildRequestModel();
 
     const params = new URLSearchParams(
       Object.entries(requestModel).reduce(
@@ -400,6 +400,14 @@ const fetchStoppageReport = useCallback(async () => {
         {} as Record<string, string>
       )
     );
+  // ================= API CALL =================
+ 
+
+const fetchStoppageReport = useCallback(async () => {
+  setLoading(true);
+
+  try {
+    
 
     const url = `${API_BASE_URL}/Reports/GetAllStoppageReport?${params.toString()}`;
 
@@ -427,6 +435,34 @@ const fetchStoppageReport = useCallback(async () => {
   selectedVehicle,
   sortConfig,
 ]);
+
+//======= DOWNLOAD HANDLERS (PDF & EXCEL) ========
+const {
+  exportExcel: originalExportExcel,
+  exportPdf: originalExportPdf,
+} = useReportDownload(
+  "/Reports/GetIdlingStatusReport",
+  requestModel
+);
+
+const exportExcel = async () => {
+  try {
+    setLoading(true);
+    await originalExportExcel();
+  } finally {
+    setLoading(false);
+  }
+};
+
+const exportPdf = async () => {
+  try {
+   setLoading(true);  
+    await originalExportPdf();
+  } finally {
+    setLoading(false);
+  }
+};
+  //=====================
   useEffect(() => {
     fetchStoppageReport();
   }, [fetchStoppageReport]);
@@ -540,8 +576,8 @@ const fetchStoppageReport = useCallback(async () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem>Export as PDF</DropdownMenuItem>
-                <DropdownMenuItem>Export as Excel</DropdownMenuItem>
+                <DropdownMenuItem onSelect={exportPdf}><FileText className="mr-2 h-4 w-4" />Export as PDF</DropdownMenuItem>
+              <DropdownMenuItem onSelect={exportExcel}><FileSpreadsheet className="mr-2 h-4 w-4" />Export as Excel</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
             <WhatsappPopup />
