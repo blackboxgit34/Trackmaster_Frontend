@@ -3,10 +3,8 @@ import {  Table,  TableBody,  TableCell,  TableHead,  TableHeader,  TableRow,} f
 import {  Card,  CardContent,  CardDescription,  CardFooter,  CardHeader,  CardTitle,} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import type {VehicleSpeedSummary} from '@/types';
-import {  ArrowUp,  ArrowDown,  ChevronLeft,  ChevronRight,  ChevronsLeft,  ChevronsRight,  Download,
-  CalendarIcon,  ChevronDown,  TrendingUp,  Gauge,  Activity,  ChevronsUpDown,
-  FileSpreadsheet,
-  FileText,} from 'lucide-react';
+import {  ArrowUp,  ArrowDown,  ChevronLeft,  ChevronRight,  ChevronsLeft,  ChevronsRight,  Download,  CalendarIcon,  ChevronDown,  TrendingUp,  Gauge,  Activity,  ChevronsUpDown,
+  FileSpreadsheet,  FileText,} from 'lucide-react';
 import { DateRange } from 'react-day-picker';
 import { subWeeks, subHours, subDays, subMonths, endOfDay,format, startOfDay,  } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -119,9 +117,7 @@ const getDefaultDateRange = (): DateRange => {
   const [isLiveLocationOpen, setIsLiveLocationOpen] = useState(false);
   //==========================
   const authData = JSON.parse(   localStorage.getItem("trackmaster-auth") || "{}"   );
-  const [downloadLoading, setDownloadLoading] = useState(false);
-
-
+ 
   const requestModel: DataTableRequestModel = {
   sEcho: 1,
   CustId: authData?.custId || 0,
