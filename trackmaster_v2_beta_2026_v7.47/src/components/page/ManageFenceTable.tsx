@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import {  Table,  TableBody,  TableCell,  TableHead,  TableHeader,  TableRow,} from '@/components/ui/table';
 import {  Card,  CardContent,  CardDescription,  CardFooter,  CardHeader,  CardTitle,} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import CopyFenceDialog from './CopyFenceDialog';
 import EditFenceDialog from './EditFenceDialog';
 import { Switch } from '../ui/switch';
+import { API_BASE_URL } from '@/config/Api';
 
 type GeofenceDataKey = keyof GeofenceShape;
 
@@ -53,11 +54,61 @@ const SortableHeader = ({
 );
 
 interface ManageFenceTableProps {
-  fences: GeofenceShape[];
-  onUpdateFences: (fences: GeofenceShape[]) => void;
+  fences?: GeofenceShape[];
+  onUpdateFences?: (fences: GeofenceShape[]) => void;
 }
 
-const ManageFenceTable = ({ fences, onUpdateFences }: ManageFenceTableProps) => {
+// API Response Types
+interface VehicleListItem {
+  vehName: string;
+  bbid: string;
+  type: string;
+}
+
+interface GeofenceVehicleItem {
+  vehName: string;
+  bbid: string;
+}
+
+interface LatLongHistory {
+  latitude: number;
+  longitude: number;
+}
+
+interface GeofenceModel {
+  fenceId: number;
+  fenceName: string;
+  radius: string;
+  fenceType: string;
+  isActive: boolean;
+  vehicleLists: GeofenceVehicleItem[];
+  latLongList: LatLongHistory[];
+}
+
+interface GetGeofenceListResponse {
+  data: GeofenceModel[];
+  count: number;
+  vehicleList: VehicleListItem[];
+}
+
+const transformGeofenceData = (apiData: GeofenceModel): GeofenceShape => {
+  return {
+    id: apiData.fenceId,
+    name: apiData.fenceName,
+    type: (apiData.fenceType.toLowerCase() === 'circle' ? 'circle' : 'polygon') as 'circle' | 'polygon',
+    machines: apiData.vehicleLists.map(v => v.bbid) || [],
+    isActive: apiData.isActive,
+    radius: apiData.fenceType.toLowerCase() === 'circle' ? parseInt(apiData.radius) || 0 : undefined,
+    paths: apiData.fenceType.toLowerCase() === 'polygon' && apiData.latLongList.length > 0 
+      ? apiData.latLongList.map(coord => ({ lat: coord.latitude, lng: coord.longitude }))
+      : undefined,
+    center: apiData.fenceType.toLowerCase() === 'circle' && apiData.latLongList.length > 0
+      ? { lat: apiData.latLongList[0].latitude, lng: apiData.latLongList[0].longitude }
+      : undefined,
+  };
+};
+
+const ManageFenceTable = ({ fences: propFences, onUpdateFences: propOnUpdateFences }: ManageFenceTableProps) => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [sortConfig, setSortConfig] = useState<{
@@ -69,6 +120,73 @@ const ManageFenceTable = ({ fences, onUpdateFences }: ManageFenceTableProps) => 
   const [isCopyDialogOpen, setIsCopyDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedFence, setSelectedFence] = useState<GeofenceShape | null>(null);
+  const [fences, setFences] = useState<GeofenceShape[]>(propFences || []);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [availableVehicles, setAvailableVehicles] = useState<VehicleListItem[]>([]);
+  const [vehicleTypes, setVehicleTypes] = useState<string[]>(['All Types']);
+
+  // Fetch geofences from API
+  const fetchGeofences = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const custId = JSON.parse(localStorage.getItem("trackmaster-auth") ?? "{}")?.custId;
+      
+      if (!custId) {
+        setError("Customer ID not found");
+        return;
+      }
+
+      const queryParams = new URLSearchParams({
+        CustId: String(custId),
+        iDisplayStart: '0',
+        iDisplayLength: '1000',
+        sSearch: '',
+      });
+
+      const response = await fetch(`${API_BASE_URL}/Geofence/GetGeofenceList?${queryParams}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch geofences: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      const geofenceList = result.data || [];
+      
+      const transformedFences = geofenceList.map((item: GeofenceModel) => transformGeofenceData(item));
+      setFences(transformedFences);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch geofences';
+      setError(errorMessage);
+      console.error('Error fetching geofences:', err);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: errorMessage,
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [toast]);
+
+  // Fetch data on component mount
+  useEffect(() => {
+    fetchGeofences();
+  }, [fetchGeofences]);
+
+  // If component receives prop fences, use those instead
+  useEffect(() => {
+    if (propFences && propFences.length > 0) {
+      setFences(propFences);
+    }
+  }, [propFences]);
 
   const filteredAndSortedData = useMemo(() => {
     const filteredData = fences.filter(item =>
@@ -135,7 +253,11 @@ const ManageFenceTable = ({ fences, onUpdateFences }: ManageFenceTableProps) => 
   };
 
   const handleSaveEdit = (updatedFence: GeofenceShape) => {
-    onUpdateFences(fences.map(f => f.id === updatedFence.id ? updatedFence : f));
+    const updatedFences = fences.map(f => f.id === updatedFence.id ? updatedFence : f);
+    setFences(updatedFences);
+    if (propOnUpdateFences) {
+      propOnUpdateFences(updatedFences);
+    }
     toast({
       variant: 'success',
       title: "Fence Updated",
@@ -145,7 +267,11 @@ const ManageFenceTable = ({ fences, onUpdateFences }: ManageFenceTableProps) => 
 
   const handleDelete = (fenceId: number) => {
     const fenceToDelete = fences.find(f => f.id === fenceId);
-    onUpdateFences(fences.filter(f => f.id !== fenceId));
+    const updatedFences = fences.filter(f => f.id !== fenceId);
+    setFences(updatedFences);
+    if (propOnUpdateFences) {
+      propOnUpdateFences(updatedFences);
+    }
     toast({
       title: "Fence Deleted",
       description: `Geofence "${fenceToDelete?.name}" has been deleted.`,
@@ -154,7 +280,11 @@ const ManageFenceTable = ({ fences, onUpdateFences }: ManageFenceTableProps) => 
   };
 
   const handleToggleStatus = (fenceId: number) => {
-    onUpdateFences(fences.map(f => f.id === fenceId ? { ...f, isActive: !f.isActive } : f));
+    const updatedFences = fences.map(f => f.id === fenceId ? { ...f, isActive: !f.isActive } : f);
+    setFences(updatedFences);
+    if (propOnUpdateFences) {
+      propOnUpdateFences(updatedFences);
+    }
   };
 
   return (
@@ -180,147 +310,174 @@ const ManageFenceTable = ({ fences, onUpdateFences }: ManageFenceTableProps) => 
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/50 hover:bg-muted/50 border-b">
-                  {headers.map((header) => (
-                    <SortableHeader
-                      key={header.key as string}
-                      onClick={() => handleSort(header.key)}
-                      isSorted={sortConfig.key === header.key}
-                      sortDirection={
-                        sortConfig.key === header.key
-                          ? sortConfig.direction
-                          : undefined
-                      }
-                    >
-                      {header.label}
-                    </SortableHeader>
-                  ))}
-                  <TableHead className="px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider text-center">
-                    Action
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {paginatedData.map((row) => (
-                  <TableRow
-                    key={row.id}
-                    className="bg-card hover:bg-muted/50 border-b"
-                  >
-                    <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-foreground">
-                      {row.name}
-                    </TableCell>
-                    <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground capitalize">
-                      {row.type}
-                    </TableCell>
-                    <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                      {row.machines.length} vehicle(s)
-                    </TableCell>
-                    <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                      <Switch checked={row.isActive} onCheckedChange={() => handleToggleStatus(row.id)} />
-                    </TableCell>
-                    <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        <Button variant="ghost" size="icon" onClick={() => handleEdit(row)}>
-                          <Pencil className="h-4 w-4 text-blue-500" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleCopy(row)}>
-                          <Copy className="h-4 w-4 text-green-500" />
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <Trash2 className="h-4 w-4 text-red-500" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                This action cannot be undone. This will permanently delete the geofence "{row.name}".
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDelete(row.id)}>
-                                Delete
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    </TableCell>
+          {loading && (
+            <div className="flex items-center justify-center h-64">
+              <p className="text-muted-foreground">Loading geofences...</p>
+            </div>
+          )}
+          {error && (
+            <div className="flex items-center justify-center h-64">
+              <div className="text-center">
+                <p className="text-red-500 font-semibold">Error loading geofences</p>
+                <p className="text-muted-foreground text-sm mt-1">{error}</p>
+              </div>
+            </div>
+          )}
+          {!loading && !error && (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/50 hover:bg-muted/50 border-b">
+                    {headers.map((header) => (
+                      <SortableHeader
+                        key={header.key as string}
+                        onClick={() => handleSort(header.key)}
+                        isSorted={sortConfig.key === header.key}
+                        sortDirection={
+                          sortConfig.key === header.key
+                            ? sortConfig.direction
+                            : undefined
+                        }
+                      >
+                        {header.label}
+                      </SortableHeader>
+                    ))}
+                    <TableHead className="px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider text-center">
+                      Action
+                    </TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                </TableHeader>
+                <TableBody>
+                  {paginatedData.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={headers.length + 1} className="text-center py-8 text-muted-foreground">
+                        No geofences found
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    paginatedData.map((row) => (
+                      <TableRow
+                        key={row.id}
+                        className="bg-card hover:bg-muted/50 border-b"
+                      >
+                        <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-foreground">
+                          {row.name}
+                        </TableCell>
+                        <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground capitalize">
+                          {row.type}
+                        </TableCell>
+                        <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+                          {row.machines.length} vehicle(s)
+                        </TableCell>
+                        <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+                          <Switch checked={row.isActive} onCheckedChange={() => handleToggleStatus(row.id)} />
+                        </TableCell>
+                        <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            <Button variant="ghost" size="icon" onClick={() => handleEdit(row)}>
+                              <Pencil className="h-4 w-4 text-blue-500" />
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleCopy(row)}>
+                              <Copy className="h-4 w-4 text-green-500" />
+                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                  <Trash2 className="h-4 w-4 text-red-500" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    This action cannot be undone. This will permanently delete the geofence "{row.name}".
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => handleDelete(row.id)}>
+                                    Delete
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </CardContent>
         <CardFooter className="flex items-center justify-between py-3 px-6 border-t bg-card">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Rows per page:</span>
-            <Select
-              value={String(rowsPerPage)}
-              onValueChange={(value) => {
-                setRowsPerPage(Number(value));
-                setPage(0);
-              }}
-            >
-              <SelectTrigger className="w-20 h-9 text-sm focus:ring-2 focus:ring-primary">
-                <SelectValue placeholder={rowsPerPage} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="25">25</SelectItem>
-                <SelectItem value="50">50</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-muted-foreground">
-              {firstRowIndex}-{lastRowIndex} of {filteredAndSortedData.length}
-            </span>
-            <div className="flex items-center gap-1">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-muted-foreground hover:bg-accent"
-                onClick={() => setPage(0)}
-                disabled={page === 0}
-              >
-                <ChevronsLeft className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-muted-foreground hover:bg-accent"
-                onClick={() => setPage(page - 1)}
-                disabled={page === 0}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-muted-foreground hover:bg-accent"
-                onClick={() => setPage(page + 1)}
-                disabled={page >= totalPages - 1}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-muted-foreground hover:bg-accent"
-                onClick={() => setPage(totalPages - 1)}
-                disabled={page >= totalPages - 1}
-              >
-                <ChevronsRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
+          {!loading && !error && (
+            <>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Rows per page:</span>
+                <Select
+                  value={String(rowsPerPage)}
+                  onValueChange={(value) => {
+                    setRowsPerPage(Number(value));
+                    setPage(0);
+                  }}
+                >
+                  <SelectTrigger className="w-20 h-9 text-sm focus:ring-2 focus:ring-primary">
+                    <SelectValue placeholder={rowsPerPage} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="25">25</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center gap-4">
+                <span className="text-sm text-muted-foreground">
+                  {filteredAndSortedData.length === 0 ? '0' : `${firstRowIndex}-${lastRowIndex}`} of {filteredAndSortedData.length}
+                </span>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground hover:bg-accent"
+                    onClick={() => setPage(0)}
+                    disabled={page === 0}
+                  >
+                    <ChevronsLeft className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground hover:bg-accent"
+                    onClick={() => setPage(page - 1)}
+                    disabled={page === 0}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground hover:bg-accent"
+                    onClick={() => setPage(page + 1)}
+                    disabled={page >= totalPages - 1}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground hover:bg-accent"
+                    onClick={() => setPage(totalPages - 1)}
+                    disabled={page >= totalPages - 1}
+                  >
+                    <ChevronsRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
         </CardFooter>
       </Card>
       <CopyFenceDialog

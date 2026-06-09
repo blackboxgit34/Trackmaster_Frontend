@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,6 +8,8 @@ import { cn } from '@/lib/utils';
 import { GoogleMap, Marker, StandaloneSearchBox, Circle } from '@react-google-maps/api';
 import { useToast } from '@/hooks/use-toast';
 import type { Poi } from '@/data/poiData';
+import { API_BASE_URL } from '@/config/Api';
+import React from 'react';
 
 const mapContainerStyle = {
   width: '100%',
@@ -46,6 +48,7 @@ const AddPoi = ({ onAddPoi }: AddPoiProps) => {
   const [lat, setLat] = useState('');
   const [lng, setLng] = useState('');
   const [poiName, setPoiName] = useState('');
+  const [poiList, setPoiList] = useState<any[]>([]);
 
   const onMapLoad = useCallback((mapInstance: google.maps.Map) => {
     setMap(mapInstance);
@@ -94,34 +97,134 @@ const AddPoi = ({ onAddPoi }: AddPoiProps) => {
     }
   };
 
-  const handleCreatePoi = () => {
+  const authData = JSON.parse(localStorage.getItem("trackmaster-auth") || "{}");
+
+  const handleCreatePoi = async () => {
     if (!poiName.trim()) {
-      toast({ title: "Error", description: "Please enter a name for the POI.", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: "Please enter a name for the POI.",
+        variant: "destructive"
+      });
       return;
     }
+
     if (!markerPosition) {
-      toast({ title: "Error", description: "Please select a location on the map.", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: "Please select a location on the map.",
+        variant: "destructive"
+      });
       return;
     }
 
-    const newPoi: Poi = {
-      id: `poi-${Date.now()}`,
-      poiName: poiName.trim(),
-      latitude: markerPosition.lat,
-      longitude: markerPosition.lng,
-      radius: radius,
-    };
+    try {
 
-    onAddPoi(newPoi);
-    toast({ variant: "success", title: "Success", description: `POI "${newPoi.poiName}" has been created.` });
-    handleReset();
+      const payload = {
+        CustId: authData?.custId || 0, // Replace with actual customer id
+        lat: markerPosition.lat.toString(),
+        longi: markerPosition.lng.toString(),
+        location: poiName.trim(),
+        radius: radius.toString(),
+        poiName: poiName.trim()
+      };
+
+      const response = await fetch(
+        `${API_BASE_URL}/Geofence/AddPOI`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(payload)
+        }
+      );
+
+      const text = await response.text();
+
+      console.log(text);
+
+      const result = text ? JSON.parse(text) : {};
+
+      if (response.ok) {
+
+        const newPoi: Poi = {
+          id: `poi-${Date.now()}`,
+          poiName: poiName.trim(),
+          latitude: markerPosition.lat,
+          longitude: markerPosition.lng,
+          radius: radius
+        };
+
+        onAddPoi(newPoi);
+
+        toast({
+          variant: "success",
+          title: "Success",
+          description: result.message || "POI added successfully"
+        });
+
+        handleReset();
+
+      } else {
+
+        toast({
+          title: "Error",
+          description: result.message || "Failed to add POI",
+          variant: "destructive"
+        });
+
+      }
+
+    } catch (error) {
+
+      console.error(error);
+
+      toast({
+        title: "Error",
+        description: "Unable to connect to server",
+        variant: "destructive"
+      });
+
+    }
   };
+
+  useEffect(() => {
+    loadPOI();
+  }, []);
+
+  const loadPOI = async () => {
+    debugger
+    try {
+      const authData = JSON.parse(
+        localStorage.getItem("trackmaster-auth") || "{}"
+      );
+
+      const CustId = authData?.custId || 0;
+
+      const response = await fetch(
+        `${API_BASE_URL}/Geofence/GetPOI?CustId=${CustId}`
+      );
+
+      const result = await response.json();
+
+      console.log("POI API Response:", result);
+
+      if (result.success) {
+        setPoiList(result.data);
+      }
+    } catch (error) {
+      console.error("Error loading POI:", error);
+    }
+  };
+
+
 
   return (
     <div className="grid grid-cols-1 grid-rows-2 lg:grid-cols-[1fr_350px] lg:grid-rows-1 gap-6 h-full">
       {/* Map Section */}
       <div className="bg-muted rounded-lg relative overflow-hidden">
-        <GoogleMap
+        {/* <GoogleMap
           mapContainerStyle={mapContainerStyle}
           center={center}
           zoom={5}
@@ -139,6 +242,63 @@ const AddPoi = ({ onAddPoi }: AddPoiProps) => {
               />
             </>
           )}
+        </GoogleMap> */}
+
+        <GoogleMap
+          mapContainerStyle={mapContainerStyle}
+          center={center}
+          zoom={5}
+          options={mapOptions}
+          onLoad={onMapLoad}
+          onClick={onMapClick}
+        >
+          {/* Existing marker while creating POI */}
+          {markerPosition && (
+            <>
+              <Marker position={markerPosition} />
+              <Circle
+                center={markerPosition}
+                radius={radius}
+                options={circleOptions}
+              />
+            </>
+          )}
+
+          {/* POIs loaded from API */}
+          {poiList.map((poi, index) => (
+            <React.Fragment key={poi.id || index}>
+              <Marker
+                position={{
+                  lat: Number(poi.lat),
+                  lng: Number(poi.lng),
+                }}
+                title={poi.details}
+                label={{
+                  text:
+                    poi.details?.split(",")[0]?.length > 15
+                      ? poi.details.split(",")[0].substring(0, 15) + "..."
+                      : poi.details?.split(",")[0] || "",
+                  fontSize: "11px",
+                  fontWeight: "bold",
+                }}
+              />
+
+              <Circle
+                center={{
+                  lat: Number(poi.lat),
+                  lng: Number(poi.lng),
+                }}
+                radius={Number(poi.standardDistance)}
+                options={{
+                  strokeColor: "#AA0000",
+                  strokeOpacity: 0.8,
+                  strokeWeight: 2,
+                  fillColor: "#AA0000",
+                  fillOpacity: 0.25,
+                }}
+              />
+            </React.Fragment>
+          ))}
         </GoogleMap>
       </div>
 

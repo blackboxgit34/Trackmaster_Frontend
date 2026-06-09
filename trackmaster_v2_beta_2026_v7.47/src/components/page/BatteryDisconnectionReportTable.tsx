@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useApi, useVehicleList } from '@/hooks/useApi';
+import { useReportDownload } from '@/hooks/useApi';
 import { API_BASE_URL } from '@/config/Api';
 
 import {
@@ -232,11 +233,59 @@ const BatteryDisconnectionReportTable = () => {
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
   const { data: vehicleOptions } = useVehicleList();
+  const [downloadLoading, setDownloadLoading] = useState(false);
 
   const vehicleSearchOptions = [
     { label: 'All', value: 'all' },
     ...(vehicleOptions ?? []),
   ];
+
+  const authData = JSON.parse(
+  localStorage.getItem('trackmaster-auth') || '{}'
+);
+
+const requestModel = {
+  sEcho: 1,
+  CustId: authData?.custId || 0,
+  iDisplayStart: page === 0 ? 0 : page * rowsPerPage + 1,
+  iDisplayLength: (page + 1) * rowsPerPage,
+  beginDate: date?.from
+    ? format(startOfDay(date.from), 'yyyy-MM-dd HH:mm:ss')
+    : '',
+  endDate: date?.to
+    ? format(endOfDay(date.to), 'yyyy-MM-dd HH:mm:ss')
+    : '',
+  search:
+    selectedVehicle !== 'all'
+      ? selectedVehicle
+      : '',
+};
+
+const {
+  exportExcel: originalExportExcel,
+  exportPdf: originalExportPdf,
+} = useReportDownload(
+  '/Reports/BatteryDisconnection',
+  requestModel
+);
+
+const exportExcel = async () => {
+  try {
+    setDownloadLoading(true);
+    await originalExportExcel();
+  } finally {
+    setDownloadLoading(false);
+  }
+};
+
+const exportPdf = async () => {
+  try {
+    setDownloadLoading(true);
+    await originalExportPdf();
+  } finally {
+    setDownloadLoading(false);
+  }
+};
 
   const fetchBatteryDisconnectionReport = useCallback(async () => {
     const auth = JSON.parse(
@@ -600,11 +649,11 @@ const BatteryDisconnectionReportTable = () => {
             </DropdownMenuTrigger>
 
             <DropdownMenuContent align="end">
-              <DropdownMenuItem>
+              <DropdownMenuItem onSelect={exportPdf}>
                 Export as PDF
               </DropdownMenuItem>
 
-              <DropdownMenuItem>
+              <DropdownMenuItem onSelect={exportExcel}>
                 Export as Excel
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -616,7 +665,7 @@ const BatteryDisconnectionReportTable = () => {
 
       <CardContent className="p-0">
         <div className="relative">
-          {loading && (
+          {(loading || downloadLoading) && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
               <div className="bg-white p-4 rounded-lg flex items-center gap-3 shadow-lg">
                 <div className="animate-spin h-5 w-5 border-2 border-black border-t-transparent rounded-full"></div>

@@ -7,9 +7,6 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 
-
-
-
 export const downloadReport = async (
   endpoint: string,
   requestModel: any,
@@ -24,18 +21,16 @@ export const downloadReport = async (
     iDisplayStart: 0,
     iDisplayLength: 100000,
     DownloadType: downloadType,
-     ...extraParams,
+    ...extraParams,
   }).forEach(([key, value]) => {
     if (value !== null && value !== undefined) {
       queryParams.append(key, String(value));
     }
   });
 
-const APIurl = `${API_BASE_URL}${endpoint}?${queryParams.toString()}`;
+  const APIurl = `${API_BASE_URL}${endpoint}?${queryParams.toString()}`;
 
-console.log("Download URL:", APIurl);
-
-const response = await fetch(APIurl);
+  const response = await fetch(APIurl);
 
   if (!response.ok) {
     throw new Error(`Download failed (${response.status})`);
@@ -43,24 +38,28 @@ const response = await fetch(APIurl);
 
   const blob = await response.blob();
 
+  //  DEFAULT NAME (fallback only)
   let fileName =
     downloadType === "Excel"
       ? "Report.xlsx"
       : "Report.pdf";
 
+  //  READ BACKEND HEADER
   const contentDisposition =
     response.headers.get("content-disposition");
 
   if (contentDisposition) {
-    const match = contentDisposition.match(
-      /filename="?([^"]+)"?/i
-    );
+    const filenameMatch =
+      contentDisposition.match(
+        /filename\*?=(?:UTF-8'')?["']?([^"';]+)["']?/i
+      );
 
-    if (match?.[1]) {
-      fileName = match[1];
+    if (filenameMatch?.[1]) {
+      fileName = decodeURIComponent(filenameMatch[1]);
     }
   }
 
+  //  DOWNLOAD FILE
   const url = window.URL.createObjectURL(blob);
 
   const link = document.createElement("a");
@@ -73,3 +72,68 @@ const response = await fetch(APIurl);
   document.body.removeChild(link);
   window.URL.revokeObjectURL(url);
 };
+
+
+// export const downloadReport = async (
+//   endpoint: string,
+//   requestModel: any,
+//   downloadType: "Excel" | "Pdf",
+//   extraParams?: Record<string, string>
+// ) => {
+//   const queryParams = new URLSearchParams();
+
+//   Object.entries({
+//     mode: "over",
+//     ...requestModel,
+//     iDisplayStart: 0,
+//     iDisplayLength: 100000,
+//     DownloadType: downloadType,
+//      ...extraParams,
+//   }).forEach(([key, value]) => {
+//     if (value !== null && value !== undefined) {
+//       queryParams.append(key, String(value));
+//     }
+//   });
+
+// const APIurl = `${API_BASE_URL}${endpoint}?${queryParams.toString()}`;
+
+// console.log("Download URL:", APIurl);
+
+// const response = await fetch(APIurl);
+
+//   if (!response.ok) {
+//     throw new Error(`Download failed (${response.status})`);
+//   }
+
+//   const blob = await response.blob();
+
+//   let fileName =
+//     downloadType === "Excel"
+//       ? "Report.xlsx"
+//       : "Report.pdf";
+
+//   const contentDisposition =
+//     response.headers.get("content-disposition");
+
+//   if (contentDisposition) {
+//     const match = contentDisposition.match(
+//       /filename="?([^"]+)"?/i
+//     );
+
+//     if (match?.[1]) {
+//       fileName = match[1];
+//     }
+//   }
+
+//   const url = window.URL.createObjectURL(blob);
+
+//   const link = document.createElement("a");
+//   link.href = url;
+//   link.download = fileName;
+
+//   document.body.appendChild(link);
+//   link.click();
+
+//   document.body.removeChild(link);
+//   window.URL.revokeObjectURL(url);
+// };
