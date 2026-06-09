@@ -26,7 +26,7 @@ import {
   consolidatedReportTableData,
 } from '@/data/mockData';
 
-import { useVehicleList } from '@/hooks/useApi';
+import { useReportDownload, useVehicleList } from '@/hooks/useApi';
 
 
 import {
@@ -44,7 +44,7 @@ import {
   ChevronsUpDown,
 } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
-import { subWeeks, subDays, subMonths, startOfDay, format } from 'date-fns';
+import { subWeeks, subDays, subMonths, startOfDay, format, endOfDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 import WhatsappPopup from '../WhatsappPopup';
 import { VehicleCombobox } from '../VehicleCombobox';
@@ -114,12 +114,8 @@ const locationMapOptions: google.maps.MapOptions = {
 };
 
 const EntryExitReportTable = () => {
-  // const [sortConfig, setSortConfig] = useState<{ key: ReportDataKey; direction: 'asc' | 'desc'; }>({ key: 'date', direction: 'desc' });
   const [detailsSortConfig, setDetailsSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'startTime', direction: 'asc' });
-  const [date, setDate] = useState<DateRange | undefined>({
-    from: new Date(),
-    to: new Date(),
-  });
+  const [date, setDate] = useState<DateRange | undefined>({from: new Date(),to: new Date(),});
   const [selectedVehicle, setSelectedVehicle] = useState('all');
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
@@ -131,10 +127,9 @@ const EntryExitReportTable = () => {
   const [selectedLocation, setSelectedLocation] = useState<any>(null);
   const [isLocationDialogOpen, setIsLocationDialogOpen] = useState(false);
   const [isInfoWindowOpen, setIsInfoWindowOpen] = useState(false);
-  const [pagination, setPagination] = useState({
-    pageIndex: 0,
-    pageSize: 10,
-  });
+  const [pagination, setPagination] = useState({pageIndex: 0,pageSize: 10,});
+
+
   const formatDateTime = (value: string | Date | null | undefined) => {
     if (!value) return "";
 
@@ -211,260 +206,84 @@ const EntryExitReportTable = () => {
   };
 
 
-  const handleExportCSV = async () => {
-    setLoading(true);
+  const authData = JSON.parse(
+    localStorage.getItem("trackmaster-auth") || "{}"
+  );
+
+  const request: DataTableRequestModel = {
+
+    CustId: authData?.custId || 0,
+
+    sEcho: 1,
+
+    iDisplayStart:
+      pagination.pageIndex *
+      pagination.pageSize,
+
+    iDisplayLength:
+      pagination.pageSize,
+
+    sSearch: searchTerm,
+
+    sortColumn:
+      sortConfig.sortColumn,
+
+    sortDirection:
+      sortConfig.sortDirection,
+    // updated interval mapping
+    interval: intervalMap[intervalFilter] || "1",
+    beginDate:
+      format(
+
+        startOfDay(
+
+          date?.from ||
+
+          new Date()
+
+        ),
+
+        "M/d/yyyy h:mm:ss a"
+
+      ),
+
+    endDate:
+      format(
+        new Date(),
+        "M/d/yyyy h:mm:ss a"
+      ),
+
+    Status: ""
+  };
+
+
+  const {
+    exportExcel: originalExportExcel,
+    exportPdf: originalExportPdf,
+  } = useReportDownload(
+    "/Reports/GetEntryExitReport",
+    request,
+    { rtype: "EntryExitReport" }
+  );
+
+  const exportExcel = async () => {
     try {
-      const authData = JSON.parse(
-        localStorage.getItem("trackmaster-auth") || "{}"
-      );
-
-      const request: DataTableRequestModel = {
-
-        CustId: authData?.custId || 0,
-
-        sEcho: 1,
-
-        iDisplayStart: 0,
-        iDisplayLength: 1000000,
-
-        sSearch: searchTerm,
-
-        sortColumn:
-          sortConfig.sortColumn,
-
-        sortDirection:
-          sortConfig.sortDirection,
-        // updated interval mapping
-        interval: intervalMap[intervalFilter] || "1",
-        beginDate:
-          format(
-
-            startOfDay(
-
-              date?.from ||
-
-              new Date()
-
-            ),
-
-            "M/d/yyyy h:mm:ss a"
-
-          ),
-
-        endDate:
-          format(
-            new Date(),
-            "M/d/yyyy h:mm:ss a"
-          ),
-
-        Status: "",
-        DownloadType: "Excel"
-      };
-      // ensure server receives report type in body
-      (request as any).rtype = 'EntryExitReport';
-
-      const params =
-        new URLSearchParams();
-
-      Object.entries(request)
-        .forEach(([key, value]) => {
-
-          if (
-            value !== null &&
-            value !== undefined
-          ) {
-
-            params.append(
-              key,
-              String(value)
-            );
-
-          }
-
-        });
-      // ADD THIS
-      if (
-        selectedVehicle &&
-        selectedVehicle !== "all"
-      ) {
-
-        params.append(
-          "bbid",
-          selectedVehicle
-        );
-
-      }
-      // ensure report type is set
-      params.append('rtype', 'EntryExitReport');
-
-      const response = await fetch(`${API_BASE_URL}/Reports/GetEntryExitReport?${params.toString()}`, {
-        method: 'Post',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(request),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to download excel');
-      }
-
-      // Convert response to blob
-      const blob = await response.blob();
-
-      // Create download url
-      const downloadUrl = window.URL.createObjectURL(blob);
-
-      // Create temp anchor
-      const link = document.createElement('a');
-
-      link.href = downloadUrl;
-
-      link.download =
-        `EntryExitReport_${authData?.custId || 0}.xlsx`;
-
-      document.body.appendChild(link);
-
-      // Trigger download
-      link.click();
-
-      // Cleanup
-      link.remove();
-      window.URL.revokeObjectURL(downloadUrl);
-
-    } catch (error) {
-      console.error('Export Excel Error:', error);
+      setLoading(true);
+      await originalExportExcel();
     } finally {
       setLoading(false);
     }
   };
 
-  const handleExportPDF = async () => {
-    setLoading(true);
+  const exportPdf = async () => {
     try {
-      const authData = JSON.parse(
-        localStorage.getItem("trackmaster-auth") || "{}"
-      );
-
-      const request: DataTableRequestModel = {
-
-        CustId: authData?.custId || 0,
-
-        sEcho: 1,
-
-        iDisplayStart: 0,
-        iDisplayLength: 1000000,
-
-        sSearch: searchTerm,
-
-        sortColumn:
-          sortConfig.sortColumn,
-
-        sortDirection:
-          sortConfig.sortDirection,
-        // updated interval mapping
-        interval: intervalMap[intervalFilter] || "1",
-        beginDate:
-          format(
-
-            startOfDay(
-
-              date?.from ||
-
-              new Date()
-
-            ),
-
-            "M/d/yyyy h:mm:ss a"
-
-          ),
-
-        endDate:
-          format(
-            new Date(),
-            "M/d/yyyy h:mm:ss a"
-          ),
-
-        Status: "",
-        DownloadType: "Pdf"
-      };
-      // ensure server receives report type in body
-      (request as any).rtype = 'EntryExitReport';
-
-      const params =
-        new URLSearchParams();
-
-      Object.entries(request)
-        .forEach(([key, value]) => {
-
-          if (
-            value !== null &&
-            value !== undefined
-          ) {
-
-            params.append(
-              key,
-              String(value)
-            );
-
-          }
-
-        });
-      // ADD THIS
-      if (
-        selectedVehicle &&
-        selectedVehicle !== "all"
-      ) {
-
-        params.append(
-          "bbid",
-          selectedVehicle
-        );
-
-      }
-
-
-      const response = await fetch(`${API_BASE_URL}/Reports/GetEntryExitReport?${params.toString()}`, {
-        method: 'Post',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(request),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to download pdf');
-      }
-
-      // Convert response to blob
-      const blob = await response.blob();
-
-      // Create download url
-      const downloadUrl = window.URL.createObjectURL(blob);
-
-      // Create temp anchor
-      const link = document.createElement('a');
-
-      link.href = downloadUrl;
-
-      link.download =
-        `EntryExitReport_${authData?.custId || 0}.pdf`;
-
-      document.body.appendChild(link);
-
-      // Trigger download
-      link.click();
-
-      // Cleanup
-      link.remove();
-      window.URL.revokeObjectURL(downloadUrl);
-
-    } catch (error) {
-      console.error('Export PDF Error:', error);
+      setLoading(true);
+      await originalExportPdf();
     } finally {
       setLoading(false);
     }
   };
+
 
   const parseDuration = (value: string) => {
     if (!value) {
@@ -493,55 +312,6 @@ const EntryExitReportTable = () => {
 
       setLoading(true);
 
-      const authData = JSON.parse(
-        localStorage.getItem("trackmaster-auth") || "{}"
-      );
-
-      const request: DataTableRequestModel = {
-
-        CustId: authData?.custId || 0,
-
-        sEcho: 1,
-
-        iDisplayStart:
-          pagination.pageIndex *
-          pagination.pageSize,
-
-        iDisplayLength:
-          pagination.pageSize,
-
-        sSearch: searchTerm,
-
-        sortColumn:
-          sortConfig.sortColumn,
-
-        sortDirection:
-          sortConfig.sortDirection,
-        // updated interval mapping
-        interval: intervalMap[intervalFilter] || "1",
-        beginDate:
-          format(
-
-            startOfDay(
-
-              date?.from ||
-
-              new Date()
-
-            ),
-
-            "M/d/yyyy h:mm:ss a"
-
-          ),
-
-        endDate:
-          format(
-            new Date(),
-            "M/d/yyyy h:mm:ss a"
-          ),
-
-        Status: ""
-      };
       // ensure server receives report type in body
       (request as any).rtype = 'EntryExitReport';
 
@@ -583,7 +353,7 @@ const EntryExitReportTable = () => {
           `${API_BASE_URL}/Reports/GetEntryExitReport?${params.toString()}`,
 
           {
-            method: "POST",
+            method: "GET",
           }
 
         );
@@ -869,8 +639,8 @@ const EntryExitReportTable = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onSelect={handleExportPDF}><FileText className="mr-2 h-4 w-4" />Export as PDF</DropdownMenuItem>
-                <DropdownMenuItem onSelect={handleExportCSV}><FileSpreadsheet className="mr-2 h-4 w-4" />Export as Excel</DropdownMenuItem>
+                <DropdownMenuItem onSelect={exportPdf}><FileText className="mr-2 h-4 w-4" />Export as PDF</DropdownMenuItem>
+                <DropdownMenuItem onSelect={exportExcel}><FileSpreadsheet className="mr-2 h-4 w-4" />Export as Excel</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
             <WhatsappPopup />
