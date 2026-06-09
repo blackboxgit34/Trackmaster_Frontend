@@ -18,6 +18,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Command, CommandGroup, CommandInput, CommandItem, } from '@/components/ui/command';
 import { Check } from 'lucide-react';
 import type { DataTableRequestModel } from '@/hooks/DataTableRequestModel';
+import { useReportDownload } from "@/hooks/useApi";
 //========== searchable dropdown ==================//
 
 type ReportDataKey = keyof NotificationData;
@@ -90,14 +91,15 @@ const SmsNotificationReportTable = () => {
 
   // neha k
   const [search, setSearch] = useState("");
-  const [sortColumn, setSortColumn] =useState<ReportDataKey>("messageDate");
-  const [sortDirection, setSortDirection] =useState("desc");
+  const [sortColumn, setSortColumn] = useState<ReportDataKey>("messageDate");
+  const [sortDirection, setSortDirection] = useState("desc");
   const [date, setDate] = useState<DateRange | undefined>({ from: subWeeks(new Date(), 1), to: new Date() });
   const [selectedVehicle, setSelectedVehicle] = useState('all');
   const [messageTypeFilter, setMessageTypeFilter] = useState('0');// neha k 22.05.2026
   const [notificationTypeFilter, setNotificationTypeFilter] = useState('1');
   const [reportData, setReportData] = useState<NotificationData[]>([]); //neha k 
   const [loading, setLoading] = useState(false); //neha k 
+  //const [downloading, setDownloading] = useState(false);// exceland pdf
   const [totalRecords, setTotalRecords] = useState(0); // neha k
   // neha k bind data table 
   const getMessageReports = async () => {
@@ -213,120 +215,7 @@ const SmsNotificationReportTable = () => {
     setPage(0);
   };
 
-  // for pdf neha k 26.05.2026
-  const handleExportPDF = async () => {
-    try {
-      setLoading(true);
-      const auth = JSON.parse(
-        localStorage.getItem("trackmaster-auth") || "{}"
-      );
-
-      const typeId =
-        notificationTypeFilter === "0"
-          ? 0
-          : Number(notificationTypeFilter);
-
-      const params = new URLSearchParams({
-        CustId: String(auth.custId),
-        sEcho: "1",
-        iDisplayStart: "0",
-        iDisplayLength: String(totalRecords || 10000),
-        sSearch: search?.trim() || "",
-        sortColumn: sortMap[sortConfig.key] || "",
-        sortDirection: sortConfig.direction || "",
-        typeid: String(typeId),
-        messagetype: messageTypeFilter,
-        beginDate: date?.from? date.from.toLocaleString("en-US").replace(",", ""): "",
-        endDate: date?.to? date.to.toLocaleString("en-US").replace(",", ""): "",
-        vehicleNo: selectedVehicle,
-        downloadType: "PDF",
-      });
-
-      const response = await fetch(
-        `${API_BASE_URL}/Reports/GetMessageReports?${params.toString()}`,
-        {
-          method: "GET",
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to download PDF");
-      }
-
-      const blob = await response.blob();
-      const downloadUrl =window.URL.createObjectURL(blob);
-      const link =document.createElement("a");
-      link.href = downloadUrl;
-      link.download = `sms-notification-report-${new Date().toISOString().split("T")[0]}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(downloadUrl);
-    } catch (error) {
-      console.error(
-        "Export PDF Error:",
-        error
-      );
-    }
-    finally {
-      setLoading(false);
-    }
-  };
-
-  // for excel neha k 26.05.2026
-  const handleExportExcel = async () => {
-    try {
-      setLoading(true);
-      const auth = JSON.parse(
-        localStorage.getItem("trackmaster-auth") || "{}"
-      );
-      const typeId =notificationTypeFilter === "0"? 0: Number(notificationTypeFilter);
-
-      const params = new URLSearchParams({
-        CustId: String(auth.custId),
-        sEcho: "1",
-        iDisplayStart: "0",
-        iDisplayLength: String(totalRecords || 10000),
-        sSearch: search?.trim() || "",
-        sortColumn: sortMap[sortConfig.key] || "",
-        sortDirection: sortConfig.direction || "",
-        typeid: String(typeId),
-        messagetype: messageTypeFilter,
-        beginDate: date?.from? date.from.toLocaleString("en-US").replace(",", ""): "",
-        endDate: date?.to? date.to.toLocaleString("en-US").replace(",", ""): "",
-        vehicleNo: selectedVehicle,
-        downloadType: "Excel",
-      });
-
-      const response = await fetch(
-        `${API_BASE_URL}/Reports/GetMessageReports?${params.toString()}`,
-        {
-          method: "GET",
-        }
-      );
-      if (!response.ok) {
-        throw new Error("Failed to download excel");
-      }
-      const blob = await response.blob();
-      const downloadUrl =window.URL.createObjectURL(blob);
-      const link =document.createElement("a");
-      link.href = downloadUrl;
-      link.download =`sms-notification-report-${new Date().toISOString().split("T")[0]}.xlsx`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(downloadUrl);
-    } catch (error) {
-      console.error(
-        "Export Excel Error:",
-        error
-      );
-    }
-    finally {
-      setLoading(false);
-    }
-  };
-
+  
   // get vehicle
   useEffect(() => {
     if (!custId) return;
@@ -411,6 +300,69 @@ const SmsNotificationReportTable = () => {
 
   const paginatedData = reportData;
   const totalPages = Math.ceil(totalRecords / rowsPerPage);
+
+  const auth = JSON.parse(
+    localStorage.getItem("trackmaster-auth") || "{}"
+  );
+
+  const typeId =
+    notificationTypeFilter === "0"
+      ? 0
+      : Number(notificationTypeFilter);
+
+  const requestModel = {
+    CustId: auth.custId,
+    sEcho: 1,
+    sSearch: search?.trim() || "",
+    sortColumn: sortMap[sortConfig.key] || "",
+    sortDirection: sortConfig.direction || "",
+  };
+
+  const extraParams = {
+    typeid: String(typeId),
+    messagetype: messageTypeFilter,
+    beginDate: date?.from
+      ? date.from.toLocaleString("en-US").replace(",", "")
+      : "",
+    endDate: date?.to
+      ? date.to.toLocaleString("en-US").replace(",", "")
+      : "",
+    vehicleNo: selectedVehicle,
+  };
+
+  const {
+  exportExcel,
+  exportPdf,
+} = useReportDownload(
+  "/Reports/GetMessageReports",
+  requestModel,
+  extraParams
+);
+
+// PUT HERE 👇
+
+const handleExportExcel = async () => {
+  setLoading(true);
+  try {
+    await exportExcel();
+  } catch (error) {
+    console.error(error);
+  } finally {
+    setLoading(false);
+  }
+};
+
+const handleExportPdf = async () => {
+  setLoading(true);
+  try {
+    await exportPdf();
+  } catch (error) {
+    console.error(error);
+  } finally {
+    setLoading(false);
+  }
+};
+
   return (
     <>
       {loading && (
@@ -434,7 +386,7 @@ const SmsNotificationReportTable = () => {
           </div>
           <div className="flex items-center gap-2 flex-wrap justify-start sm:justify-end">
             <DateRangePicker date={date} setDate={setDate} />
-            <VehicleCombobox vehicles={vehicleList} value={selectedVehicle} onChange={setSelectedVehicle} className="w-full sm:w-[180px]" />           
+            <VehicleCombobox vehicles={vehicleList} value={selectedVehicle} onChange={setSelectedVehicle} className="w-full sm:w-[180px]" />
             <Popover
               open={messageTypeOpen}
               onOpenChange={setMessageTypeOpen}
@@ -465,7 +417,7 @@ const SmsNotificationReportTable = () => {
                     {messageTypeList.map((item) => (
                       <CommandItem
                         key={item.value}
-                        value={item.label}                       
+                        value={item.label}
                         onSelect={() => {
                           setMessageTypeFilter(item.value);
                           setMessageTypeOpen(false);
@@ -514,9 +466,17 @@ const SmsNotificationReportTable = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onSelect={handleExportPDF}><FileText className="mr-2 h-4 w-4" />Export as PDF</DropdownMenuItem>
-                {/* <DropdownMenuItem onSelect={handleExportCSV}><FileSpreadsheet className="mr-2 h-4 w-4" />Export as Excel</DropdownMenuItem> */}
-                <DropdownMenuItem onSelect={handleExportExcel}><FileSpreadsheet className="mr-2 h-4 w-4" /> Export as Excel</DropdownMenuItem>
+                {/* <DropdownMenuItem onClick={exportPdf}><FileText className="mr-2 h-4 w-4" />Export as PDF</DropdownMenuItem>            
+                <DropdownMenuItem onClick={exportExcel}><FileSpreadsheet className="mr-2 h-4 w-4" /> Export as Excel</DropdownMenuItem> */}
+                <DropdownMenuItem onClick={handleExportPdf}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  Export as PDF
+                </DropdownMenuItem>
+
+                <DropdownMenuItem onClick={handleExportExcel}>
+                  <FileSpreadsheet className="mr-2 h-4 w-4" />
+                  Export as Excel
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
             <WhatsappPopup />
