@@ -20,7 +20,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Search, Tag } from 'lucide-react';
-import { actualVehicles } from '@/data/mockData';
 import type { GeofenceShape } from '@/data/geofenceMapData';
 import { useToast } from '@/hooks/use-toast';
 
@@ -28,12 +27,23 @@ interface EditFenceDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   fence: GeofenceShape | null;
+  vehicles: VehicleListItem[];
+  vehicleTypes: string[];
   onSave: (fence: GeofenceShape) => void;
 }
-
-const vehicleTypes = ['All Types', ...Array.from(new Set(actualVehicles.map(m => m.type)))];
-
-const EditFenceDialog = ({ open, onOpenChange, fence, onSave }: EditFenceDialogProps) => {
+interface VehicleListItem {
+  vehName: string;
+  bbid: string;
+  type: string;
+}
+const EditFenceDialog = ({
+  open,
+  onOpenChange,
+  fence,
+  vehicles,
+  vehicleTypes,
+  onSave,
+}: EditFenceDialogProps) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState('All Types');
   const [selectedVehicles, setSelectedVehicles] = useState<Set<string>>(new Set());
@@ -48,13 +58,18 @@ const EditFenceDialog = ({ open, onOpenChange, fence, onSave }: EditFenceDialogP
   }, [fence]);
 
   const filteredVehicles = useMemo(() => {
-    return actualVehicles.filter(vehicle => {
-      const matchesType = selectedType === 'All Types' || vehicle.type === selectedType;
-      const matchesSearch = vehicle.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            vehicle.id.toLowerCase().includes(searchTerm.toLowerCase());
+    return vehicles.filter(vehicle => {
+      const matchesType =
+        selectedType === 'All Types' ||
+        vehicle.type === selectedType;
+
+      const matchesSearch =
+        vehicle.vehName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        vehicle.bbid?.toLowerCase().includes(searchTerm.toLowerCase());
+
       return matchesType && matchesSearch;
     });
-  }, [searchTerm, selectedType]);
+  }, [vehicles, searchTerm, selectedType]);
 
   const handleSelectVehicle = (vehicleId: string) => {
     setSelectedVehicles(prev => {
@@ -67,15 +82,23 @@ const EditFenceDialog = ({ open, onOpenChange, fence, onSave }: EditFenceDialogP
       return newSet;
     });
   };
+const handleSelectAll = (checked: boolean | 'indeterminate') => {
+  setSelectedVehicles(prev => {
+    const updated = new Set(prev);
 
-  const handleSelectAll = (checked: boolean | 'indeterminate') => {
     if (checked === true) {
-      const allFilteredIds = new Set(filteredVehicles.map(m => m.id));
-      setSelectedVehicles(allFilteredIds);
+      filteredVehicles.forEach(vehicle => {
+        updated.add(vehicle.bbid);
+      });
     } else {
-      setSelectedVehicles(new Set());
+      filteredVehicles.forEach(vehicle => {
+        updated.delete(vehicle.bbid);
+      });
     }
-  };
+
+    return updated;
+  });
+};
 
   const handleSaveChanges = () => {
     if (!fence) return;
@@ -95,7 +118,7 @@ const EditFenceDialog = ({ open, onOpenChange, fence, onSave }: EditFenceDialogP
       });
       return;
     }
-    
+
     const updatedFence = {
       ...fence,
       name: fenceName,
@@ -113,8 +136,8 @@ const EditFenceDialog = ({ open, onOpenChange, fence, onSave }: EditFenceDialogP
     }, 300);
   };
 
-  const allFilteredSelected = filteredVehicles.length > 0 && filteredVehicles.every(m => selectedVehicles.has(m.id));
-  const someFilteredSelected = filteredVehicles.some(m => selectedVehicles.has(m.id));
+  const allFilteredSelected = filteredVehicles.length > 0 && filteredVehicles.every(m => selectedVehicles.has(m.bbid));
+  const someFilteredSelected = filteredVehicles.some(m => selectedVehicles.has(m.bbid));
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -177,16 +200,16 @@ const EditFenceDialog = ({ open, onOpenChange, fence, onSave }: EditFenceDialogP
             <ScrollArea className="h-56">
               <div className="p-3 space-y-2">
                 {filteredVehicles.map(vehicle => (
-                  <div key={vehicle.id} className="flex items-center space-x-3 p-2 rounded-md hover:bg-muted">
+                  <div key={vehicle.bbid} className="flex items-center space-x-3 p-2 rounded-md hover:bg-muted">
                     <Checkbox
-                      id={`edit-${vehicle.id}`}
-                      checked={selectedVehicles.has(vehicle.id)}
-                      onCheckedChange={() => handleSelectVehicle(vehicle.id)}
+                      id={`edit-${vehicle.bbid}`}
+                      checked={selectedVehicles.has(vehicle.bbid)}
+                      onCheckedChange={() => handleSelectVehicle(vehicle.bbid)}
                     />
-                    <Label htmlFor={`edit-${vehicle.id}`} className="w-full cursor-pointer">
+                    <Label htmlFor={`edit-${vehicle.bbid}`} className="w-full cursor-pointer">
                       <div className="flex justify-between">
-                        <span className="font-semibold">{vehicle.name}</span>
-                        <span className="text-xs text-muted-foreground">{vehicle.id}</span>
+                        <span className="font-semibold">{vehicle.vehName}</span>
+                        <span className="text-xs text-muted-foreground">{vehicle.bbid}</span>
                       </div>
                       <p className="text-xs text-muted-foreground">{vehicle.type}</p>
                     </Label>

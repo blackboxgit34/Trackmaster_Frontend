@@ -1,12 +1,14 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import {  Table,  TableBody,  TableCell,  TableHead,  TableHeader,  TableRow,} from '@/components/ui/table';
-import {  Card,  CardContent,  CardDescription,  CardFooter,  CardHeader,  CardTitle,} from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, } from '@/components/ui/table';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle, } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import type { GeofenceShape } from '@/data/geofenceMapData';
-import {  ArrowUp,  ArrowDown,  ChevronLeft,  ChevronRight,  ChevronsLeft,  ChevronsRight,  Copy,  Trash2,  Search,  Pencil,  ChevronsUpDown,} from 'lucide-react';
-import {  Select,  SelectContent,  SelectItem,  SelectTrigger,  SelectValue,} from '@/components/ui/select';
-import {  AlertDialog,  AlertDialogAction,  AlertDialogCancel,  AlertDialogContent,  AlertDialogDescription,  AlertDialogFooter,  AlertDialogHeader,
-  AlertDialogTitle,  AlertDialogTrigger,} from "@/components/ui/alert-dialog";
+import { ArrowUp, ArrowDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Copy, Trash2, Search, Pencil, ChevronsUpDown, } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from '@/components/ui/select';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader,
+  AlertDialogTitle, AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import CopyFenceDialog from './CopyFenceDialog';
@@ -99,7 +101,7 @@ const transformGeofenceData = (apiData: GeofenceModel): GeofenceShape => {
     machines: apiData.vehicleLists.map(v => v.bbid) || [],
     isActive: apiData.isActive,
     radius: apiData.fenceType.toLowerCase() === 'circle' ? parseInt(apiData.radius) || 0 : undefined,
-    paths: apiData.fenceType.toLowerCase() === 'polygon' && apiData.latLongList.length > 0 
+    paths: apiData.fenceType.toLowerCase() === 'polygon' && apiData.latLongList.length > 0
       ? apiData.latLongList.map(coord => ({ lat: coord.latitude, lng: coord.longitude }))
       : undefined,
     center: apiData.fenceType.toLowerCase() === 'circle' && apiData.latLongList.length > 0
@@ -131,9 +133,9 @@ const ManageFenceTable = ({ fences: propFences, onUpdateFences: propOnUpdateFenc
     try {
       setLoading(true);
       setError(null);
-      
+
       const custId = JSON.parse(localStorage.getItem("trackmaster-auth") ?? "{}")?.custId;
-      
+
       if (!custId) {
         setError("Customer ID not found");
         return;
@@ -157,11 +159,31 @@ const ManageFenceTable = ({ fences: propFences, onUpdateFences: propOnUpdateFenc
         throw new Error(`Failed to fetch geofences: ${response.statusText}`);
       }
 
-      const result = await response.json();
+      const result: GetGeofenceListResponse = await response.json();
+
       const geofenceList = result.data || [];
-      
-      const transformedFences = geofenceList.map((item: GeofenceModel) => transformGeofenceData(item));
+      const vehicleList = result.vehicleList || [];
+
+      setAvailableVehicles(vehicleList);
+
+      const transformedFences = geofenceList.map(
+        (item: GeofenceModel) => transformGeofenceData(item)
+      );
+
       setFences(transformedFences);
+
+      const types = [
+        'All Types',
+        ...Array.from(
+          new Set(
+            vehicleList
+              .map(v => v.type)
+              .filter(Boolean)
+          )
+        ),
+      ];
+
+      setVehicleTypes(types);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch geofences';
       setError(errorMessage);
@@ -484,11 +506,15 @@ const ManageFenceTable = ({ fences: propFences, onUpdateFences: propOnUpdateFenc
         open={isCopyDialogOpen}
         onOpenChange={setIsCopyDialogOpen}
         fence={selectedFence}
+        vehicles={availableVehicles}
+        vehicleTypes={vehicleTypes}
       />
       <EditFenceDialog
         open={isEditDialogOpen}
         onOpenChange={setIsEditDialogOpen}
         fence={selectedFence}
+        vehicles={availableVehicles}
+        vehicleTypes={vehicleTypes}
         onSave={handleSaveEdit}
       />
     </>
