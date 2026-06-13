@@ -123,11 +123,10 @@ const ManageFenceTable = ({ fences: propFences, onUpdateFences: propOnUpdateFenc
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedFence, setSelectedFence] = useState<GeofenceShape | null>(null);
   const [fences, setFences] = useState<GeofenceShape[]>(propFences || []);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [availableVehicles, setAvailableVehicles] = useState<VehicleListItem[]>([]);
   const [vehicleTypes, setVehicleTypes] = useState<string[]>(['All Types']);
-
+  const [loading, setLoading] = useState(false);
   // Fetch geofences from API
   const fetchGeofences = useCallback(async () => {
     try {
@@ -274,17 +273,17 @@ const ManageFenceTable = ({ fences: propFences, onUpdateFences: propOnUpdateFenc
     setIsEditDialogOpen(true);
   };
 
+  // After edit dialog calls onSave (API already called inside dialog),
+  // refresh the list from server to stay in sync.
   const handleSaveEdit = (updatedFence: GeofenceShape) => {
+    // Optimistically update local state
     const updatedFences = fences.map(f => f.id === updatedFence.id ? updatedFence : f);
     setFences(updatedFences);
     if (propOnUpdateFences) {
       propOnUpdateFences(updatedFences);
     }
-    toast({
-      variant: 'success',
-      title: "Fence Updated",
-      description: `Geofence "${updatedFence.name}" has been updated.`,
-    });
+    // Refresh from server to stay in sync
+    fetchGeofences();
   };
 
   const handleDelete = (fenceId: number) => {
@@ -311,6 +310,14 @@ const ManageFenceTable = ({ fences: propFences, onUpdateFences: propOnUpdateFenc
 
   return (
     <>
+      {loading && (
+        <div className="absolute inset-0 bg-white/70 z-10 flex items-center justify-center rounded-md">
+          <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-lg shadow">
+            <div className="animate-spin h-4 w-4 border-2 border-black border-t-transparent rounded-full"></div>
+            <span className="text-sm">Please wait ...</span>
+          </div>
+        </div>
+      )}
       <Card className="shadow-sm overflow-hidden">
         <CardHeader className="px-6 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
@@ -508,6 +515,8 @@ const ManageFenceTable = ({ fences: propFences, onUpdateFences: propOnUpdateFenc
         fence={selectedFence}
         vehicles={availableVehicles}
         vehicleTypes={vehicleTypes}
+        onSuccess={fetchGeofences}
+        setParentLoading={setLoading}
       />
       <EditFenceDialog
         open={isEditDialogOpen}
@@ -516,6 +525,8 @@ const ManageFenceTable = ({ fences: propFences, onUpdateFences: propOnUpdateFenc
         vehicles={availableVehicles}
         vehicleTypes={vehicleTypes}
         onSave={handleSaveEdit}
+        onSuccess={fetchGeofences}
+        setParentLoading={setLoading}
       />
     </>
   );
