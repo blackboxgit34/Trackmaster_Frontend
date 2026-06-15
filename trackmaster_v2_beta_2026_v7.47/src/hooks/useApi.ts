@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import type { LiveVehicleStatus, VehicleStatus } from '@/types';
 import type { DataTableRequestModel } from '@/hooks/DataTableRequestModel';
 import { downloadReport } from "@/lib/utils";
+import { boolean } from 'zod';
 
 type VehicleOption = {
   label: string;
@@ -146,6 +147,51 @@ type GetVehicleStatusParams = {
   requestModel?: DataTableRequestModel;
   Status?: string | null;
 };
+const getVehicleStatus = (
+  speed: number,
+  overspeed: number,
+  lastUpdated: string,
+  ignitionStatus: boolean
+): string => {
+  const hoursDiff =
+    (new Date().getTime() - new Date(lastUpdated).getTime()) /
+    (1000 * 60 * 60);
+
+    debugger
+  switch (true) {
+    case hoursDiff > 6:
+      return 'Unreachable';
+
+    case speed > 0 &&
+      speed >= overspeed &&
+      ignitionStatus ===true:
+      return 'High Speed';
+
+    case speed > 0 &&
+      speed < overspeed &&
+      ignitionStatus === true:
+      return 'Moving';
+
+    case speed <= 0 &&
+      ignitionStatus === true:
+      return 'Ignition On';
+
+    case speed <= 0 &&
+      ignitionStatus === false:
+      return 'Parked';
+
+    case speed > 0 &&
+      ignitionStatus === false:
+      return 'Towed';
+
+    default:
+      return 'Unknown';
+  }
+};
+
+
+
+
 
 export const getVehicleStatusList = async ({
   pageName,
@@ -169,7 +215,7 @@ export const getVehicleStatusList = async ({
     params.append("CustId", String(CustId));
   }
 
-  const url = `${API_BASE_URL}/VehicleStatus/GetvehicleStatusList?${params}`;
+  const url = `${API_BASE_URL}/Reports/GetLiveStatus?${params}`;
 
   const response = await fetch(url);
 
@@ -179,13 +225,23 @@ export const getVehicleStatusList = async ({
 
   const result = await response.json();
 
+  debugger
   return result.data.map((item: any) => ({
-    
+
     id: item.bbid,
     vehicleNo: item.vehName,
     type: item.type || 'Other',
     model: item.model || '',
-    status: item.vehicleStatus as VehicleStatus,
+      
+    // status: item.vehicleStatus as VehicleStatus,
+
+    status: getVehicleStatus(
+      Number(item.speed),
+      Number(item.overspeed ?? 60),
+      item.lastUpdated,
+        item.ignitionStatus
+    ) as VehicleStatus,
+
     lat: Number(item.lat),
     lng: Number(item.lng),
     speed: Number(item.speed),
@@ -197,27 +253,28 @@ export const getVehicleStatusList = async ({
     fuelConsumed: 0,
     gsmSignal: item.gsmSignal,
     deviceSignal: item.gpsAntConStatus,
-    GPSFix: item.gpsFix,
-    battery:  item.vehBattery,
-    gpsDeviceBattery:  item.deviceBattery,
+    GPSFix: item.hasfix,
+    battery: item.vehBattery,
+    gpsDeviceBattery: item.deviceBattery,
     alerts: 0,
     errors: 0,
     alertDetails: [],
     errorDetails: [],
     distance: 0,
-    fuelLevel: 0,
+    fuelLevel: item.remainingFuelLevel || 0,
     fuelLiters: 0,
     fuelTankCapacity: 0,
     engineTemp: 0,
     hydraulicTemp: 0,
-    acStatus: 'Off',
-    ignitionStatus: item.IgnitionStatus,
+    acStatus: item.acSignal,
+    ignitionStatus: item.ignitionStatus,
     totalRecords: item.totalRecords || 0,
-    driverName:item.driverName || '',
-    mob_no:item.mob_no||'',
+    driverName: item.driverName || '',
+    mob_no: item.mob_no || '',
 
   }));
 };
+
 
 // ==============================
 // EXCEL PDF & EXCEL DOWNLOAD HOOK
@@ -233,7 +290,7 @@ export const useReportDownload = (
       endpoint,
       requestModel,
       "Excel",
-       extraParams
+      extraParams
     );
   };
 
@@ -242,7 +299,7 @@ export const useReportDownload = (
       endpoint,
       requestModel,
       "Pdf",
-       extraParams
+      extraParams
     );
   };
 
@@ -252,5 +309,6 @@ export const useReportDownload = (
   };
 };
 //===========================================
+
 
 

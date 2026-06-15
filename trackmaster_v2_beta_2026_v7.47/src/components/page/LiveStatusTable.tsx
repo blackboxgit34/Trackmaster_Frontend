@@ -278,6 +278,10 @@ const BatteryIcon = ({ battery, tooltipLabel }: { battery: number; tooltipLabel:
       text = 'Unknown';
       color = 'text-muted-foreground';
   }
+
+  
+
+
   return (
     <TooltipProvider>
       <Tooltip>
@@ -307,7 +311,7 @@ const BatteryIconDevice = ({ deviceBattery, tooltipLabel }: { deviceBattery: num
       color = 'text-muted-foreground';
       break;
 
-    case deviceBattery == 3:
+    case deviceBattery == 33:
       Icon = BatteryFull;
       text = 'High';
       color = 'text-green-500';
@@ -419,63 +423,63 @@ const LiveStatusTable = () => {
     sortColumn: 'vehname',
     sortDirection: 'asc' as 'asc' | 'desc',
   });
- const getLiveStatusData = async (silent = false) => {
-  const requestId = ++latestRequestRef.current;
+  const getLiveStatusData = async (silent = false) => {
+    const requestId = ++latestRequestRef.current;
 
-  try {
-    // Loader only manual load
-    if (!silent) {
-      setLoading(true);
+    try {
+      // Loader only manual load
+      if (!silent) {
+        setLoading(true);
+      }
+
+      const authData = JSON.parse(
+        localStorage.getItem("trackmaster-auth") || "{}"
+      );
+
+      const requestModel: DataTableRequestModel = {
+        CustId: authData?.custId || 0,
+        iDisplayStart:
+          pagination.pageIndex * pagination.pageSize,
+        iDisplayLength: pagination.pageSize,
+        sSearch: searchTerm || "",
+        sortColumn: sortConfig.sortColumn,
+        sortDirection: sortConfig.sortDirection,
+        Status: statusFromUrl || null,
+      };
+
+      const response = await getVehicleStatusList({
+        pageName: "livestatus",
+        CustId: authData?.custId || 0,
+        requestModel,
+      });
+
+      if (requestId !== latestRequestRef.current) return;
+
+      if (response) {
+        setLiveStatus(response);
+
+        const total =
+          response?.length > 0
+            ? response[0]?.totalRecords || 0
+            : 0;
+
+        setTotalRecords(total);
+      }
+
+    } catch (error) {
+      console.log(error);
+
+    } finally {
+
+      if (
+        requestId === latestRequestRef.current &&
+        !silent
+      ) {
+        setLoading(false);
+      }
+
     }
-
-    const authData = JSON.parse(
-      localStorage.getItem("trackmaster-auth") || "{}"
-    );
-
-    const requestModel: DataTableRequestModel = {
-      CustId: authData?.custId || 0,
-      iDisplayStart:
-        pagination.pageIndex * pagination.pageSize,
-      iDisplayLength: pagination.pageSize,
-      sSearch: searchTerm || "",
-      sortColumn: sortConfig.sortColumn,
-      sortDirection: sortConfig.sortDirection,
-      Status: statusFromUrl || null,
-    };
-
-    const response = await getVehicleStatusList({
-      pageName: "livestatus",
-      CustId: authData?.custId || 0,
-      requestModel,
-    });
-
-    if (requestId !== latestRequestRef.current) return;
-
-    if (response) {
-      setLiveStatus(response);
-
-      const total =
-        response?.length > 0
-          ? response[0]?.totalRecords || 0
-          : 0;
-
-      setTotalRecords(total);
-    }
-
-  } catch (error) {
-    console.log(error);
-
-  } finally {
-
-    if (
-      requestId === latestRequestRef.current &&
-      !silent
-    ) {
-      setLoading(false);
-    }
-
-  }
-};
+  };
 
   const handleSort = (column: string) => {
     setSortConfig(prev => ({
@@ -489,36 +493,36 @@ const LiveStatusTable = () => {
     setPagination(p => ({ ...p, pageIndex: 0 }));
   };
 
-useEffect(() => {
+  useEffect(() => {
 
-  const interval = setInterval(() => {
+    const interval = setInterval(() => {
 
-    // silent refresh
-    getLiveStatusData(true);
+      // silent refresh
+      getLiveStatusData(true);
 
-  }, 60000);
+    }, 60000);
 
-  return () => clearInterval(interval);
+    return () => clearInterval(interval);
 
-}, [
-  pagination.pageIndex,
-  pagination.pageSize,
-  searchTerm,
-  statusFromUrl,
-  sortConfig
-]);
+  }, [
+    pagination.pageIndex,
+    pagination.pageSize,
+    searchTerm,
+    statusFromUrl,
+    sortConfig
+  ]);
 
-useEffect(() => {
+  useEffect(() => {
 
-  getLiveStatusData(false);
+    getLiveStatusData(false);
 
-}, [
-  pagination.pageIndex,
-  pagination.pageSize,
-  searchTerm,
-  statusFromUrl,
-  sortConfig
-]);
+  }, [
+    pagination.pageIndex,
+    pagination.pageSize,
+    searchTerm,
+    statusFromUrl,
+    sortConfig
+  ]);
   useEffect(() => {
     setPagination(prev => ({
       pageIndex: 0,
@@ -891,12 +895,12 @@ useEffect(() => {
                             </span>
 
                             <span className="font-semibold">
-                              {/* {' '}
-                              {row.curentFuelLevel || 0} L */}
-                              {
+                              {/* {' '} */}
+                              {row.fuelLevel || 0} L
+                              {/* {
                                 fuelMap[row.bbid]
                                   ?.remainingFuelLevel || 0
-                              } L
+                              } L */}
                             </span>
                           </div>
                         </TableCell>
@@ -980,7 +984,7 @@ useEffect(() => {
                         </TableCell>
 
                         {/* SAME ANALYSIS UI */}
-                       <TableCell className="px-6 py-4 whitespace-nowrap text-center">
+                        <TableCell className="px-6 py-4 whitespace-nowrap text-center">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="icon">
