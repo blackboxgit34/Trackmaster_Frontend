@@ -53,6 +53,7 @@ import {
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import Papa from 'papaparse';
+import { useVehicleList } from '@/hooks/useApi';
 
 const geofenceViolationsData = alertsData.Geofencing.map((alert, index) => ({
   id: `GV-${index + 1}`,
@@ -284,6 +285,7 @@ const GeofenceViolations = () => {
     (page + 1) * rowsPerPage,
     sortedData.length
   );
+  const { data: vehicleList } = useVehicleList();
 
   return (
     <Card className="shadow-sm overflow-hidden">
@@ -322,12 +324,7 @@ const GeofenceViolations = () => {
             </DropdownMenuContent>
           </DropdownMenu>
           <DateRangePicker date={date} setDate={handleDateChange} />
-          <VehicleCombobox
-            vehicles={vehicles}
-            value={selectedVehicle}
-            onChange={setSelectedVehicle}
-            className="w-full sm:w-[180px]"
-          />
+          <VehicleCombobox vehicles={[{ label: 'All Vehicles', value: 'all' }, ...(vehicleList ?? []),]} value={selectedVehicle} onChange={setSelectedVehicle} className="w-full sm:w-[180px]" />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button className="bg-black text-white hover:bg-black/90 w-full sm:w-auto">
