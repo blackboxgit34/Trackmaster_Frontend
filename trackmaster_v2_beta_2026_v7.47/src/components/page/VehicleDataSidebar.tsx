@@ -19,7 +19,7 @@ import type { LiveVehicleStatus, VehicleStatus } from '@/types';
 import FuelGauge from './FuelGauge';
 import { useToast } from '@/hooks/use-toast';
 import ShareLocationDialog from './ShareLocationDialog';
-import { format, parse , isValid } from 'date-fns';
+import { format, parse , isValid, parseISO } from 'date-fns';
 import BlackboxSignalIcon from '../icons/BlackboxSignalIcon';
 import SpeedGauge from './SpeedGauge';
 import { getIconUrl } from '@/lib/map-utils';
@@ -37,7 +37,7 @@ const DeviceSignalIcon = ({
   let color = 'text-muted-foreground';
   let Icon;
   switch (true) {
-    case gpsAntConStatus === 1 && GPSFix === 2:
+    case gpsAntConStatus === 15 && GPSFix === 1:
       Icon = Signal;
       text = 'Full GPS Signal';
       color = 'text-green-500';
@@ -222,7 +222,7 @@ const BatteryIconDevice = ({ deviceBattery, tooltipLabel }: { deviceBattery: num
       color = 'text-muted-foreground';
       break;
     
-    case deviceBattery == 3:
+    case deviceBattery == 33:
       Icon = BatteryFull;
       text = 'High';
       color = 'text-green-500';
@@ -374,23 +374,43 @@ const formatDuration = (minutes: number) => {
 
 const playbackDate = useMemo(() => {
   try {
-    const parsedDate = parse(
-      vehicle.lastUpdated,
-      'M/d/yyyy hh:mm:ss a',
-      new Date()
-    );
+    const parsedDate = parseISO(vehicle.lastUpdated);
 
     if (!isValid(parsedDate)) {
       console.error('Invalid date:', vehicle.lastUpdated);
       return todayStr;
     }
+    debugger
 
+    console.log(parsedDate );
+    console.log(vehicle.lastUpdated);
     return format(parsedDate, 'yyyy-MM-dd');
   } catch (e) {
     console.error('Failed to parse date for playback link:', e);
     return todayStr;
   }
 }, [vehicle.lastUpdated, todayStr]);
+
+// const playbackDate = useMemo(() => {
+//   try {
+//     const parsedDate = parse(
+//       vehicle.lastUpdated,
+//       'M/d/yyyy hh:mm:ss a',
+//       new Date()
+//     );
+
+//     console.log(vehicle.lastUpdated);
+//     if (!isValid(parsedDate)) {
+//       console.error('Invalid date:', vehicle.lastUpdated);
+//       return todayStr;
+//     }
+
+//     return format(parsedDate, 'yyyy-MM-dd');
+//   } catch (e) {
+//     console.error('Failed to parse date for playback link:', e);
+//     return todayStr;
+//   }
+// }, [vehicle.lastUpdated, todayStr]);
 
   const stopTimeHours = Math.floor(vehicle.stoppageTime);
   // const stopTimeMinutes = Math.round((vehicle.idlingHours - stopTimeHours) * 60);
@@ -517,7 +537,7 @@ const playbackDate = useMemo(() => {
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <button>
-                        <AirVent className={cn("h-5 w-5", vehicle.acStatus === 'On' ? 'text-green-500' : 'text-red-500')} />
+                        <AirVent className={cn("h-5 w-5", vehicle.acStatus === true ? 'text-green-500' : 'text-red-500')} />
                       </button>
                     </TooltipTrigger>
                     <TooltipContent>
@@ -532,7 +552,7 @@ const playbackDate = useMemo(() => {
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <button>
-                        <Power className={cn("h-5 w-5", vehicle.ignitionStatus === 'On' ? 'text-green-500' : 'text-red-500')} />
+                        <Power className={cn("h-5 w-5", vehicle.ignitionStatus === true ? 'text-green-500' : 'text-red-500')} />
                       </button>
                     </TooltipTrigger>
                     <TooltipContent>

@@ -32,8 +32,8 @@ export interface LiveVehicleStatus {
   engineTemp: number;
   hydraulicTemp: number;
   sensorStatus: 'ok' | 'disconnected' | 'dirt_error';
-  acStatus: 'On' | 'Off';
-  ignitionStatus: 'On' | 'Off';
+  acStatus: true |  false;
+  ignitionStatus: true |  false;
   driverName: string;
   mob_no: string;
   totalRecords: number;
@@ -41,6 +41,7 @@ export interface LiveVehicleStatus {
     lat: number;
     lng: number;
   }[];
+
 }
 
 export interface Vehicle {

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle, } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -110,49 +110,81 @@ const transformGeofenceData = (apiData: GeofenceModel): GeofenceShape => {
   };
 };
 
+// Map our local sort key to the column name the API expects.
+// Adjust values to match what your backend accepts.
+const SORT_COLUMN_MAP: Partial<Record<GeofenceDataKey, string>> = {
+  name: 'fenceName',
+  type: 'fenceType',
+  machines: 'vehicleCount',
+  isActive: 'isActive',
+};
+
+const DEBOUNCE_MS = 400;
+
 const ManageFenceTable = ({ fences: propFences, onUpdateFences: propOnUpdateFences }: ManageFenceTableProps) => {
-  const [page, setPage] = useState(0);
+  // ── Server-driven state ──────────────────────────────────────────────────
+  const [page, setPage] = useState(0);                       // 0-based page index
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [sortConfig, setSortConfig] = useState<{
-    key: GeofenceDataKey;
-    direction: 'asc' | 'desc';
-  }>({ key: 'name', direction: 'asc' });
-  const { toast } = useToast();
+  const [sortConfig, setSortConfig] = useState<{ key: GeofenceDataKey; direction: 'asc' | 'desc' }>({
+    key: 'name',
+    direction: 'asc',
+  });
   const [searchTerm, setSearchTerm] = useState('');
-  const [isCopyDialogOpen, setIsCopyDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [selectedFence, setSelectedFence] = useState<GeofenceShape | null>(null);
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+
+  // ── Data state ───────────────────────────────────────────────────────────
   const [fences, setFences] = useState<GeofenceShape[]>(propFences || []);
-  const [loading, setLoading] = useState(true);
+  const [totalCount, setTotalCount] = useState(0);            // total records on server
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [availableVehicles, setAvailableVehicles] = useState<VehicleListItem[]>([]);
   const [vehicleTypes, setVehicleTypes] = useState<string[]>(['All Types']);
 
-  // Fetch geofences from API
+  // ── Dialog state ─────────────────────────────────────────────────────────
+  const [isCopyDialogOpen, setIsCopyDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [selectedFence, setSelectedFence] = useState<GeofenceShape | null>(null);
+
+  const { toast } = useToast();
+
+  // ── Debounce search input ────────────────────────────────────────────────
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchTerm(value);
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    debounceTimer.current = setTimeout(() => {
+      setDebouncedSearch(value);
+      setPage(0);                                             // reset to first page on new search
+    }, DEBOUNCE_MS);
+  };
+
+  // ── Core fetch (all params sent to server) ───────────────────────────────
   const fetchGeofences = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const custId = JSON.parse(localStorage.getItem("trackmaster-auth") ?? "{}")?.custId;
-
+      const custId = JSON.parse(localStorage.getItem('trackmaster-auth') ?? '{}')?.custId;
       if (!custId) {
-        setError("Customer ID not found");
+        setError('Customer ID not found');
         return;
       }
 
+      const sortColumn = SORT_COLUMN_MAP[sortConfig.key] ?? 'fenceName';
+
       const queryParams = new URLSearchParams({
         CustId: String(custId),
-        iDisplayStart: '0',
-        iDisplayLength: '1000',
-        sSearch: '',
+        iDisplayStart: String(page * rowsPerPage),           // offset
+        iDisplayLength: String(rowsPerPage),                 // page size
+        sSearch: debouncedSearch,                            // search term
+        sSortColumn: sortColumn,                             // column to sort by
+        sSortDir: sortConfig.direction,                      // 'asc' | 'desc'
       });
 
       const response = await fetch(`${API_BASE_URL}/Geofence/GetGeofenceList?${queryParams}`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
       });
 
       if (!response.ok) {
@@ -165,161 +197,124 @@ const ManageFenceTable = ({ fences: propFences, onUpdateFences: propOnUpdateFenc
       const vehicleList = result.vehicleList || [];
 
       setAvailableVehicles(vehicleList);
+      setTotalCount(result.count ?? 0);                      // total matching records
 
-      const transformedFences = geofenceList.map(
-        (item: GeofenceModel) => transformGeofenceData(item)
-      );
-
-      setFences(transformedFences);
+      setFences(geofenceList.map(transformGeofenceData));
 
       const types = [
         'All Types',
-        ...Array.from(
-          new Set(
-            vehicleList
-              .map(v => v.type)
-              .filter(Boolean)
-          )
-        ),
+        ...Array.from(new Set(vehicleList.map(v => v.type).filter(Boolean))),
       ];
-
       setVehicleTypes(types);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch geofences';
       setError(errorMessage);
       console.error('Error fetching geofences:', err);
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: errorMessage,
-      });
+      toast({ variant: 'destructive', title: 'Error', description: errorMessage });
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [page, rowsPerPage, sortConfig, debouncedSearch, toast]);  // re-fetch whenever any param changes
 
-  // Fetch data on component mount
+  // Fetch on mount and whenever fetch dependencies change
   useEffect(() => {
     fetchGeofences();
   }, [fetchGeofences]);
 
-  // If component receives prop fences, use those instead
+  // Sync prop fences if parent provides them (overrides server data)
   useEffect(() => {
     if (propFences && propFences.length > 0) {
       setFences(propFences);
     }
   }, [propFences]);
 
-  const filteredAndSortedData = useMemo(() => {
-    const filteredData = fences.filter(item =>
-      Object.values(item).some(value =>
-        String(value).toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    );
-
-    const sortableData = [...filteredData];
-    if (sortConfig) {
-      sortableData.sort((a, b) => {
-        const aValue = a[sortConfig.key];
-        const bValue = b[sortConfig.key];
-        if (Array.isArray(aValue) && Array.isArray(bValue)) {
-          return sortConfig.direction === 'asc' ? aValue.length - bValue.length : bValue.length - aValue.length;
-        }
-        if (aValue == null || bValue == null) return 0;
-        if (aValue < bValue) {
-          return sortConfig.direction === 'asc' ? -1 : 1;
-        }
-        if (aValue > bValue) {
-          return sortConfig.direction === 'asc' ? 1 : -1;
-        }
-        return 0;
-      });
-    }
-    return sortableData;
-  }, [sortConfig, searchTerm, fences]);
-
+  // ── Sorting ──────────────────────────────────────────────────────────────
   const handleSort = (key: GeofenceDataKey) => {
-    let direction: 'asc' | 'desc' = 'asc';
-    if (sortConfig.key === key && sortConfig.direction === 'asc') {
-      direction = 'desc';
-    }
-    setSortConfig({ key, direction });
+    setSortConfig(prev => ({
+      key,
+      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc',
+    }));
     setPage(0);
   };
 
-  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(event.target.value);
-    setPage(0);
-  };
+  // ── Pagination helpers ───────────────────────────────────────────────────
+  const totalPages = Math.ceil(totalCount / rowsPerPage);
+  const firstRowIndex = totalCount === 0 ? 0 : page * rowsPerPage + 1;
+  const lastRowIndex = Math.min((page + 1) * rowsPerPage, totalCount);
 
-  const paginatedData = filteredAndSortedData.slice(
-    page * rowsPerPage,
-    page * rowsPerPage + rowsPerPage
-  );
-
-  const totalPages = Math.ceil(filteredAndSortedData.length / rowsPerPage);
-  const firstRowIndex = page * rowsPerPage + 1;
-  const lastRowIndex = Math.min(
-    (page + 1) * rowsPerPage,
-    filteredAndSortedData.length
-  );
-
-  const handleCopy = (fence: GeofenceShape) => {
-    setSelectedFence(fence);
-    setIsCopyDialogOpen(true);
-  };
-
-  const handleEdit = (fence: GeofenceShape) => {
-    setSelectedFence(fence);
-    setIsEditDialogOpen(true);
-  };
+  // ── Action handlers ──────────────────────────────────────────────────────
+  const handleCopy = (fence: GeofenceShape) => { setSelectedFence(fence); setIsCopyDialogOpen(true); };
+  const handleEdit = (fence: GeofenceShape) => { setSelectedFence(fence); setIsEditDialogOpen(true); };
 
   const handleSaveEdit = (updatedFence: GeofenceShape) => {
-    const updatedFences = fences.map(f => f.id === updatedFence.id ? updatedFence : f);
-    setFences(updatedFences);
-    if (propOnUpdateFences) {
-      propOnUpdateFences(updatedFences);
-    }
-    toast({
-      variant: 'success',
-      title: "Fence Updated",
-      description: `Geofence "${updatedFence.name}" has been updated.`,
-    });
+    // Optimistically update local slice, then re-sync with server
+    setFences(prev => prev.map(f => f.id === updatedFence.id ? updatedFence : f));
+    if (propOnUpdateFences) propOnUpdateFences(fences.map(f => f.id === updatedFence.id ? updatedFence : f));
+    fetchGeofences();
   };
 
-  const handleDelete = (fenceId: number) => {
-    const fenceToDelete = fences.find(f => f.id === fenceId);
-    const updatedFences = fences.filter(f => f.id !== fenceId);
-    setFences(updatedFences);
-    if (propOnUpdateFences) {
-      propOnUpdateFences(updatedFences);
+  const handleDelete = async (fenceId: number) => {
+    try {
+      setLoading(true);
+
+      const fence = fences.find(f => f.id === fenceId);
+
+      if (!fence) {
+        throw new Error("Fence not found");
+      }
+
+      const response = await fetch(`${API_BASE_URL}/Geofence/DeleteGeofence?FenceId=${fenceId}&Type=${fence.type === "circle" ? "Circle" : "Polygon"}`);
+
+      if (!response.ok) {
+        throw new Error("Failed to delete geofence");
+      }
+
+      const result = await response.json();
+
+      if (result === true || result.success === true) {
+        toast({
+          title: "Success",
+          description: `${fence.name} deleted successfully.`,
+        });
+
+        fetchGeofences();
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to delete geofence",
+      });
+    } finally {
+      setLoading(false);
     }
-    toast({
-      title: "Fence Deleted",
-      description: `Geofence "${fenceToDelete?.name}" has been deleted.`,
-      variant: "destructive",
-    });
   };
 
   const handleToggleStatus = (fenceId: number) => {
-    const updatedFences = fences.map(f => f.id === fenceId ? { ...f, isActive: !f.isActive } : f);
-    setFences(updatedFences);
-    if (propOnUpdateFences) {
-      propOnUpdateFences(updatedFences);
-    }
+    const updated = fences.map(f => f.id === fenceId ? { ...f, isActive: !f.isActive } : f);
+    setFences(updated);
+    if (propOnUpdateFences) propOnUpdateFences(updated);
   };
 
+  // ── Render ───────────────────────────────────────────────────────────────
   return (
     <>
+      {loading && (
+        <div className="absolute inset-0 bg-white/70 z-10 flex items-center justify-center rounded-md">
+          <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-lg shadow">
+            <div className="animate-spin h-4 w-4 border-2 border-black border-t-transparent rounded-full" />
+            <span className="text-sm">Please wait ...</span>
+          </div>
+        </div>
+      )}
       <Card className="shadow-sm overflow-hidden">
         <CardHeader className="px-6 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <CardTitle className="text-xl font-bold text-foreground">
-              Manage Geofences
-            </CardTitle>
-            <CardDescription>
-              View, copy, or delete existing geofences for your vehicles.
-            </CardDescription>
+            <CardTitle className="text-xl font-bold text-foreground">Manage Geofences</CardTitle>
+            <CardDescription>View, copy, or delete existing geofences for your vehicles.</CardDescription>
           </div>
           <div className="relative w-full sm:max-w-xs">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -331,12 +326,8 @@ const ManageFenceTable = ({ fences: propFences, onUpdateFences: propOnUpdateFenc
             />
           </div>
         </CardHeader>
+
         <CardContent className="p-0">
-          {loading && (
-            <div className="flex items-center justify-center h-64">
-              <p className="text-muted-foreground">Loading geofences...</p>
-            </div>
-          )}
           {error && (
             <div className="flex items-center justify-center h-64">
               <div className="text-center">
@@ -345,7 +336,7 @@ const ManageFenceTable = ({ fences: propFences, onUpdateFences: propOnUpdateFenc
               </div>
             </div>
           )}
-          {!loading && !error && (
+          {!error && (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
@@ -355,11 +346,7 @@ const ManageFenceTable = ({ fences: propFences, onUpdateFences: propOnUpdateFenc
                         key={header.key as string}
                         onClick={() => handleSort(header.key)}
                         isSorted={sortConfig.key === header.key}
-                        sortDirection={
-                          sortConfig.key === header.key
-                            ? sortConfig.direction
-                            : undefined
-                        }
+                        sortDirection={sortConfig.key === header.key ? sortConfig.direction : undefined}
                       >
                         {header.label}
                       </SortableHeader>
@@ -370,18 +357,15 @@ const ManageFenceTable = ({ fences: propFences, onUpdateFences: propOnUpdateFenc
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {paginatedData.length === 0 ? (
+                  {fences.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={headers.length + 1} className="text-center py-8 text-muted-foreground">
-                        No geofences found
+                        {loading ? 'Loading geofences...' : 'No geofences found'}
                       </TableCell>
                     </TableRow>
                   ) : (
-                    paginatedData.map((row) => (
-                      <TableRow
-                        key={row.id}
-                        className="bg-card hover:bg-muted/50 border-b"
-                      >
+                    fences.map((row) => (
+                      <TableRow key={row.id} className="bg-card hover:bg-muted/50 border-b">
                         <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-foreground">
                           {row.name}
                         </TableCell>
@@ -417,9 +401,7 @@ const ManageFenceTable = ({ fences: propFences, onUpdateFences: propOnUpdateFenc
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
                                   <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction onClick={() => handleDelete(row.id)}>
-                                    Delete
-                                  </AlertDialogAction>
+                                  <AlertDialogAction onClick={() => handleDelete(row.id)}>Delete</AlertDialogAction>
                                 </AlertDialogFooter>
                               </AlertDialogContent>
                             </AlertDialog>
@@ -433,17 +415,15 @@ const ManageFenceTable = ({ fences: propFences, onUpdateFences: propOnUpdateFenc
             </div>
           )}
         </CardContent>
+
         <CardFooter className="flex items-center justify-between py-3 px-6 border-t bg-card">
-          {!loading && !error && (
+          {!error && (
             <>
               <div className="flex items-center gap-2">
                 <span className="text-sm text-muted-foreground">Rows per page:</span>
                 <Select
                   value={String(rowsPerPage)}
-                  onValueChange={(value) => {
-                    setRowsPerPage(Number(value));
-                    setPage(0);
-                  }}
+                  onValueChange={(value) => { setRowsPerPage(Number(value)); setPage(0); }}
                 >
                   <SelectTrigger className="w-20 h-9 text-sm focus:ring-2 focus:ring-primary">
                     <SelectValue placeholder={rowsPerPage} />
@@ -457,43 +437,19 @@ const ManageFenceTable = ({ fences: propFences, onUpdateFences: propOnUpdateFenc
               </div>
               <div className="flex items-center gap-4">
                 <span className="text-sm text-muted-foreground">
-                  {filteredAndSortedData.length === 0 ? '0' : `${firstRowIndex}-${lastRowIndex}`} of {filteredAndSortedData.length}
+                  {totalCount === 0 ? '0' : `${firstRowIndex}-${lastRowIndex}`} of {totalCount}
                 </span>
                 <div className="flex items-center gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-muted-foreground hover:bg-accent"
-                    onClick={() => setPage(0)}
-                    disabled={page === 0}
-                  >
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setPage(0)} disabled={page === 0}>
                     <ChevronsLeft className="h-4 w-4" />
                   </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-muted-foreground hover:bg-accent"
-                    onClick={() => setPage(page - 1)}
-                    disabled={page === 0}
-                  >
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setPage(p => p - 1)} disabled={page === 0}>
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-muted-foreground hover:bg-accent"
-                    onClick={() => setPage(page + 1)}
-                    disabled={page >= totalPages - 1}
-                  >
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setPage(p => p + 1)} disabled={page >= totalPages - 1}>
                     <ChevronRight className="h-4 w-4" />
                   </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-muted-foreground hover:bg-accent"
-                    onClick={() => setPage(totalPages - 1)}
-                    disabled={page >= totalPages - 1}
-                  >
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setPage(totalPages - 1)} disabled={page >= totalPages - 1}>
                     <ChevronsRight className="h-4 w-4" />
                   </Button>
                 </div>
@@ -502,12 +458,15 @@ const ManageFenceTable = ({ fences: propFences, onUpdateFences: propOnUpdateFenc
           )}
         </CardFooter>
       </Card>
+
       <CopyFenceDialog
         open={isCopyDialogOpen}
         onOpenChange={setIsCopyDialogOpen}
         fence={selectedFence}
         vehicles={availableVehicles}
         vehicleTypes={vehicleTypes}
+        onSuccess={fetchGeofences}
+        setParentLoading={setLoading}
       />
       <EditFenceDialog
         open={isEditDialogOpen}
@@ -516,6 +475,8 @@ const ManageFenceTable = ({ fences: propFences, onUpdateFences: propOnUpdateFenc
         vehicles={availableVehicles}
         vehicleTypes={vehicleTypes}
         onSave={handleSaveEdit}
+        onSuccess={fetchGeofences}
+        setParentLoading={setLoading}
       />
     </>
   );
