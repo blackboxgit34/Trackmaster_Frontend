@@ -1,0 +1,28 @@
+<svg width="1200" height="1200" viewBox="0 0 1200 1200" xmlns="http://www.w3.org/2000/svg">
+  <g fill="none" stroke="#FF0000" stroke-width="72" stroke-linecap="round" stroke-linejoin="round">
+    
+    <!-- Battery body (slightly taller) -->
+    <rect x="60" y="360" width="1080" height="660" rx="96" ry="96"/>
+
+    <!-- Left terminal -->
+    <path d="M192 340 V280
+             C192 248 216 224 248 224
+             H344
+             C376 224 400 248 400 280
+             V340"/>
+
+    <!-- Right terminal -->
+    <path d="M792 340 V280
+             C792 248 816 224 848 224
+             H944
+             C976 224 1000 248 1000 280
+             V340"/>
+
+    <!-- Minus sign (centered vertically) -->
+    <line x1="192" y1="700" x2="400" y2="700"/>
+
+    <!-- Plus sign (centered vertically) -->
+    <line x1="792" y1="700" x2="1000" y2="700"/>
+    <line x1="896" y1="600" x2="896" y2="800"/>
+  </g>
+</svg>
