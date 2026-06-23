@@ -1,9 +1,10 @@
-import { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Info } from 'lucide-react';
 import { vehicleSummary } from '@/data/mockData';
+import { API_BASE_URL } from '@/config/Api';
 import {
   Tooltip,
   TooltipContent,
@@ -14,39 +15,82 @@ import { useSettings } from '@/context/SettingsContext';
 
 const CurrentFuelLevel = () => {
   const [activeLevel, setActiveLevel] = useState<string | null>(null);
+  const [fuelData, setFuelData] = useState({
+  totalCnt: 0,
+  lowLevel: 0,
+  normalFuel: 0,
+});
   const { fuelThresholds } = useSettings();
 
-  const fuelCounts = useMemo(() => {
-    const counts = {
-      normal: 0,
-      low: 0,
-    };
-
-    vehicleSummary.forEach((vehicle) => {
-      if (vehicle.fuelLiters < fuelThresholds.low) {
-        counts.low += 1;
-      } else {
-        counts.normal += 1;
-      }
-    });
-
-    return counts;
-  }, [fuelThresholds.low]);
+    const fuelCounts = useMemo(
+  () => ({
+    normal: fuelData.normalFuel,
+    low: fuelData.lowLevel,
+  }),
+  [fuelData]
+);
 
   const chartData = useMemo(
-    () => [
-      { name: `Normal Fuel (>=${fuelThresholds.low}L)`, shortName: 'Normal Fuel', value: fuelCounts.normal, color: '#22c55e', slug: 'normal' },
-      { name: `Low Fuel (<${fuelThresholds.low}L)`, shortName: 'Low Fuel', value: fuelCounts.low, color: '#ef4444', slug: 'low' },
-    ],
-    [fuelCounts, fuelThresholds.low]
-  );
-
-  const totalVehicles = useMemo(() => chartData.reduce((acc, curr) => acc + curr.value, 0), [chartData]);
-
+  () => [
+    {
+      name: "Normal Fuel",
+      shortName: "Normal Fuel",
+      value: fuelCounts.normal,
+      color: "#22c55e",
+      slug: "normal",
+    },
+    {
+      name: "Low Fuel",
+      shortName: "Low Fuel",
+      value: fuelCounts.low,
+      color: "#ef4444",
+      slug: "low",
+    },
+  ],
+  [fuelCounts]
+);
+const totalVehicles = fuelData.normalFuel + fuelData.lowLevel;
   const activeEntry = useMemo(
     () => (activeLevel ? chartData.find((d) => d.name === activeLevel) : null),
     [activeLevel, chartData]
   );
+
+  // ================= API CALL =================
+    const auth = JSON.parse(localStorage.getItem("trackmaster-auth") || "{}");
+  const custId = auth.custId;
+  const [loading, setLoading] = useState(true);
+  const fetchFuelDashboard = useCallback(async () => {
+  setLoading(true);
+debugger;
+  try {
+    const url = `${API_BASE_URL}/FuelDashboard/FuelDashboardData?custid=${custId}`;
+
+    const response = await fetch(url);
+    const json = await response.json();
+
+    console.log("API Response:", json);
+
+    setFuelData({
+      totalCnt: json.totalGenset || 0,
+      lowLevel: json.lowLevel || 0,
+      normalFuel: json.normalLevel || 0,
+    });
+  } catch (error) {
+    console.error(error);
+  } finally {
+    setLoading(false);
+  }
+}, [custId]);
+
+useEffect(() => {
+    fetchFuelDashboard();
+  }, [fetchFuelDashboard]);
+  if (loading) return <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+    <div className="bg-white p-4 rounded-lg flex items-center gap-3 shadow-lg">
+      <div className="animate-spin h-5 w-5 border-2 border-black border-t-transparent rounded-full"></div>
+      <span>Please wait...</span>
+    </div>
+  </div>; 
 
   return (
     <Card className="h-full flex flex-col">
