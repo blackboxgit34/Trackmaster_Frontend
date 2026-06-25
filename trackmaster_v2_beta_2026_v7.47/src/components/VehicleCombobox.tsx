@@ -15,11 +15,10 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from '@/components/ui/popover';   
+} from '@/components/ui/popover';
 
 interface VehicleComboboxProps {
-  // vehicles: { id: string; name: string }[];
-    vehicles: { label: string; value: string }[];  // ✅ FIXED
+  vehicles: { id: string; name: string }[];
   value: string;
   onChange: (value: string) => void;
   className?: string;
@@ -33,10 +32,7 @@ export function VehicleCombobox({
 }: VehicleComboboxProps) {
   const [open, setOpen] = React.useState(false);
 
-  // const selectedVehicle = vehicles.find((vehicle) => vehicle.id === value);
-const selectedVehicle = vehicles.find(
-  (vehicle) => vehicle.value === value
-);
+  const selectedVehicle = vehicles.find((vehicle) => vehicle.id === value);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -49,8 +45,7 @@ const selectedVehicle = vehicles.find(
         >
           <Car className="mr-2 h-4 w-4 text-muted-foreground" />
           <span className="flex-1 text-left truncate">
-            {/* {selectedVehicle ? selectedVehicle.name : 'All Vehicles'} */}
-             {selectedVehicle ? selectedVehicle.label : 'All Vehicles'}
+            {selectedVehicle ? selectedVehicle.name : 'All Vehicles'}
           </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
@@ -60,7 +55,7 @@ const selectedVehicle = vehicles.find(
           <CommandInput placeholder="Search vehicle..." />
           <CommandList>
             <CommandEmpty>No vehicle found.</CommandEmpty>
-            {/* <CommandGroup>
+            <CommandGroup>
               {vehicles.map((vehicle) => (
                 <CommandItem
                   key={vehicle.id}
@@ -77,29 +72,6 @@ const selectedVehicle = vehicles.find(
                     )}
                   />
                   {vehicle.name}
-                </CommandItem>
-              ))}
-            </CommandGroup> */}
-
-                    <CommandGroup>
-              {vehicles.map((vehicle) => (
-                <CommandItem
-                  key={vehicle.value}
-                  value={vehicle.label}
-                  onSelect={() => {
-                    onChange(vehicle.value);
-                    setOpen(false);
-                  }}
-                >
-                  <Check
-                    className={cn(
-                      'mr-2 h-4 w-4',
-                      value === vehicle.value
-                        ? 'opacity-100'
-                        : 'opacity-0'
-                    )}
-                  />
-                  {vehicle.label}
                 </CommandItem>
               ))}
             </CommandGroup>
