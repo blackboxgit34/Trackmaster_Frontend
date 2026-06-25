@@ -13,9 +13,10 @@ import {
   Pause,
 } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
-import { subWeeks, format, parse, differenceInMinutes } from 'date-fns';
+import { subWeeks, subDays, format, parse, differenceInMinutes, differenceInDays, startOfDay, endOfDay } from 'date-fns';
 import DistanceReportToolbar from './reports/DistanceReportToolbar';
 import { useDistanceReportData } from '@/hooks/useDistanceReportData';
+import { API_BASE_URL } from '@/config/Api';
 import type { ReportSortKey } from '@/types/report-types';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -231,6 +232,15 @@ const DistanceReport2 = () => {
   const [pageIndex, setPageIndex] = useState(0);
   const itemsPerPage = 5;
 
+  const [totalVehicleCount, setTotalVehicleCount] = useState(0);
+  interface PeriodStats {
+    currentTotal: number;
+    currentActive: number;
+    prevTotal: number;
+    prevActive: number;
+  }
+  const [allPeriodsStats, setAllPeriodsStats] = useState<PeriodStats | null>(null);
+
   // Fixed sort config — no sort UI in card view
   const sortConfig = useMemo(
     () => ({ key: 'vehicleId' as ReportSortKey, direction: 'asc' as const }),
@@ -250,11 +260,117 @@ const DistanceReport2 = () => {
     setPageIndex(0);
   }, [dateRange, selectedVehicle]);
 
+  // Fetch total fleet count once
+  useEffect(() => {
+    const fetchVehicleCount = async () => {
+      try {
+        const auth = JSON.parse(localStorage.getItem('trackmaster-auth') || '{}');
+        const custId = auth.custId;
+        const res = await fetch(`${API_BASE_URL}/Dashboard/GetAllVehicleListByCustId?userid=${custId}`);
+        const data = await res.json();
+        setTotalVehicleCount((data.data || []).length);
+      } catch (e) {
+        console.error('Vehicle count fetch error', e);
+      }
+    };
+    fetchVehicleCount();
+  }, []);
+
+  // Fetch current + previous period aggregate totals for KPI comparison
+  useEffect(() => {
+    if (!dateRange?.from || !dateRange?.to) return;
+
+    const fetchPeriodStats = async () => {
+      try {
+        const auth = JSON.parse(localStorage.getItem('trackmaster-auth') || '{}');
+        const custId = Number(auth.custId ?? 0) || 0;
+
+        const curFrom = startOfDay(dateRange.from!);
+        const curTo = endOfDay(dateRange.to!);
+        const dayCount = differenceInDays(curTo, curFrom) + 1;
+        const prevFrom = subDays(curFrom, dayCount);
+        const prevTo = subDays(curFrom, 1);
+
+        const makeBody = (from: Date, to: Date) =>
+          JSON.stringify({
+            CustId: custId,
+            iDisplayStart: 0,
+            iDisplayLength: 9999,
+            sortColumn: 'BBID',
+            sortDirection: 'asc',
+            sSearch: selectedVehicle && selectedVehicle !== 'all' ? selectedVehicle : undefined,
+            beginDate: format(from, 'yyyy-MM-dd HH:mm:ss'),
+            endDate: format(to, 'yyyy-MM-dd HH:mm:ss'),
+          });
+
+        const headers = { 'Content-Type': 'application/json' };
+        const url = `${API_BASE_URL}/Reports/GetDistanceReportData`;
+
+        const [curRes, prevRes] = await Promise.all([
+          fetch(url, { method: 'POST', headers, body: makeBody(curFrom, curTo) }),
+          fetch(url, { method: 'POST', headers, body: makeBody(prevFrom, endOfDay(prevTo)) }),
+        ]);
+
+        const [curJson, prevJson] = await Promise.all([curRes.json(), prevRes.json()]);
+
+        const sumDist = (items: any[]) =>
+          items.reduce((s: number, item: any) => {
+            const d = parseFloat(String(item.Distance ?? item.distance ?? 0).replace(',', '.'));
+            return s + (isFinite(d) ? d : 0);
+          }, 0);
+
+        const curItems = Array.isArray(curJson.data) ? curJson.data : [];
+        const prevItems = Array.isArray(prevJson.data) ? prevJson.data : [];
+
+        setAllPeriodsStats({
+          currentTotal: sumDist(curItems),
+          currentActive: Number(curJson.count) || curItems.length,
+          prevTotal: sumDist(prevItems),
+          prevActive: Number(prevJson.count) || prevItems.length,
+        });
+      } catch (e) {
+        console.error('Period stats fetch error', e);
+      }
+    };
+
+    fetchPeriodStats();
+  }, [dateRange, selectedVehicle]);
+
   // ── Compute KPI Stats ─────────────────────────────────────────────────────
   const stats = useMemo(() => {
-    const totalDistance = reportRows.reduce((sum, r) => sum + (r.distance || 0), 0);
-    const activeCount = reportRows.length;
+    const totalDistance = allPeriodsStats?.currentTotal
+      ?? reportRows.reduce((sum, r) => sum + (r.distance || 0), 0);
+    const activeCount = allPeriodsStats?.currentActive ?? totalRows;
     const avgDistPerVehicle = activeCount > 0 ? totalDistance / activeCount : 0;
+
+    // Day count label
+    const dayCount =
+      dateRange?.from && dateRange?.to
+        ? differenceInDays(endOfDay(dateRange.to), startOfDay(dateRange.from)) + 1
+        : 7;
+
+    // % change helpers
+    const pctChange = (curr: number, prev: number): number | null =>
+      prev > 0 ? ((curr - prev) / prev) * 100 : null;
+    const fmtPct = (pct: number | null) =>
+      pct === null ? '—' : `${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%`;
+
+    const prevTotal = allPeriodsStats?.prevTotal ?? 0;
+    const prevActive = allPeriodsStats?.prevActive ?? 0;
+    const prevAvg = prevActive > 0 ? prevTotal / prevActive : 0;
+
+    const distPct = allPeriodsStats ? pctChange(totalDistance, prevTotal) : null;
+    const avgPct = allPeriodsStats ? pctChange(avgDistPerVehicle, prevAvg) : null;
+
+    // Fleet utilization
+    const fleetUtil =
+      totalVehicleCount > 0
+        ? Math.min(100, Math.round((activeCount / totalVehicleCount) * 100))
+        : 0;
+    const fleetSubtitle =
+      totalVehicleCount > 0
+        ? `${activeCount} of ${totalVehicleCount} vehicles active`
+        : `${activeCount} vehicles active`;
 
     // Peak hour from session start times
     const hourBuckets: Record<number, number> = {};
@@ -281,9 +397,9 @@ const DistanceReport2 = () => {
         label: 'Total Distance',
         value: totalDistance.toLocaleString('en-IN', { maximumFractionDigits: 1 }),
         unit: 'km',
-        trend: '—',
-        trendUp: true,
-        subtitle: 'selected period',
+        trend: fmtPct(distPct),
+        trendUp: distPct === null || distPct >= 0,
+        subtitle: `vs previous ${dayCount} days`,
         icon: Route,
         accent: '#2563eb',
         iconBg: 'bg-blue-50',
@@ -293,8 +409,8 @@ const DistanceReport2 = () => {
         label: 'Avg Distance / Vehicle',
         value: avgDistPerVehicle.toLocaleString('en-IN', { maximumFractionDigits: 1 }),
         unit: 'km',
-        trend: '—',
-        trendUp: true,
+        trend: fmtPct(avgPct),
+        trendUp: avgPct === null || avgPct >= 0,
         subtitle: 'per active vehicle',
         icon: Gauge,
         accent: '#7c3aed',
@@ -302,12 +418,16 @@ const DistanceReport2 = () => {
         iconColor: 'text-violet-600',
       },
       {
-        label: 'Active Vehicles',
-        value: String(totalRows),
+        label: 'Fleet Utilization',
+        value: `${fleetUtil}%`,
         unit: '',
-        trend: '—',
+        trend: fmtPct(
+          allPeriodsStats && totalVehicleCount > 0
+            ? pctChange(activeCount / totalVehicleCount, prevActive / totalVehicleCount)
+            : null,
+        ),
         trendUp: true,
-        subtitle: 'vehicles with trips',
+        subtitle: fleetSubtitle,
         icon: Car,
         accent: '#f59e0b',
         iconBg: 'bg-amber-50',
@@ -326,7 +446,7 @@ const DistanceReport2 = () => {
         iconColor: 'text-emerald-600',
       },
     ];
-  }, [reportRows, detailRows, totalRows]);
+  }, [reportRows, detailRows, totalRows, allPeriodsStats, totalVehicleCount, dateRange]);
 
   // ── Build per-vehicle report data ─────────────────────────────────────────
   const reportData: VehicleReportRow[] = useMemo(() => {
