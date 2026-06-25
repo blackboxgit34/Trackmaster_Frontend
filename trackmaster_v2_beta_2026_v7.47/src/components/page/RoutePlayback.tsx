@@ -93,7 +93,7 @@ const RoutePlayback = () => {
         // Adapt to whatever shape the API returns; adjust field names as needed
         const list: VehicleOption[] = (data?.data || data || []).map((v: any) => ({
           id: String(v.bbid ?? v.id ?? v.vehicleId),
-          name: String(v.vehicleName ?? v.name ?? v.bbid),
+          name: String(v.vehName ?? v.vehicleName ?? v.name ?? v.bbid),
           type: v.vehicleType ?? v.type ?? '',
         }));
         setVehicles(list);
