@@ -37,6 +37,14 @@ export interface LiveVehicleStatus {
   driverName: string;
   mob_no: string;
   totalRecords: number;
+  addons: {
+    fuel: 'working' | 'error' | 'uninstalled';
+    temp: 'working' | 'error' | 'uninstalled';
+    ac: 'working' | 'error' | 'uninstalled';
+    door: 'working' | 'error' | 'uninstalled';
+    lid: 'working' | 'error' | 'uninstalled';
+    immobilizer: 'working' | 'error' | 'uninstalled';
+  };
   latLongHistory?: {
     lat: number;
     lng: number;

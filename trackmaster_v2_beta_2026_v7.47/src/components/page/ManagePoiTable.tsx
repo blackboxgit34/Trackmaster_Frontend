@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { API_BASE_URL } from "@/config/Api";
 import {
   Table,
   TableBody,
@@ -92,12 +93,28 @@ const SortableHeader = ({
 
 interface ManagePoiTableProps {
   pois: Poi[];
-  onUpdatePois: (pois: Poi[]) => void;
-}
+  totalCount: number;
+  page: number;
+  rowsPerPage: number;
 
-const ManagePoiTable = ({ pois, onUpdatePois }: ManagePoiTableProps) => {
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  onPageChange: (page: number) => void;
+  onRowsPerPageChange: (size: number) => void;
+  onSearch: (search: string) => void;
+
+  onUpdatePois: (pois: Poi[]) => void;
+} 
+
+const ManagePoiTable = ({
+  pois,
+  totalCount,
+  page,
+  rowsPerPage,
+  onPageChange,
+  onRowsPerPageChange,
+  onSearch,
+  onUpdatePois,
+}: ManagePoiTableProps) => {
+  
   const [sortConfig, setSortConfig] = useState<{
     key: PoiDataKey;
     direction: 'asc' | 'desc';
@@ -107,29 +124,7 @@ const ManagePoiTable = ({ pois, onUpdatePois }: ManagePoiTableProps) => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedPoi, setSelectedPoi] = useState<Poi | null>(null);
 
-  const filteredAndSortedData = useMemo(() => {
-    const filteredData = pois.filter(item =>
-      Object.values(item).some(value =>
-        String(value).toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    );
-
-    const sortableData = [...filteredData];
-    if (sortConfig) {
-      sortableData.sort((a, b) => {
-        const aValue = a[sortConfig.key];
-        const bValue = b[sortConfig.key];
-        if (aValue < bValue) {
-          return sortConfig.direction === 'asc' ? -1 : 1;
-        }
-        if (aValue > bValue) {
-          return sortConfig.direction === 'asc' ? 1 : -1;
-        }
-        return 0;
-      });
-    }
-    return sortableData;
-  }, [sortConfig, searchTerm, pois]);
+  const filteredAndSortedData = pois;
 
   const handleSort = (key: PoiDataKey) => {
     let direction: 'asc' | 'desc' = 'asc';
@@ -137,25 +132,28 @@ const ManagePoiTable = ({ pois, onUpdatePois }: ManagePoiTableProps) => {
       direction = 'desc';
     }
     setSortConfig({ key, direction });
-    setPage(0);
+    onPageChange(0);
   };
 
-  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(event.target.value);
-    setPage(0);
-  };
+  const handleSearchChange = (
+  event: React.ChangeEvent<HTMLInputElement>
+) => {
+  const value = event.target.value;
 
-  const paginatedData = filteredAndSortedData.slice(
-    page * rowsPerPage,
-    page * rowsPerPage + rowsPerPage
-  );
+  setSearchTerm(value);
 
-  const totalPages = Math.ceil(filteredAndSortedData.length / rowsPerPage);
+  onSearch(value);
+};
+
+ const paginatedData = pois;
+
+  const totalPages =
+  Math.ceil(totalCount / rowsPerPage);
   const firstRowIndex = page * rowsPerPage + 1;
   const lastRowIndex = Math.min(
-    (page + 1) * rowsPerPage,
-    filteredAndSortedData.length
-  );
+  (page + 1) * rowsPerPage,
+  totalCount
+);
 
   const handleEdit = (poi: Poi) => {
     setSelectedPoi(poi);
@@ -166,17 +164,40 @@ const ManagePoiTable = ({ pois, onUpdatePois }: ManagePoiTableProps) => {
     onUpdatePois(pois.map(p => p.id === updatedPoi.id ? updatedPoi : p));
   };
 
-  const handleDelete = (poiId: string) => {
-    const poiToDelete = pois.find(p => p.id === poiId);
-    if (poiToDelete) {
-      onUpdatePois(pois.filter(p => p.id !== poiId));
+ const handleDelete = async (poi: Poi) => {
+  try {
+    const response = await fetch(
+    `${API_BASE_URL}/Geofence/EditPoi?id=${poi.id}&action=DELETE`,
+    {
+      method: "POST",
+    }
+   );
+
+    const result = await response.json();
+
+    if (result.success) {
+      onUpdatePois(pois.filter(p => p.id !== poi.id));
+
       toast({
         title: "POI Deleted",
-        description: `Point of Interest "${poiToDelete.poiName}" has been deleted.`,
+        description: result.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Error",
+        description: result.message || "Delete failed",
         variant: "destructive",
       });
     }
-  };
+  } catch (error) {
+    toast({
+      title: "Error",
+      description: "Server error while deleting POI",
+      variant: "destructive",
+    });
+  }
+};
 
   return (
     <>
@@ -234,10 +255,10 @@ const ManagePoiTable = ({ pois, onUpdatePois }: ManagePoiTableProps) => {
                       {row.poiName}
                     </TableCell>
                     <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground font-mono">
-                      {row.latitude.toFixed(4)}
+                      {Number(row.latitude).toFixed(4)}
                     </TableCell>
                     <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground font-mono">
-                      {row.longitude.toFixed(4)}
+                      {Number(row.longitude).toFixed(4)}
                     </TableCell>
                     <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                       {row.radius}
@@ -262,7 +283,7 @@ const ManagePoiTable = ({ pois, onUpdatePois }: ManagePoiTableProps) => {
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                               <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDelete(row.id)}>
+                              <AlertDialogAction onClick={() => handleDelete(row)}>
                                 Delete
                               </AlertDialogAction>
                             </AlertDialogFooter>
@@ -282,8 +303,8 @@ const ManagePoiTable = ({ pois, onUpdatePois }: ManagePoiTableProps) => {
             <Select
               value={String(rowsPerPage)}
               onValueChange={(value) => {
-                setRowsPerPage(Number(value));
-                setPage(0);
+              onRowsPerPageChange(Number(value));
+              onPageChange(0);
               }}
             >
               <SelectTrigger className="w-20 h-9 text-sm focus:ring-2 focus:ring-primary">
@@ -298,14 +319,14 @@ const ManagePoiTable = ({ pois, onUpdatePois }: ManagePoiTableProps) => {
           </div>
           <div className="flex items-center gap-4">
             <span className="text-sm text-muted-foreground">
-              {firstRowIndex}-{lastRowIndex} of {filteredAndSortedData.length}
+              {firstRowIndex}-{lastRowIndex} of {totalCount}
             </span>
             <div className="flex items-center gap-1">
               <Button
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8 text-muted-foreground hover:bg-accent"
-                onClick={() => setPage(0)}
+                onClick={() => onPageChange(0)}
                 disabled={page === 0}
               >
                 <ChevronsLeft className="h-4 w-4" />
@@ -314,7 +335,7 @@ const ManagePoiTable = ({ pois, onUpdatePois }: ManagePoiTableProps) => {
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8 text-muted-foreground hover:bg-accent"
-                onClick={() => setPage(page - 1)}
+                onClick={() => onPageChange(page - 1)}
                 disabled={page === 0}
               >
                 <ChevronLeft className="h-4 w-4" />
@@ -323,7 +344,7 @@ const ManagePoiTable = ({ pois, onUpdatePois }: ManagePoiTableProps) => {
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8 text-muted-foreground hover:bg-accent"
-                onClick={() => setPage(page + 1)}
+                onClick={() => onPageChange(page + 1)}
                 disabled={page >= totalPages - 1}
               >
                 <ChevronRight className="h-4 w-4" />
@@ -332,7 +353,7 @@ const ManagePoiTable = ({ pois, onUpdatePois }: ManagePoiTableProps) => {
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8 text-muted-foreground hover:bg-accent"
-                onClick={() => setPage(totalPages - 1)}
+                onClick={() => onPageChange(totalPages - 1)}
                 disabled={page >= totalPages - 1}
               >
                 <ChevronsRight className="h-4 w-4" />
