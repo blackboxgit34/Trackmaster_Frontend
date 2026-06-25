@@ -467,7 +467,7 @@ const RoutePlayback = () => {
           onVehicleChange={setSelectedVehicle}
           selectedDate={selectedDate}
           onDateChange={setSelectedDate}
-          vehicles={vehicles.map(v => ({ id: v.id, name: v.name }))}
+          vehicles={vehicles.map(v => ({ label: v.name, value: v.id }))}
           vehicleName={summary.vehicleName}
           totalDistance={summary.totalDistance}
           drivingTime={summary.drivingTime}
@@ -480,7 +480,7 @@ const RoutePlayback = () => {
         <div className="w-[350px] flex-shrink-0 bg-card border-r flex flex-col h-full overflow-hidden p-4">
           <div className="flex items-center gap-2">
             <VehicleCombobox
-              vehicles={vehicles.map(v => ({ id: v.id, name: v.name }))}
+              vehicles={vehicles.map(v => ({ label: v.name, value: v.id }))}
               value={selectedVehicle || ''}
               onChange={setSelectedVehicle}
               className="w-full"

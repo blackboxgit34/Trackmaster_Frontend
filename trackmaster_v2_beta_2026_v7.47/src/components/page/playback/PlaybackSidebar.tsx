@@ -15,7 +15,7 @@ interface PlaybackSidebarProps {
   onVehicleChange: (vehicleId: string) => void;
   selectedDate: Date | undefined;
   onDateChange: (date: Date | undefined) => void;
-  vehicles: { id: string; name: string }[];
+  vehicles: { label: string; value: string }[];
   vehicleName: string;
   totalDistance: number;
   drivingTime: number; // in minutes
