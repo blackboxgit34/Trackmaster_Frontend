@@ -249,7 +249,7 @@ const DistanceCovered = ({
 
   /* ---------------- UI ---------------- */
   return (
-    <Card className="relative flex h-full flex-col overflow-hidden">
+    <Card className="relative flex flex-col overflow-hidden">
 
       {/* HEADER */}
       <CardHeader>
@@ -418,19 +418,22 @@ const DistanceCovered = ({
       <CardContent className="relative flex-1 p-6 pt-0">
 
         {loading ? (
-          <div className="flex h-[320px] items-center justify-center">
+          <div className="flex h-[250px] items-center justify-center">
             <div className="h-6 w-6 animate-spin rounded-full border-2 border-orange-500 border-t-transparent" />
           </div>
         ) : (
           <div className="flex">
 
             {/* Y AXIS */}
-            <div style={{ width: 60, height: 400 }}>
+            <div style={{ width: 70, height: 250, overflow: 'hidden' }}>
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={[]}>
+                <BarChart data={[{}]} margin={{ top: 20, right: 0, left: 0, bottom: 65 }}>
                   <YAxis
-                    domain={yDomain}
+                    type="number"
+                    domain={[0, yDomain[1]]}
                     tick={{ fontSize: 12 }}
+                    tickLine={false}
+                    axisLine={false}
                   />
                 </BarChart>
               </ResponsiveContainer>
@@ -440,25 +443,26 @@ const DistanceCovered = ({
             <div
               ref={scrollContainerRef}
               className="flex-1 overflow-x-hidden"
+              style={{ overflowY: 'hidden' }}
             >
               <div
                 style={{
-                  width: `${Math.max(chartData.length * 8, 100)}%`,
-                  height: 400
+                  width: `${Math.max(chartData.length * 40, 200)}px`,
+                  height: 250
                 }}
               >
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
-                      data={chartData}
-                      margin={{ top: 20, right: 20, left: 10, bottom: 80 }}
-                    >
-
+                    data={chartData}
+                    margin={{ top: 20, right: 20, left: 0, bottom: 5 }}
+                  >
                     <XAxis
                       dataKey="vehicle"
                       angle={-45}
                       textAnchor="end"
                       interval={0}
-                      tick={{ fontSize: 12 }}
+                      tick={{ fontSize: 11 }}
+                      height={60}
                     />
 
                     <YAxis hide domain={yDomain} />
@@ -469,7 +473,7 @@ const DistanceCovered = ({
                       dataKey="distance"
                       fill="hsl(34, 94%, 50%)"
                       radius={[6, 6, 0, 0]}
-                      maxBarSize={40}
+                      barSize={10}
                     />
                   </BarChart>
                 </ResponsiveContainer>

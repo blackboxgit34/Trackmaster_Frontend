@@ -31,7 +31,7 @@ interface ProcessedPoint {
   location: string;
   speed: number;
   timestamp: string;
-  engineStatus: string;
+  engineStatus: 'ON' | 'OFF';
   distance: number;
 }
 
