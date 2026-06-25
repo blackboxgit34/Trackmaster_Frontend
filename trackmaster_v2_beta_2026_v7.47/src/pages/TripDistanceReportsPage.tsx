@@ -4,9 +4,11 @@ import DistanceReportTable from '@/components/page/DistanceReportTable';
 import NotFound from '@/components/page/NotFound';
 import MonthlyDayWiseDistanceReport from '@/components/page/MonthlyDayWiseDistanceReport';
 import TripReport from '@/components/page/TripReport';
+import DistanceReport2 from '@/components/page/DistanceReport2';
 
 const tabs = [
   { value: 'distance', label: 'Distance Report', component: <DistanceReportTable /> },
+  { value: 'distance-2', label: 'Distance Report 2', component: <DistanceReport2 /> },
   { value: 'trip-report', label: 'Trip Report', component: <TripReport /> },
   { value: 'monthly-day-wise', label: 'Monthly Day-Wise Distance Report', component: <MonthlyDayWiseDistanceReport /> },
 ];

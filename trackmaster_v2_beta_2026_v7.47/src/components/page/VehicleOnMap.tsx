@@ -25,7 +25,7 @@ import MapComponent from './MapComponent';
 import { LoadScript } from '@react-google-maps/api';
 import { GOOGLE_MAPS_API_KEY } from '@/config/maps';
 import { useApi } from '@/hooks/useApi';
-import { getIconUrl } from '@/lib/map-utils';
+import { getIconUrl, getMinimalDotUrl, getVehiclePngUrl } from '@/lib/map-utils';
 import type {LiveVehicleStatus,VehicleStatus} from '@/types';
 import { getVehicleStatusList } from '@/hooks/useApi';
 import { fetchAndCalculatePlaybackData } from '@/lib/playback-utils';
@@ -154,49 +154,52 @@ useEffect(() => {
       return matchesSearch && matchesStatus && matchesType;
     });
   }, [liveStatusData, searchTerm, selectedStatuses, selectedTypes]);
-
-  
-  
-const handleSelectVehicle = async (
-  vehicleId: string
-) => {
-
-  try {
-
+const handleSelectVehicle = useCallback((vehicleId: string) => {
     setSelectedVehicleId(vehicleId);
-
     setIsDataSidebarOpen(true);
+  }, []);
+  
+  
+// const handleSelectVehicle = async (
+//   vehicleId: string
+// ) => {
 
-    // Find selected vehicle
-    const selectedVehicle =
-      liveStatusData?.find(
-        (v) => v.id === vehicleId
-      );
+//   try {
 
-    if (!selectedVehicle?.bbid) return;
+//     setSelectedVehicleId(vehicleId);
 
-    // Playback API calculation
-    const playbackStats =
-      await fetchAndCalculatePlaybackData(
-        selectedVehicle.bbid,
-        new Date()
-      );
+//     setIsDataSidebarOpen(true);
 
-    setVehicleExtraDetails({
-      distance: playbackStats.totalDistance || 0,
-      workingHours: playbackStats.drivingTime || 0,
-      idlingHours: playbackStats.totalIdlingTime || 0,
-      stoppageTime: playbackStats.totalStoppageTime || 0,
-    });
-  } catch (error) {
+//     // Find selected vehicle
+//     const selectedVehicle =
+//       liveStatusData?.find(
+//         (v) => v.id === vehicleId
+//       );
 
-    console.error(
-      'Failed to fetch playback data',
-      error
-    );
+//     if (!selectedVehicle?.bbid) return;
 
-  }
-};
+//     // Playback API calculation
+//     const playbackStats =
+//       await fetchAndCalculatePlaybackData(
+//         selectedVehicle.bbid,
+//         new Date()
+//       );
+
+//     setVehicleExtraDetails({
+//       distance: playbackStats.totalDistance || 0,
+//       workingHours: playbackStats.drivingTime || 0,
+//       idlingHours: playbackStats.totalIdlingTime || 0,
+//       stoppageTime: playbackStats.totalStoppageTime || 0,
+//     });
+//   } catch (error) {
+
+//     console.error(
+//       'Failed to fetch playback data',
+//       error
+//     );
+
+//   }
+// };
   const handleStatusChange = (status: VehicleStatus) => {
     setSelectedStatuses(prev => {
       const newSet = new Set(prev);
@@ -224,21 +227,6 @@ const handleSelectVehicle = async (
   const handleClearFilters = () => {
     setSelectedStatuses(new Set());
     setSelectedTypes(new Set());
-  };
-
-  const getStatusBadgeClasses = (status: VehicleStatus) => {
-    const styles: Record<VehicleStatus, string> = {
-      Moving: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
-      Parked: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
-      'Ignition On': 'bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-300',
-      Unreachable: 'bg-gray-100 text-gray-800 dark:bg-gray-800/50 dark:text-gray-300',
-      'Battery Disconnect': 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300',
-      Breakdown: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
-      'High Speed': 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300',
-      Towed: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
-      Idle: 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300',
-    };
-    return styles[status] || 'bg-gray-100 text-gray-800 dark:bg-gray-800/50 dark:text-gray-300';
   };
 
   const handleMapLoad = useCallback((map: google.maps.Map) => {
@@ -362,27 +350,31 @@ const handleSelectVehicle = async (
                     </div>
                   )}
                   {filteredVehicles.map(vehicle => (
-                    
-                    <div
-                    
+                      <div
                       key={vehicle.id}
                       onClick={() => handleSelectVehicle(vehicle.id)}
                       className={cn(
-                        "flex items-center gap-3 p-2 rounded-md cursor-pointer transition-colors",
-                        selectedVehicleId === vehicle.id ? 'bg-primary/10' : 'hover:bg-accent'
-                      )}
-                    >
-                      <img
-                        src={getIconUrl(vehicle.type, vehicle.status)}
-                        alt={vehicle.type}
-                        className="h-10 w-10 object-contain"
-                      />
+                      "flex items-center gap-3 p-2 rounded-md cursor-pointer transition-colors",
+                      selectedVehicleId === vehicle.id ? 'bg-primary/10' : 'hover:bg-accent'
+                    )}
+                  >
+                    
+                       <img
+                      src={getVehiclePngUrl(vehicle.type)}
+                      alt={vehicle.type}
+                      className="h-10 w-10 object-contain"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?q=80&w=200&auto=format&fit=crop';
+                      }}
+                    />
                       <div className="flex-1">
                         <p className="font-semibold text-sm">{vehicle.vehicleNo}</p>
                         {/* <p className="text-xs text-muted-foreground">{vehicle.model} / {vehicle.type}</p> */}
                         <p className="text-xs text-muted-foreground">{vehicle.type}</p>
                       </div>
-                      <Badge className={cn('border-transparent', getStatusBadgeClasses(vehicle.status))}>{vehicle.status}</Badge>
+                     <div title={vehicle.status}>
+                      <img src={getMinimalDotUrl(vehicle.status)} alt={vehicle.status} className="w-6 h-6 drop-shadow-sm" />
+                    </div>
                     </div>
                   ))}
                 </div>
@@ -395,27 +387,27 @@ const handleSelectVehicle = async (
           {/* Map */}
           <div className="flex-1 relative bg-muted overflow-hidden">
             <MapComponent
-              machines={filteredVehicles}
-              selectedMachineId={selectedVehicleId}
-              onMarkerClick={handleSelectVehicle}
-              showLabels={showLabels}
-              autoZoom={autoZoom}
-              showPois={showPois}
-              showFences={showFences}
-              onMapLoad={handleMapLoad}
-            />
-            <MapControls
-              showLabels={showLabels}
-              setShowLabels={setShowLabels}
-              autoRefresh={autoRefresh}
-              setAutoRefresh={setAutoRefresh}
-              autoZoom={autoZoom}
-              setAutoZoom={setAutoZoom}
-              showPois={showPois}
-              setShowPois={setShowPois}
-              showFences={showFences}
-              setShowFences={setShowFences}
-            />
+            machines={filteredVehicles}
+            selectedMachineId={selectedVehicleId}
+            onMarkerClick={handleSelectVehicle}
+            showLabels={showLabels}
+            autoZoom={autoZoom}
+            showPois={showPois}
+            showFences={showFences}
+            onMapLoad={handleMapLoad}
+          />
+          <MapControls
+            showLabels={showLabels}
+            setShowLabels={setShowLabels}
+            autoRefresh={autoRefresh}
+            setAutoRefresh={setAutoRefresh}
+            autoZoom={autoZoom}
+            setAutoZoom={setAutoZoom}
+            showPois={showPois}
+            setShowPois={setShowPois}
+            showFences={showFences}
+            setShowFences={setShowFences}
+          />
           </div>
 
           {/* Right Sidebar: Vehicle Data */}

@@ -97,25 +97,10 @@ export const calculateBearing = (lat1: number, lng1: number, lat2: number, lng2:
   return (bearingDeg + 360) % 360; // Normalize to 0-360
 };
 
-export const calculateHaversineDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-  const toRadian = (angle: number) => (Math.PI / 180) * angle;
-  const distance = (a: number, b: number) => (Math.PI / 180) * (a - b);
-  const RADIUS_OF_EARTH_IN_KM = 6371;
-
-  const dLat = distance(lat2, lat1);
-  const dLon = distance(lon2, lon1);
-
-  const lat1Rad = toRadian(lat1);
-  const lat2Rad = toRadian(lat2);
-
-  const a = Math.pow(Math.sin(dLat / 2), 2) + Math.pow(Math.sin(dLon / 2), 2) * Math.cos(lat1Rad) * Math.cos(lat2Rad);
-  const c = 2 * Math.asin(Math.sqrt(a));
-
-  return RADIUS_OF_EARTH_IN_KM * c;
-};
 
 const minimalDotCache = new Map<string, string>();
 export const getMinimalDotUrl = (status: VehicleStatus) => {
+  debugger
   if (!minimalDotCache.has(status)) {
     const color = getStatusColorHex(status);
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 122.88 122.88" width="32" height="32">
@@ -131,4 +116,21 @@ export const getMinimalDotUrl = (status: VehicleStatus) => {
     minimalDotCache.set(status, `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`);
   }
   return minimalDotCache.get(status)!;
+};
+
+export const calculateHaversineDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+  const toRadian = (angle: number) => (Math.PI / 180) * angle;
+  const distance = (a: number, b: number) => (Math.PI / 180) * (a - b);
+  const RADIUS_OF_EARTH_IN_KM = 6371;
+
+  const dLat = distance(lat2, lat1);
+  const dLon = distance(lon2, lon1);
+
+  const lat1Rad = toRadian(lat1);
+  const lat2Rad = toRadian(lat2);
+
+  const a = Math.pow(Math.sin(dLat / 2), 2) + Math.pow(Math.sin(dLon / 2), 2) * Math.cos(lat1Rad) * Math.cos(lat2Rad);
+  const c = 2 * Math.asin(Math.sqrt(a));
+
+  return RADIUS_OF_EARTH_IN_KM * c;
 };
