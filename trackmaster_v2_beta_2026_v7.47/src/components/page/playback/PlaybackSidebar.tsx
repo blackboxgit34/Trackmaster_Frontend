@@ -8,6 +8,7 @@ import { VehicleCombobox } from '@/components/VehicleCombobox';
 import { format } from 'date-fns';
 import PlaybackStatCard from './PlaybackStatCard';
 import type { TripPoint } from '@/data/routeData';
+import { API_BASE_URL } from '@/config/Api';
 
 interface PlaybackSidebarProps {
   selectedVehicle: string | null;
@@ -67,6 +68,51 @@ const PlaybackSidebar = ({
   path,
   unifiedStoppages,
 }: PlaybackSidebarProps) => {
+
+  const handlePrint = () => {
+    const appSidebar = document.querySelector('aside');
+    const appHeader = document.querySelector('header');
+
+    if (appSidebar) (appSidebar as HTMLElement).style.display = 'none';
+    if (appHeader) (appHeader as HTMLElement).style.display = 'none';
+
+    document.body.classList.add('printing');
+
+    setTimeout(() => {
+      window.print();
+      document.body.classList.remove('printing');
+      if (appSidebar) (appSidebar as HTMLElement).style.display = '';
+      if (appHeader) (appHeader as HTMLElement).style.display = '';
+    }, 500);
+  };
+
+  const handleExportExcel = async () => {
+    try {
+      if (!selectedVehicle || !selectedDate) return;
+
+      const date = format(selectedDate, 'yyyy-MM-dd');
+      const url =
+        `${API_BASE_URL}/VehicleStatus/GetPlaybackData` +
+        `?bbid=${selectedVehicle}` +
+        `&date=${date}` +
+        `&downloadType=Excel`;
+
+      const response = await fetch(url, { method: 'GET' });
+      if (!response.ok) throw new Error('Failed to download excel');
+
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = `RoutePlayback_${selectedVehicle}_${date}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch (error) {
+      console.error('Export Excel Error:', error);
+    }
+  };
 
   const { startEvent, intermediateEvents, endEvent } = useMemo(() => {
     if (path.length === 0) return { startEvent: null, intermediateEvents: [], endEvent: null };
@@ -154,8 +200,8 @@ const PlaybackSidebar = ({
       </div>
 
       <div className="p-3 border-t grid grid-cols-2 gap-2 shrink-0">
-        <Button variant="outline"><Printer className="h-4 w-4 mr-2" /> Print</Button>
-        <Button className="bg-brand-orange hover:bg-brand-orange/90"><Download className="h-4 w-4 mr-2" /> Export Excel</Button>
+        <Button variant="outline" onClick={handlePrint}><Printer className="h-4 w-4 mr-2" /> Print</Button>
+        <Button className="bg-brand-orange hover:bg-brand-orange/90" onClick={handleExportExcel}><Download className="h-4 w-4 mr-2" /> Export Excel</Button>
       </div>
     </div>
   );
