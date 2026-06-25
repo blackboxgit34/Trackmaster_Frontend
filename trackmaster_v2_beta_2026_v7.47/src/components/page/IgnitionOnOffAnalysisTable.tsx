@@ -11,8 +11,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import WhatsappPopup from '../WhatsappPopup';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
+
+import { DateRangePicker } from '@/components/ui/date-range-picker';//23.06.2026
 import { API_BASE_URL } from '@/config/Api';
 //import { downloadReport } from '@/hooks/downloadReport'; //
 import type { DataTableRequestModel } from '@/hooks/DataTableRequestModel';
@@ -52,12 +52,7 @@ const headers: { key: ReportDataKey; label: string }[] = [
   { key: 'totalIgnitionTime', label: 'Ignition On Duration' },
 ];
 
-const timeRanges = [
-  { label: 'Today', value: 'today' },
-  { label: 'Yesterday', value: 'yesterday' },
-  { label: 'Last Week', value: 'last-week' },
-  { label: 'Last Month', value: 'last-month' },
-];
+
 
 const IgnitionOnOffAnalysisTable = () => {
   const [page, setPage] = useState(0);
@@ -71,7 +66,7 @@ const IgnitionOnOffAnalysisTable = () => {
   const [search, setSearch] = useState("");
 
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
-  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  
 
   const toggleRow = (rowId: string) => {
     setExpandedRows((prev) => {
@@ -163,20 +158,7 @@ const IgnitionOnOffAnalysisTable = () => {
     getIgnitionReport();
   }, [page, rowsPerPage, selectedVehicle, date]);
 
-  const handleTimeRangeClick = (range: string) => {
-    const now = new Date();
-    let fromDate: Date;
-    let toDate: Date = now;
-    switch (range) {
-      case 'today': fromDate = now; break;
-      case 'yesterday': fromDate = subDays(now, 1); toDate = subDays(now, 1); break;
-      case 'last-week': fromDate = subWeeks(now, 1); break;
-      case 'last-month': fromDate = subMonths(now, 1); break;
-      default: fromDate = now;
-    }
-    setDate({ from: fromDate, to: toDate });
-    setIsCalendarOpen(false);
-  };
+ 
 
   const paginatedData = reportData;
   const totalPages = Math.ceil(totalRecords / rowsPerPage);
@@ -255,54 +237,11 @@ const IgnitionOnOffAnalysisTable = () => {
             <CardDescription>Detailed breakdown of vehicle ignition cycles.</CardDescription>
           </div>
           <div className="flex items-center gap-2 flex-wrap justify-start sm:justify-end">
-            <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  id="date"
-                  variant={'outline'}
-                  className={cn(
-                    'w-full sm:w-[260px] justify-start text-left font-normal',
-                    !date && 'text-muted-foreground'
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {date?.from ? (
-                    date.to ? (
-                      <>
-                        {format(date.from, 'LLL dd, y')} -{' '}
-                        {format(date.to, 'LLL dd, y')}
-                      </>
-                    ) : (
-                      format(date.from, 'LLL dd, y')
-                    )
-                  ) : (
-                    <span>Pick a date</span>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0 flex" align="end">
-                <div className="flex flex-col space-y-1 p-2 border-r">
-                  {timeRanges.map((range) => (
-                    <Button
-                      key={range.value}
-                      variant="ghost"
-                      className="justify-start"
-                      onClick={() => handleTimeRangeClick(range.value)}
-                    >
-                      {range.label}
-                    </Button>
-                  ))}
-                </div>
-                <Calendar
-                  initialFocus
-                  mode="range"
-                  defaultMonth={date?.from}
-                  selected={date}
-                  onSelect={setDate}
-                  numberOfMonths={1}
-                />
-              </PopoverContent>
-            </Popover>
+           
+            <DateRangePicker
+              date={date}
+              setDate={setDate}
+            />
             <VehicleCombobox vehicles={vehicleList} value={selectedVehicle} onChange={setSelectedVehicle} className="w-full sm:w-[180px]" />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
