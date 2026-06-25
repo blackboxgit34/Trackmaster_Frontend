@@ -10,6 +10,7 @@ import { Slider } from '@/components/ui/slider';
 import { useToast } from '@/hooks/use-toast';
 import type { Poi } from '@/data/poiData';
 import { GoogleMap, Marker, Circle } from '@react-google-maps/api';
+import { API_BASE_URL } from "@/config/Api";
 
 interface EditPoiDialogProps {
   open: boolean;
@@ -43,6 +44,7 @@ const EditPoiDialog = ({ open, onOpenChange, poi, onSave }: EditPoiDialogProps) 
   const [poiName, setPoiName] = useState('');
   const [radius, setRadius] = useState(200);
   const [position, setPosition] = useState<{ lat: number; lng: number } | null>(null);
+  const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | null>(null);
   const { toast } = useToast();
 
   const circleRef = useRef<google.maps.Circle | null>(null);
@@ -51,7 +53,9 @@ const EditPoiDialog = ({ open, onOpenChange, poi, onSave }: EditPoiDialogProps) 
     if (poi) {
       setPoiName(poi.poiName);
       setRadius(poi.radius);
-      setPosition({ lat: poi.latitude, lng: poi.longitude });
+      const newPos = { lat: poi.latitude, lng: poi.longitude };
+      setPosition(newPos);
+      setMapCenter(newPos);
     }
   }, [poi]);
 
@@ -68,14 +72,9 @@ const EditPoiDialog = ({ open, onOpenChange, poi, onSave }: EditPoiDialogProps) 
       setPosition(e.latLng.toJSON());
     }
   }, []);
-
-  const onRadiusChanged = useCallback(() => {
-    if (circleRef.current) {
-      setRadius(circleRef.current.getRadius());
-    }
-  }, []);
   
-  const onCenterChanged = useCallback(() => {
+  // Use onDragEnd for the circle to avoid continuous infinite loops while sliding
+  const onCircleDragEnd = useCallback(() => {
     if (circleRef.current) {
       const newCenter = circleRef.current.getCenter();
       if (newCenter) {
@@ -84,29 +83,78 @@ const EditPoiDialog = ({ open, onOpenChange, poi, onSave }: EditPoiDialogProps) 
     }
   }, []);
 
-  const handleSave = () => {
+  // Prevent floating point collision state loops 
+  const onRadiusChanged = useCallback(() => {
+    if (circleRef.current) {
+      const newRadius = circleRef.current.getRadius();
+      setRadius((prev) => (Math.abs(prev - newRadius) < 0.1 ? prev : newRadius));
+    }
+  }, []);
+
+
+
+  const handleSave = async () => {
     if (!poi || !position) return;
-    const updatedPoi: Poi = {
-      ...poi,
-      poiName: poiName,
-      radius: radius,
-      latitude: position.lat,
-      longitude: position.lng,
-    };
-    onSave(updatedPoi);
-    toast({
-      variant: 'success',
-      title: "POI Updated",
-      description: `Point of Interest "${poiName}" has been updated successfully.`,
-    });
-    onOpenChange(false);
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/Geofence/EditPoi` +
+        `?action=UPDATE` +
+        `&id=${poi.id}` +
+        `&latitude=${position.lat}` +
+        `&longitude=${position.lng}` +
+        `&details=${encodeURIComponent(poiName)}` +
+        `&radius=${radius}`,
+        {
+          method: "POST",
+        }
+      );
+
+      const result = await response.json();
+
+      if (result.success) {
+        const updatedPoi: Poi = {
+          ...poi,
+          poiName,
+          radius,
+          latitude: position.lat,
+          longitude: position.lng,
+        };
+
+        onSave(updatedPoi);
+
+        toast({
+          variant: "success",
+          title: "POI Updated",
+          description: result.message,
+        });
+
+        onOpenChange(false);
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Update Failed",
+          description: result.message || "Failed to update POI",
+        });
+      }
+    } catch (error) {
+      console.error("Update POI error:", error);
+
+      toast({
+        variant: "destructive",
+        title: "Server Error",
+        description: "Unable to update POI",
+      });
+    }
   };
 
   const handleReset = () => {
     if (poi) {
       setPoiName(poi.poiName);
       setRadius(poi.radius);
-      setPosition({ lat: poi.latitude, lng: poi.longitude });
+      const resetPos = { lat: poi.latitude, lng: poi.longitude };
+      setPosition(resetPos);
+      setMapCenter(resetPos);
     }
   };
 
@@ -116,10 +164,10 @@ const EditPoiDialog = ({ open, onOpenChange, poi, onSave }: EditPoiDialogProps) 
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] w-full h-full">
           {/* Map Section */}
           <div className="bg-muted rounded-l-lg relative h-full">
-            {position && (
+            {mapCenter && position && (
               <GoogleMap
                 mapContainerStyle={mapContainerStyle}
-                center={position}
+                center={mapCenter}
                 zoom={14}
                 options={mapOptions}
               >
@@ -135,7 +183,7 @@ const EditPoiDialog = ({ open, onOpenChange, poi, onSave }: EditPoiDialogProps) 
                   onLoad={onCircleLoad}
                   onUnmount={onCircleUnmount}
                   onRadiusChanged={onRadiusChanged}
-                  onCenterChanged={onCenterChanged}
+                  onDragEnd={onCircleDragEnd}
                 />
               </GoogleMap>
             )}
