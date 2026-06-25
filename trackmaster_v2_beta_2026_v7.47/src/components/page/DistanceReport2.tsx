@@ -241,6 +241,7 @@ const DistanceReport2 = () => {
     prevActive: number;
   }
   const [allPeriodsStats, setAllPeriodsStats] = useState<PeriodStats | null>(null);
+  const [badgesLoading, setBadgesLoading] = useState(true);
 
   // Fixed sort config — no sort UI in card view
   const sortConfig = useMemo(
@@ -282,6 +283,7 @@ const DistanceReport2 = () => {
     if (!dateRange?.from || !dateRange?.to) return;
 
     const fetchPeriodStats = async () => {
+      setBadgesLoading(true);
       try {
         const auth = JSON.parse(localStorage.getItem('trackmaster-auth') || '{}');
         const custId = Number(auth.custId ?? 0) || 0;
@@ -331,6 +333,8 @@ const DistanceReport2 = () => {
         });
       } catch (e) {
         console.error('Period stats fetch error', e);
+      } finally {
+        setBadgesLoading(false);
       }
     };
 
@@ -629,17 +633,6 @@ const DistanceReport2 = () => {
     return rows;
   }, [reportRows, detailRows, dateRange]);
 
-  if (isLoading) {
-    return (
-      <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-        <div className="bg-white p-4 rounded-lg flex items-center gap-3 shadow-lg">
-          <div className="animate-spin h-5 w-5 border-2 border-black border-t-transparent rounded-full" />
-          <span>Please wait...</span>
-        </div>
-      </div>
-    );
-  }
-
   const totalPages = Math.ceil(totalRows / itemsPerPage);
 
   return (
@@ -706,36 +699,44 @@ const DistanceReport2 = () => {
                       {card.label}
                     </p>
 
-                    <div className="mt-4 flex items-end gap-1">
-                      <span className="text-3xl font-bold leading-none tracking-tight text-slate-900">
-                        {card.value}
-                      </span>
-
-                      <span className="mb-1 text-sm font-medium text-slate-500">
-                        {card.unit}
-                      </span>
-                    </div>
-
-                    <div className="mt-4 flex items-center justify-between">
-                      <div
-                        className={`flex items-center gap-1 text-xs font-semibold ${card.trendUp
-                          ? 'text-emerald-600'
-                          : 'text-red-500'
-                          }`}
-                      >
-                        {card.trendUp ? (
-                          <TrendingUp className="h-3.5 w-3.5" />
-                        ) : (
-                          <TrendingDown className="h-3.5 w-3.5" />
-                        )}
-
-                        <span>{card.trend}</span>
+                    {badgesLoading ? (
+                      <div className="mt-4 flex items-center h-12">
+                        <div className="animate-spin h-5 w-5 border-2 border-slate-200 border-t-blue-500 rounded-full" />
                       </div>
+                    ) : (
+                      <>
+                        <div className="mt-4 flex items-end gap-1">
+                          <span className="text-3xl font-bold leading-none tracking-tight text-slate-900">
+                            {card.value}
+                          </span>
 
-                      <span className="text-xs text-slate-400">
-                        {card.subtitle}
-                      </span>
-                    </div>
+                          <span className="mb-1 text-sm font-medium text-slate-500">
+                            {card.unit}
+                          </span>
+                        </div>
+
+                        <div className="mt-4 flex items-center justify-between">
+                          <div
+                            className={`flex items-center gap-1 text-xs font-semibold ${card.trendUp
+                              ? 'text-emerald-600'
+                              : 'text-red-500'
+                              }`}
+                          >
+                            {card.trendUp ? (
+                              <TrendingUp className="h-3.5 w-3.5" />
+                            ) : (
+                              <TrendingDown className="h-3.5 w-3.5" />
+                            )}
+
+                            <span>{card.trend}</span>
+                          </div>
+
+                          <span className="text-xs text-slate-400">
+                            {card.subtitle}
+                          </span>
+                        </div>
+                      </>
+                    )}
                   </div>
 
                   {/* Icon */}
@@ -768,12 +769,18 @@ const DistanceReport2 = () => {
 
       {/* List Section */}
       <div className="space-y-4">
-        {reportData.length === 0 && (
+        {isLoading && (
+          <div className="flex items-center justify-center py-12 rounded-xl border border-slate-200 bg-white">
+            <div className="animate-spin h-6 w-6 border-2 border-slate-200 border-t-blue-600 rounded-full" />
+            <span className="ml-3 text-sm text-slate-400">Loading vehicles...</span>
+          </div>
+        )}
+        {!isLoading && reportData.length === 0 && (
           <div className="rounded-xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-400">
             No vehicle data found for the selected period.
           </div>
         )}
-        {reportData.map((item) => (
+        {!isLoading && reportData.map((item) => (
           <div
             key={item.id}
             className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm transition-all hover:shadow-md"
