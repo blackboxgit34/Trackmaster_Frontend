@@ -34,6 +34,12 @@ import {
   MoreHorizontal,
   X,
   Search,
+  DoorOpen,
+  Fuel,
+  ShieldAlert,
+  Snowflake,
+  Thermometer,
+  Unlock,
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
@@ -75,37 +81,65 @@ import { DataTableRequestModel } from '@/hooks/DataTableRequestModel';
 import { API_BASE_URL } from '@/config/Api';
 import { fetchAndCalculatePlaybackData } from '@/lib/playback-utils';
 import { ArrowUpDown } from "lucide-react";
+import { getVehiclePngUrl } from '@/lib/map-utils';
+import { toast } from '@/hooks/use-toast';
+import type { VehicleStatus, LiveVehicleStatus } from '@/types';
+
+
+
+const minimalDotCache = new Map<string, string>();
 const StatusBadge = ({ status }: { status: string }) => {
-  const styles: Record<string, string> = {
-    Moving:
-      'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+  if (!minimalDotCache.has(status)) {
+    const color = getStatusColorHex(status);
 
-    Parked:
-      'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
+    const svg = `
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 122.88 122.88" width="32" height="32">
+        <defs>
+          <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+            <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.25" />
+          </filter>
+        </defs>
+        <circle cx="61.44" cy="61.44" r="57" fill="#ffffff" filter="url(#shadow)" />
+        <circle cx="61.44" cy="61.44" r="50" fill="${color}" />
+        <path d="M61.44 28 L87 82 L61.44 72 L35 82 Z" fill="#ffffff" />
+      </svg>
+    `;
 
-    IgnitionOn:
-      'bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-300',
+    minimalDotCache.set(
+      status,
+      `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`
+    );
+  }
 
-    Stopped:
-      'bg-gray-100 text-gray-800 dark:bg-gray-800/50 dark:text-gray-300',
-
-    Breakdown:
-      'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
-
-    Idle:
-      'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300',
-  };
+  const iconUrl = minimalDotCache.get(status)!;
 
   return (
-    <span
-      className={cn(
-        'px-2.5 py-1 text-xs font-semibold rounded-full',
-        styles[status] || styles.Stopped
-      )}
-    >
-      {status}
-    </span>
+    <div className="flex items-center gap-2">
+      <img
+        src={iconUrl}
+        alt={status}
+        className="h-5 w-5 shrink-0"
+      />
+      <span className="text-sm font-medium">
+        {status}
+      </span>
+    </div>
   );
+};
+export const getStatusColorHex = (status: string) => {
+  debugger
+  switch (status) {
+    case 'Moving': return '#22c55e';
+    case 'Parked': return '#eab308';
+    case 'Ignition On': return '#0ea5e9';
+    case 'Idle': return '#14b8a6';
+    case 'High Speed': return '#f97316';
+    case 'Breakdown': return '#6b7280';
+    case 'Unreachable': return '#ef4444';
+    case 'Battery Disconnect': return '#f43f5e';
+    case 'Towed': return '#a855f7';
+    default: return '#6b7280';
+  }
 };
 
 const DeviceSignalIcon = ({
@@ -123,31 +157,31 @@ const DeviceSignalIcon = ({
     case gpsAntConStatus === 1 && GPSFix === 2:
       Icon = Signal;
       text = 'Full GPS Signal';
-      color = 'text-green-500';
+      color = 'green';
       break;
 
     case gpsAntConStatus === 1 && GPSFix === 1:
       Icon = SignalMedium;
       text = 'Low GPS Signal';
-      color = 'text-yellow-500';
+      color = 'yellow';
       break;
 
     case gpsAntConStatus === 1 && GPSFix === 0:
       Icon = SignalZero;
       text = 'GPS Antena Connected But No GPS Signal';
-      color = 'text-red-500';
+      color = 'red';
       break;
 
     case gpsAntConStatus === 0:
       Icon = TriangleAlert;
       text = 'GPS Antena Disconnected';
-      color = 'text-gray-500';
+      color = 'gray';
       break;
 
     default:
       Icon = TriangleAlert;
       text = 'Unknown';
-      color = 'text-muted-foreground';
+      color = 'gray';
       break;
   }
 
@@ -155,13 +189,12 @@ const DeviceSignalIcon = ({
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <button>
-            <BlackboxSignalIcon className={cn('h-5 w-5', color)} />
+          <button className="flex items-center justify-center">
+            <img src={`/icons/system%20status%20icons/gps-${color}.svg`} alt="GPS Signal" className="h-5 w-5" />
           </button>
         </TooltipTrigger>
-
-        <TooltipContent>
-          <p>{text}</p>
+        <TooltipContent className="bg-black text-white border-black">
+          <p>GPS Signal: {text}</p>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
@@ -175,34 +208,34 @@ const GsmSignalIcon = ({ signal }: { signal: number }) => {
     case signal == null:
       Icon = TriangleAlert;
       text = 'Unknown';
-      color = 'text-muted-foreground';
+      color = 'gray';
       break;
     // No GSM Signal
     case signal > 31:
       Icon = SignalZero;
       text = 'No GSM Signal';
-      color = 'text-red-500';
+      color = 'red';
       break;
 
     // Excellent GSM Signal
     case signal < 32 && signal >= 25:
       Icon = Signal;
       text = 'Full GSM Signal';
-      color = 'text-green-500';
+      color = 'green';
       break;
 
     // Good GSM Signal
     case signal < 25 && signal >= 20:
       Icon = SignalHigh;
       text = 'Low GSM Signal';
-      color = 'text-lime-500';
+      color = 'green';
       break;
 
     // InSufficient GSM Signal
     case signal < 20 && signal >= 10:
       Icon = SignalMedium;
       text = 'Very Low GSM Signal';
-      color = 'text-yellow-500';
+      color = 'yellow';
       break;
 
     // GSM Signal Very Low
@@ -216,7 +249,7 @@ const GsmSignalIcon = ({ signal }: { signal: number }) => {
     default:
       Icon = TriangleAlert;
       text = 'Unknown';
-      color = 'text-muted-foreground';
+      color = 'gray';
       break;
   }
 
@@ -224,13 +257,12 @@ const GsmSignalIcon = ({ signal }: { signal: number }) => {
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <button>
-            <Icon className={cn('h-5 w-5', color)} />
+          <button className="flex items-center justify-center">
+            <img src={`/icons/system%20status%20icons/gsm-${color}.svg`} alt="GSM Signal" className="h-5 w-5" />
           </button>
         </TooltipTrigger>
-
         <TooltipContent className="bg-black text-white border-black">
-          <p>{text}</p>
+          <p>GSM Signal: {text}</p>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
@@ -243,58 +275,52 @@ const BatteryIcon = ({ battery, tooltipLabel }: { battery: number; tooltipLabel:
     case battery == null:
       Icon = TriangleAlert;
       text = 'Battery Disconnected';
-      color = 'text-muted-foreground';
+      color = 'red';
       break;
 
     case battery >= 12.5:
       Icon = BatteryFull;
       text = 'High';
-      color = 'text-green-500';
+      color = 'green';
       break;
 
 
     case battery < 12.5 && battery >= 10:
       Icon = BatteryMedium;
       text = 'Low';
-      color = 'text-lime-500';
+      color = 'lime';
       break;
 
 
     case battery < 10 && battery >= 5:
       Icon = BatteryLow;
       text = 'Very Low';
-      color = 'text-yellow-500';
+      color = 'yellow';
       break;
 
 
     case battery < 5:
       Icon = TriangleAlert;
       text = 'Battery Disconnected';
-      color = 'text-muted-foreground';
+      color = 'red';
       break;
 
     default:
       Icon = TriangleAlert;
       text = 'Unknown';
-      color = 'text-muted-foreground';
+      color = 'red';
   }
-
-  
-
 
   return (
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <button>
-            <Icon className={cn('h-5 w-5', color)} />
+          <button className="flex items-center justify-center">
+            <img src={`/icons/system%20status%20icons/device-battery-${color}.svg`} alt={tooltipLabel} className="h-5 w-5" />
           </button>
         </TooltipTrigger>
-
         <TooltipContent className="bg-black text-white border-black">
-          <p>
-            {tooltipLabel}: {text} ({battery}%)
-          </p>
+          <p>{tooltipLabel}: {text} ({battery}%)</p>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
@@ -308,42 +334,41 @@ const BatteryIconDevice = ({ deviceBattery, tooltipLabel }: { deviceBattery: num
     case deviceBattery == null:
       Icon = TriangleAlert;
       text = 'Battery Disconnected';
-      color = 'text-muted-foreground';
+      color = 'red';
       break;
 
     case deviceBattery == 33:
       Icon = BatteryFull;
       text = 'High';
-      color = 'text-green-500';
+      color = 'green';
       break;
 
 
     case deviceBattery == 2:
       Icon = BatteryMedium;
       text = 'Low';
-      color = 'text-lime-500';
+      color = 'lime';
       break;
 
     case deviceBattery == 1:
       Icon = BatteryLow;
       text = 'Very Low';
-      color = 'text-yellow-500';
+      color = 'yellow';
       break;
 
     default:
       Icon = TriangleAlert;
       text = 'Unknown';
-      color = 'text-muted-foreground';
+      color = 'red';
   }
   return (
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <button>
-            <Icon className={cn('h-5 w-5', color)} />
+          <button className="flex items-center justify-center">
+            <img src={`/icons/system%20status%20icons/vehicle-battery-${color}.svg`} alt={tooltipLabel} className="h-5 w-5" />
           </button>
         </TooltipTrigger>
-
         <TooltipContent className="bg-black text-white border-black">
           <p>
             {tooltipLabel}: {text} ({deviceBattery}%)
@@ -401,6 +426,9 @@ const TableSkeleton = () => (
     ))}
   </TableBody>
 );
+
+
+
 
 
 const LiveStatusTable = () => {
@@ -681,6 +709,67 @@ const LiveStatusTable = () => {
     };
   }, [paginatedData]);
 
+  const AddonIcon = ({
+    status,
+    icon: Icon,
+    tooltipLabel,
+    addonDataLabel,
+    addonDataValue,
+    onClick
+  }: {
+    status: 'working' | 'error' | 'uninstalled';
+    icon: any;
+    tooltipLabel: string;
+    addonDataLabel?: string;
+    addonDataValue?: string | number | null;
+    onClick: () => void;
+  }) => {
+    let color = 'text-gray-300 dark:text-gray-600';
+    let text = 'Not Installed';
+
+    if (status === 'working') {
+      color = 'text-green-500';
+      text = 'Active';
+    } else if (status === 'error') {
+      color = 'text-red-500';
+      text = 'Error / Not Working';
+    }
+
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div
+              className="flex items-center justify-center p-1 cursor-pointer hover:bg-muted/50 rounded-md transition-colors"
+              onClick={onClick}
+            >
+              <Icon className={cn("h-4 w-4", color)} />
+            </div>
+          </TooltipTrigger>
+          <TooltipContent className="bg-black text-white border-black">
+            <p className="font-medium">{tooltipLabel}: {text}</p>
+            {status === 'working' && addonDataLabel && addonDataValue !== undefined && addonDataValue !== null && (
+              <p className="text-sm mt-1 text-gray-300">{addonDataLabel}: {addonDataValue}</p>
+            )}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  };
+
+  const handleAddonClick = (status: 'working' | 'error' | 'uninstalled', addonName: string, link: string) => {
+    if (status === 'uninstalled') {
+      toast({
+        title: `${addonName} Not Installed`,
+        description: "To install this addon, please contact support.",
+        action: <Button variant="outline" size="sm" onClick={() => window.location.href = 'mailto:support@example.com'}>Contact</Button>
+      });
+    } else {
+      navigate(link);
+    }
+  };
+
+
   return (
     <>
       <Card>
@@ -816,10 +905,19 @@ const LiveStatusTable = () => {
                       >
                         <TableCell className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center gap-4">
-                            <img
+                            {/* <img
                               src={`/icons/${row.type}.png`}
                               alt={row.vehicleNo}
                               className="h-12 w-12 object-contain"
+                            /> */}
+
+                            <img
+                              src={getVehiclePngUrl(row.type)}
+                              alt={row.vehicleNo}
+                              className="h-12 w-12 object-contain"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?q=80&w=200&auto=format&fit=crop';
+                              }}
                             />
 
                             <div>
@@ -889,33 +987,71 @@ const LiveStatusTable = () => {
 
                         {/* SAME ADDON UI */}
                         <TableCell className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm">
-                            <span className="text-muted-foreground">
-                              Fuel Level:
-                            </span>
-
-                            <span className="font-semibold">
-                              {/* {' '} */}
-                              {row.fuelLevel || 0} L
-                              {/* {
-                                fuelMap[row.bbid]
-                                  ?.remainingFuelLevel || 0
-                              } L */}
-                            </span>
-                          </div>
+                          {row.addons ? (
+                            <div    className="grid grid-cols-3 gap-1 w-[80px]">
+                              <AddonIcon
+                                status={row.addons.fuel}
+                                icon={Fuel}
+                                tooltipLabel="Fuel Monitoring"
+                                addonDataLabel="Current Fuel Level"
+                                addonDataValue={`${row.fuelLiters.toFixed(1)} Liters`}
+                                onClick={() => handleAddonClick(row.addons.fuel, "Fuel Monitoring", `/addons/fuel-reports/fuel-analysis?vehicle=${row.vehicleNo}`)}
+                              />
+                              <AddonIcon
+                                status={row.addons.temp}
+                                icon={Thermometer}
+                                tooltipLabel="Temperature Monitoring"
+                                addonDataLabel="Cargo Temperature"
+                                addonDataValue={`${(row.engineTemp - 80).toFixed(1)}°C`}
+                                onClick={() => handleAddonClick(row.addons.temp, "Temperature Monitoring", `/addons/refrigerator-temp?vehicle=${row.vehicleNo}`)}
+                              />
+                              <AddonIcon
+                                status={row.addons.ac}
+                                icon={Snowflake}
+                                tooltipLabel="AC On/Off"
+                                addonDataLabel="AC Status"
+                                addonDataValue={row.acStatus}
+                                onClick={() => handleAddonClick(row.addons.ac, "AC On/Off", `/reports/summary-management/daily-summary?vehicle=${row.vehicleNo}`)}
+                              />
+                              <AddonIcon
+                                status={row.addons.door}
+                                icon={DoorOpen}
+                                tooltipLabel="Door Open/Close"
+                                onClick={() => handleAddonClick(row.addons.door, "Door Open/Close", `/reports/summary-management/daily-summary?vehicle=${row.vehicleNo}`)}
+                              />
+                              <AddonIcon
+                                status={row.addons.lid}
+                                icon={Unlock}
+                                tooltipLabel="Lid Open/Close"
+                                onClick={() => handleAddonClick(row.addons.lid, "Lid Open/Close", `/addons/fuel-reports/fuel-analysis?vehicle=${row.vehicleNo}`)}
+                              />
+                              <AddonIcon
+                                status={row.addons.immobilizer}
+                                icon={ShieldAlert}
+                                tooltipLabel="Vehicle Immobilizer"
+                                addonDataLabel="Ignition"
+                                addonDataValue={row.ignitionStatus}
+                                onClick={() => handleAddonClick(row.addons.immobilizer, "Vehicle Immobilizer", `/reports/vehicle-status-health/vehicle-status?vehicle=${row.vehicleNo}`)}
+                              />
+                            </div>
+                          ) : (
+                            <div className="text-sm text-muted-foreground">N/A</div>
+                          )}
                         </TableCell>
+
+
+
 
                         {/* SAME SYSTEM STATUS UI */}
                         <TableCell className="px-6 py-4 whitespace-nowrap">
+
+
                           <div className="flex items-center gap-3">
-                            {/* GPS SIGNAL */}
                             <DeviceSignalIcon
                               gpsAntConStatus={row.deviceSignal}
                               GPSFix={row.GPSFix}
                             />
-
                             <GsmSignalIcon signal={row.gsmSignal} />
-
                             <BatteryIcon
                               battery={row.battery}
                               tooltipLabel="Vehicle Battery"
@@ -925,6 +1061,11 @@ const LiveStatusTable = () => {
                               tooltipLabel="Blackbox Battery"
                             />
                           </div>
+
+
+
+
+
                         </TableCell>
 
                         {/* SAME ALERT UI */}

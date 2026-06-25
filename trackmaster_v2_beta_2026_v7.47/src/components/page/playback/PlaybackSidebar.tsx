@@ -8,21 +8,21 @@ import { VehicleCombobox } from '@/components/VehicleCombobox';
 import { format } from 'date-fns';
 import PlaybackStatCard from './PlaybackStatCard';
 import type { TripPoint } from '@/data/routeData';
+import { API_BASE_URL } from '@/config/Api';
 
 interface PlaybackSidebarProps {
-  vehicles: { label: string; value: string }[];
   selectedVehicle: string | null;
   onVehicleChange: (vehicleId: string) => void;
   selectedDate: Date | undefined;
   onDateChange: (date: Date | undefined) => void;
+  vehicles: { id: string; name: string }[];
   vehicleName: string;
   totalDistance: number;
   drivingTime: number; // in minutes
   totalStoppageTime: number; // in minutes
   totalIdling: number; // in minutes
   path: TripPoint[];
-  onPrint: () => void;
-  onExportExcel: () => void;
+  unifiedStoppages: any[];
 }
 
 const formatDuration = (minutes: number) => {
@@ -32,23 +32,11 @@ const formatDuration = (minutes: number) => {
   return `${h}h ${m}m`;
 };
 
-const TimelineEvent = ({ type, location, time, speed, distance }: { type: 'start' | 'stop' | 'moving' | 'end'; location: string; time: string; speed?: number; distance?: number }) => {
+const TimelineEvent = ({ type, location, time, speed, distance }: { type: 'start' | 'stop' | 'end'; location: string; time: string; speed?: number; distance?: number }) => {
   const icons = {
-    start: (
-      <div className="h-3.5 w-3.5 rounded-full bg-green-500 border-2 border-card ring-1 ring-green-500" />
-    ),
-
-    moving: (
-      <div className="h-3.5 w-3.5 rounded-full bg-blue-500 border-2 border-card ring-1 ring-blue-500" />
-    ),
-
-    stop: (
-      <div className="h-3.5 w-3.5 rounded-full bg-yellow-500 border-2 border-card ring-1 ring-yellow-500" />
-    ),
-
-    end: (
-      <div className="h-3.5 w-3.5 rounded-full bg-red-500 border-2 border-card ring-1 ring-red-500" />
-    ),
+    start: <div className="h-3.5 w-3.5 rounded-full bg-green-500 border-2 border-card ring-1 ring-green-500" />,
+    stop: <div className="h-3.5 w-3.5 rounded-full bg-blue-500 border-2 border-card ring-1 ring-blue-500" />,
+    end: <div className="h-3.5 w-3.5 rounded-full bg-red-500 border-2 border-card ring-1 ring-red-500" />,
   };
 
   return (
@@ -59,7 +47,7 @@ const TimelineEvent = ({ type, location, time, speed, distance }: { type: 'start
           <p className="font-semibold text-sm">{type === 'start' ? 'Start Location' : type === 'end' ? 'End Location' : location}</p>
           <span className="text-xs text-muted-foreground">{time}</span>
         </div>
-        <p className="text-xs text-muted-foreground">{type !== 'start' && type !== 'end' ? `` : location}</p>
+        <p className="text-xs text-muted-foreground">{type !== 'start' && type !== 'end' ? `${distance?.toFixed(1)} Km Covered` : location}</p>
         {speed !== undefined && <p className="text-xs text-muted-foreground">@ {speed}kmph</p>}
       </div>
     </div>
@@ -67,202 +55,94 @@ const TimelineEvent = ({ type, location, time, speed, distance }: { type: 'start
 };
 
 const PlaybackSidebar = ({
-  vehicles,
   selectedVehicle,
   onVehicleChange,
   selectedDate,
   onDateChange,
+  vehicles,
   vehicleName,
   totalDistance,
   drivingTime,
   totalStoppageTime,
   totalIdling,
   path,
-  onPrint,
-  onExportExcel
+  unifiedStoppages,
 }: PlaybackSidebarProps) => {
 
-  // const { startEvent, intermediateEvents, endEvent } = useMemo(() => {
-  //   if (path.length === 0) return { startEvent: null, intermediateEvents: [], endEvent: null };
+  const handlePrint = () => {
+    const appSidebar = document.querySelector('aside');
+    const appHeader = document.querySelector('header');
 
-  //   const events = [];
-  //   // Start
-  //   events.push({
-  //     type: 'start' as const,
-  //     location: path[0].location || 'Start Point',
-  //     time: format(new Date(path[0].timestamp), 'p'),
-  //   });
+    if (appSidebar) (appSidebar as HTMLElement).style.display = 'none';
+    if (appHeader) (appHeader as HTMLElement).style.display = 'none';
 
-  //   // Intermediate stops
-  //   let stopStart: TripPoint | null = null;
-  //   for (let i = 1; i < path.length; i++) {
-  //     if (path[i].speed === 0 && path[i-1].speed > 0) {
-  //       stopStart = path[i];
-  //     }
-  //     if (stopStart) {
-  //       const stopDuration = (new Date(path[i-1].timestamp).getTime() - new Date(stopStart.timestamp).getTime()) / 1000 / 60;
-  //       if (stopDuration > 1) { // Only show stops longer than 1 minute
-  //         events.push({
-  //           type: 'stop' as const,
-  //           location: stopStart.location || 'Stop',
-  //           time: format(new Date(stopStart.timestamp), 'p'),
-  //           speed: path[i-1].speed,
-  //           distance: (path[i-1] as any).distance,
-  //         });
-  //       }
-  //       stopStart = null;
-  //     }
-  //   }
+    document.body.classList.add('printing');
 
-  //   // End
-  //   if (path.length > 1) {
-  //     events.push({
-  //       type: 'end' as const,
-  //       location: path[path.length - 1].location || 'End Point',
-  //       time: format(new Date(path[path.length - 1].timestamp), 'p'),
-  //     });
-  //   }
+    setTimeout(() => {
+      window.print();
+      document.body.classList.remove('printing');
+      if (appSidebar) (appSidebar as HTMLElement).style.display = '';
+      if (appHeader) (appHeader as HTMLElement).style.display = '';
+    }, 500);
+  };
 
-  //   if (events.length < 2) {
-  //       return { startEvent: events[0] || null, intermediateEvents: [], endEvent: null };
-  //   }
+  const handleExportExcel = async () => {
+    try {
+      if (!selectedVehicle || !selectedDate) return;
 
-  //   return {
-  //     startEvent: events[0],
-  //     intermediateEvents: events.slice(1, -1),
-  //     endEvent: events[events.length - 1]
-  //   };
-  // }, [path]);
+      const date = format(selectedDate, 'yyyy-MM-dd');
+      const url =
+        `${API_BASE_URL}/VehicleStatus/GetPlaybackData` +
+        `?bbid=${selectedVehicle}` +
+        `&date=${date}` +
+        `&downloadType=Excel`;
+
+      const response = await fetch(url, { method: 'GET' });
+      if (!response.ok) throw new Error('Failed to download excel');
+
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = `RoutePlayback_${selectedVehicle}_${date}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch (error) {
+      console.error('Export Excel Error:', error);
+    }
+  };
+
   const { startEvent, intermediateEvents, endEvent } = useMemo(() => {
-    if (!path || path.length === 0) {
-      return {
-        startEvent: null,
-        intermediateEvents: [],
-        endEvent: null,
-      };
-    }
-
-    // FIRST MOVING POINT
-    const startIndex = path.findIndex(
-      (p) => Number(p.speed) > 0
-    );
-
-    if (startIndex === -1) {
-      return {
-        startEvent: null,
-        intermediateEvents: [],
-        endEvent: null,
-      };
-    }
-
-    // LAST MOVING POINT
-    let lastMovingIndex = -1;
-
-    for (let i = path.length - 1; i >= 0; i--) {
-      if (Number(path[i].speed) > 0) {
-        lastMovingIndex = i;
-        break;
-      }
-    }
-
-    // FIRST STOP AFTER LAST MOVING POINT
-    let endIndex = lastMovingIndex;
-
-    for (let i = lastMovingIndex + 1; i < path.length; i++) {
-      if (Number(path[i].speed) === 0) {
-        endIndex = i;
-        break;
-      }
-    }
-
-    // START EVENT
-    const startPoint = path[startIndex];
-
+    if (path.length === 0) return { startEvent: null, intermediateEvents: [], endEvent: null };
+    
+    // Start
     const startEvent = {
       type: 'start' as const,
-      location: startPoint.location || 'Start Point',
-      time: format(new Date(startPoint.timestamp), 'p'),
-      speed: startPoint.speed,
-      distance: (startPoint as any).distance,
+      location: path[0].location || 'Start Point',
+      time: format(new Date(path[0].timestamp), 'p'),
     };
 
-    // INTERMEDIATE EVENTS
-    const intermediateEvents = [];
+    // Intermediate stops from unifiedStoppages
+    const intermediateEvents = (unifiedStoppages || []).map(stop => ({
+      type: 'stop' as const,
+      location: stop.start.location || 'Stop',
+      time: format(new Date(stop.start.timestamp), 'p'),
+      speed: 0,
+      distance: stop.start.distance, 
+    }));
 
-    let stopStartIndex: number | null = null;
-
-    for (let i = startIndex + 1; i < endIndex; i++) {
-      const current = path[i];
-      const previous = path[i - 1];
-
-      // STOP START
-      if (
-        Number(current.speed) === 0 &&
-        Number(previous.speed) > 0
-      ) {
-        stopStartIndex = i;
-      }
-
-      // STOP END
-      if (
-        stopStartIndex !== null &&
-        (
-          Number(current.speed) > 0 ||
-          i === endIndex - 1
-        )
-      ) {
-        const stopStartPoint = path[stopStartIndex];
-        const stopEndPoint = path[i];
-
-        const stopDuration =
-          (new Date(stopEndPoint.timestamp).getTime() -
-            new Date(stopStartPoint.timestamp).getTime()) /
-          1000 /
-          60;
-
-        // SHOW STOP ONLY IF > 1 MIN
-        if (stopDuration > 1) {
-          intermediateEvents.push({
-            type: 'stop' as const,
-            location: stopStartPoint.location || 'Stop Point',
-            time: format(new Date(stopStartPoint.timestamp), 'p'),
-            speed: 0,
-            distance: (stopStartPoint as any).distance,
-          });
-        }
-
-        stopStartIndex = null;
-      }
-
-      // MOVING POINTS
-      if (Number(current.speed) > 0) {
-        intermediateEvents.push({
-          type: 'moving' as const,
-          location: current.location || 'Intermediate Point',
-          time: format(new Date(current.timestamp), 'p'),
-          speed: current.speed,
-          distance: (current as any).distance,
-        });
-      }
-    }
-
-    // END EVENT
-    const endPoint = path[endIndex];
-
-    const endEvent = {
+    // End
+    const endEvent = path.length > 1 ? {
       type: 'end' as const,
-      location: endPoint.location || 'End Point',
-      time: format(new Date(endPoint.timestamp), 'p'),
-      speed: endPoint.speed,
-      distance: (endPoint as any).distance,
-    };
+      location: path[path.length - 1].location || 'End Point',
+      time: format(new Date(path[path.length - 1].timestamp), 'p'),
+    } : null;
+    
+    return { startEvent, intermediateEvents, endEvent };
+  }, [path, unifiedStoppages]);
 
-    return {
-      startEvent,
-      intermediateEvents,
-      endEvent,
-    };
-  }, [path]);
   return (
     <div className="w-[350px] flex-shrink-0 bg-card border-r flex flex-col h-full overflow-hidden">
       <div className="p-3 border-b shrink-0 space-y-3">
@@ -296,13 +176,13 @@ const PlaybackSidebar = ({
       <div className="flex-1 flex flex-col overflow-hidden p-3">
         <div className="relative flex flex-col h-full">
           <div className="absolute left-[7px] top-3 bottom-3 w-px bg-border" />
-
+          
           {startEvent && (
             <div className="pb-4 shrink-0">
               <TimelineEvent {...startEvent} />
             </div>
           )}
-
+          
           <ScrollArea className="flex-1">
             <div className="space-y-4">
               {intermediateEvents.map((event, index) => (
@@ -320,10 +200,8 @@ const PlaybackSidebar = ({
       </div>
 
       <div className="p-3 border-t grid grid-cols-2 gap-2 shrink-0">
-        <Button variant="outline" onClick={onPrint}><Printer className="h-4 w-4 mr-2" /> Print</Button>
-        <Button className="bg-brand-orange hover:bg-brand-orange/90" onClick={onExportExcel}>
-          <Download className="h-4 w-4 mr-2" /> Export Excel
-        </Button>
+        <Button variant="outline" onClick={handlePrint}><Printer className="h-4 w-4 mr-2" /> Print</Button>
+        <Button className="bg-brand-orange hover:bg-brand-orange/90" onClick={handleExportExcel}><Download className="h-4 w-4 mr-2" /> Export Excel</Button>
       </div>
     </div>
   );
