@@ -167,6 +167,10 @@ const RoutePlayback = () => {
           (a, b) => parseISO(a.timestamp).getTime() - parseISO(b.timestamp).getTime()
         );
 
+        // Normalize distances to start from 0
+        const baseDistance = processedPath[0]?.distance ?? 0;
+        processedPath.forEach(p => { p.distance = p.distance - baseDistance; });
+
         // ── Stats (distance / driving / idling / stoppage) ───────────────
         let drivingSeconds = 0;
         let idlingSeconds = 0;
@@ -452,6 +456,7 @@ const RoutePlayback = () => {
           onVehicleChange={setSelectedVehicle}
           selectedDate={selectedDate}
           onDateChange={setSelectedDate}
+          vehicles={vehicles.map(v => ({ id: v.id, name: v.name }))}
           vehicleName={summary.vehicleName}
           totalDistance={summary.totalDistance}
           drivingTime={summary.drivingTime}

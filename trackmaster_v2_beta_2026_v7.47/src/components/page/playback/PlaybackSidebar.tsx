@@ -5,9 +5,7 @@ import { Calendar as CalendarIcon, Download, Printer, Milestone, Clock, Ban, Hou
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { VehicleCombobox } from '@/components/VehicleCombobox';
-import { actualVehicles } from '@/data/mockData';
 import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
 import PlaybackStatCard from './PlaybackStatCard';
 import type { TripPoint } from '@/data/routeData';
 
@@ -16,6 +14,7 @@ interface PlaybackSidebarProps {
   onVehicleChange: (vehicleId: string) => void;
   selectedDate: Date | undefined;
   onDateChange: (date: Date | undefined) => void;
+  vehicles: { id: string; name: string }[];
   vehicleName: string;
   totalDistance: number;
   drivingTime: number; // in minutes
@@ -59,6 +58,7 @@ const PlaybackSidebar = ({
   onVehicleChange,
   selectedDate,
   onDateChange,
+  vehicles,
   vehicleName,
   totalDistance,
   drivingTime,
@@ -67,7 +67,6 @@ const PlaybackSidebar = ({
   path,
   unifiedStoppages,
 }: PlaybackSidebarProps) => {
-  const vehiclesForFilter = actualVehicles.map(v => ({ id: v.id, name: v.name }));
 
   const { startEvent, intermediateEvents, endEvent } = useMemo(() => {
     if (path.length === 0) return { startEvent: null, intermediateEvents: [], endEvent: null };
@@ -102,7 +101,7 @@ const PlaybackSidebar = ({
     <div className="w-[350px] flex-shrink-0 bg-card border-r flex flex-col h-full overflow-hidden">
       <div className="p-3 border-b shrink-0 space-y-3">
         <div className="flex items-center gap-2">
-          <VehicleCombobox vehicles={vehiclesForFilter} value={selectedVehicle || ''} onChange={onVehicleChange} className="w-full h-9" />
+          <VehicleCombobox vehicles={vehicles} value={selectedVehicle || ''} onChange={onVehicleChange} className="w-full h-9" />
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="outline" className="w-full h-9 justify-start text-left font-normal">
