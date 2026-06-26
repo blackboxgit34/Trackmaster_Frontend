@@ -22,7 +22,7 @@ type Props = {
 const chartConfig = {
   avgSpeed: {
     // label: 'Avg. Speed (km/h)',
-    label: 'Non Overspeed Incidents',
+    label: 'Avg. Speed (km/h)',
     color: '#F97316', // Brand Orange
   },
   overspeedIncidents: {

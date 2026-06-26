@@ -153,18 +153,23 @@ const getVehicleStatus = (
   lastUpdated: string,
   ignitionStatus: boolean
 ): string => {
-  const hoursDiff =
-    (new Date().getTime() - new Date(lastUpdated).getTime()) /
-    (1000 * 60 * 60);
+
+  // const hoursDiff =
+  //   (new Date().getTime() - new Date(lastUpdated).getTime()) /
+  //   (1000 * 60 * 60);
 
 
+  const lastCleaned = lastUpdated.replace('Z', '').replace('T', ' ');
+  const now = new Date();
+  const last = new Date(lastCleaned);
+  const hoursDiff = (now.getTime() - last.getTime()) / (1000 * 60 * 60);
   switch (true) {
     case hoursDiff > 6:
       return 'Unreachable';
 
     case speed > 0 &&
       speed >= overspeed &&
-      ignitionStatus ===true:
+      ignitionStatus === true:
       return 'High Speed';
 
     case speed > 0 &&
@@ -231,14 +236,14 @@ export const getVehicleStatusList = async ({
     vehicleNo: item.vehName,
     type: item.type || 'Other',
     model: item.model || '',
-      
+
     // status: item.vehicleStatus as VehicleStatus,
 
     status: getVehicleStatus(
       Number(item.speed),
       Number(item.overspeed ?? 60),
       item.lastUpdated,
-        item.ignitionStatus
+      item.ignitionStatus
     ) as VehicleStatus,
 
     lat: Number(item.lat),

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Table,
   TableBody,
@@ -22,8 +22,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-import { alertsData } from '@/data/mockData';
-import { vehicles } from '@/data/mockData';
+
 import {
   ArrowUp,
   ArrowDown,
@@ -36,9 +35,10 @@ import {
   FileText,
   FileSpreadsheet,
   ChevronsUpDown,
+  ChevronDown,
 } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
-import { subWeeks, subHours, subDays, subMonths, isWithinInterval, parse, startOfDay, endOfDay } from 'date-fns';
+import { subWeeks, subHours, subDays, subMonths, isWithinInterval, parse, startOfDay, endOfDay, format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import WhatsappPopup from '../WhatsappPopup';
@@ -50,31 +50,51 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import Papa from 'papaparse';
-import { useVehicleList } from '@/hooks/useApi';
+import { useReportDownload, useVehicleList } from '@/hooks/useApi';
+import { DataTableRequestModel } from '@/hooks/DataTableRequestModel';
+import { API_BASE_URL } from '@/config/Api';
 
-const geofenceViolationsData = alertsData.Geofencing.map((alert, index) => ({
-  id: `GV-${index + 1}`,
-  dateTime: alert.dateTime,
-  machineId: alert.machineId,
-  machineName: alert.machineName,
-  fenceName: alert.location,
-  eventType: (Math.random() > 0.5 ? 'Entry' : 'Exit') as 'Entry' | 'Exit',
-}));
+type GeofenceEvent = {
+  id: string;
+  dateTime: string;
+  vehicleId: string;
+  vehicleName: string;
+  location: string;
+  fenceName: string;
+  eventType: 'Fence in' | 'Fence out';
+};
 
-type ReportData = (typeof geofenceViolationsData)[0];
-type ReportDataKey = keyof ReportData;
 
-const headers: { key: ReportDataKey; label: string }[] = [
-  { key: 'dateTime', label: 'Date & Time' },
-  { key: 'machineId', label: 'Machine ID' },
-  { key: 'machineName', label: 'Machine Name' },
-  { key: 'fenceName', label: 'Location' },
-  { key: 'eventType', label: 'Event Type' },
+
+
+type AggregatedData = {
+  vehicleName: string;
+  location: string;
+  geoTime: string;
+  fenceStatus: string;
+  bbid: string;
+  fencename: string;
+  fenceViolationsCount: number;
+};
+
+
+
+type ReportDataKey = keyof AggregatedData;
+
+const headers = [
+  {
+    key: 'vehicleName',
+    label: 'Vehicle No'
+  },
+  {
+    key: 'fenceViolationsCount',
+    label: 'Fence Violations Count'
+  },
 ];
-
 const timeRanges = [
   { label: 'Last Hour', value: 'last-hour' },
   { label: 'Last Day', value: 'last-day' },
@@ -113,8 +133,8 @@ const SortableHeader = ({
   </TableHead>
 );
 
-const EventTypeBadge = ({ eventType }: { eventType: 'Entry' | 'Exit' }) => {
-  const isEntry = eventType === 'Entry';
+const EventTypeBadge = ({ eventType }: { eventType: 'Fence in' | 'Fence out' }) => {
+  const isEntry = eventType === 'Fence in';
   return (
     <span
       className={cn(
@@ -130,13 +150,14 @@ const EventTypeBadge = ({ eventType }: { eventType: 'Entry' | 'Exit' }) => {
 };
 
 const GeofenceViolations = () => {
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
   const [sortConfig, setSortConfig] = useState<{
     key: ReportDataKey;
     direction: 'asc' | 'desc';
-  }>({ key: 'dateTime', direction: 'desc' });
+  }>({ key: 'vehicleName', direction: 'asc' });
+  const [detailsSortConfig, setDetailsSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'dateTime', direction: 'desc' });
 
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const { data: vehicleList } = useVehicleList();
   const [date, setDate] = useState<DateRange | undefined>({
     from: subWeeks(new Date(), 1),
     to: new Date(),
@@ -145,6 +166,31 @@ const GeofenceViolations = () => {
   const [activeTimeRange, setActiveTimeRange] = useState<string | null>(
     'last-week'
   );
+
+  const [reportData, setReportData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [totalRecords, setTotalRecords] = useState(0);
+
+  const [pagination, setPagination] = useState({
+    pageIndex: 0,
+    pageSize: 10,
+  });
+
+
+
+
+
+  const toggleRow = (rowId: string) => {
+    setExpandedRows((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(rowId)) {
+        newSet.delete(rowId);
+      } else {
+        newSet.add(rowId);
+      }
+      return newSet;
+    });
+  };
 
   const handleTimeRangeClick = (range: string) => {
     const now = new Date();
@@ -172,53 +218,29 @@ const GeofenceViolations = () => {
 
     setDate({ from: fromDate, to: now });
     setActiveTimeRange(range);
+    setPagination(p => ({ ...p, pageIndex: 0 }));
   };
 
   const handleDateChange = (newDate: DateRange | undefined) => {
     setDate(newDate);
     setActiveTimeRange(null);
+    setPagination(p => ({ ...p, pageIndex: 0 }));
+  };
+
+  const handleVehicleChange = (value: string) => {
+    setSelectedVehicle(value);
+    setPagination(p => ({ ...p, pageIndex: 0 }));
   };
 
   const selectedTimeRangeLabel =
     timeRanges.find((r) => r.value === activeTimeRange)?.label ||
     'Select a time range';
 
-  const filteredData = useMemo(() => {
-    let data = [...geofenceViolationsData];
 
-    if (date?.from) {
-      const start = startOfDay(date.from);
-      const end = date.to ? endOfDay(date.to) : endOfDay(date.from);
-      data = data.filter(item => {
-        const itemDate = parse(item.dateTime, 'yyyy-MM-dd HH:mm', new Date());
-        return isWithinInterval(itemDate, { start, end });
-      });
-    }
-
-    if (selectedVehicle !== 'all') {
-      data = data.filter(item => item.machineId === selectedVehicle);
-    }
-
-    return data;
-  }, [date, selectedVehicle]);
 
   const sortedData = useMemo(() => {
-    const sortableData = [...filteredData];
-    if (sortConfig) {
-      sortableData.sort((a, b) => {
-        const aValue = a[sortConfig.key as keyof typeof a];
-        const bValue = b[sortConfig.key as keyof typeof b];
-        if (aValue < bValue) {
-          return sortConfig.direction === 'asc' ? -1 : 1;
-        }
-        if (aValue > bValue) {
-          return sortConfig.direction === 'asc' ? 1 : -1;
-        }
-        return 0;
-      });
-    }
-    return sortableData;
-  }, [filteredData, sortConfig]);
+    return reportData || [];
+  }, [reportData]);
 
   const handleSort = (key: ReportDataKey) => {
     let direction: 'asc' | 'desc' = 'asc';
@@ -226,69 +248,214 @@ const GeofenceViolations = () => {
       direction = 'desc';
     }
     setSortConfig({ key, direction });
-    setPage(0);
+    setPagination(p => ({ ...p, pageIndex: 0 }));
   };
 
-  const generateExportData = () => {
-    return sortedData.map(row => ({
-      'Date & Time': row.dateTime,
-      'Machine ID': row.machineId,
-      'Machine Name': row.machineName,
-      'Location': row.fenceName,
-      'Event Type': row.eventType,
+  const handleDetailsSort = (key: string) => {
+    setDetailsSortConfig(prev => ({
+      key,
+      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc',
     }));
   };
 
-  const handleExportPDF = () => {
-    const exportData = generateExportData();
-    if (exportData.length === 0) return;
-    const doc = new jsPDF();
-    
-    const tableColumn = Object.keys(exportData[0]);
-    const tableRows = exportData.map(row => Object.values(row).map(String));
-
-    doc.text("Geofence Violations Report", 14, 15);
-    
-    autoTable(doc, {
-      head: [tableColumn],
-      body: tableRows,
-      startY: 20,
+  const generateExportData = () => {
+    const dataToExport: any[] = [];
+    sortedData.forEach(row => {
+      if (row.events.length > 0) {
+        row.events.forEach(detail => {
+          dataToExport.push({
+            'Vehicle No': row.vehicleName,
+            'Fence Violations Count': row.violationCount,
+            'Vehicle Name': detail.vehicleName,
+            'Location': detail.location,
+            'GeoTime': detail.dateTime,
+            'Fence name': detail.fenceName,
+            'Fence Status': detail.eventType,
+          });
+        });
+      } else {
+        dataToExport.push({
+          'Vehicle No': row.vehicleName,
+          'Fence Violations Count': row.violationCount,
+          'Vehicle Name': 'N/A',
+          'Location': 'N/A',
+          'GeoTime': 'N/A',
+          'Fence name': 'N/A',
+          'Fence Status': 'N/A',
+        });
+      }
     });
-    
-    doc.save(`geofence-violations-${new Date().toISOString().split('T')[0]}.pdf`);
+    return dataToExport;
   };
 
-  const handleExportCSV = () => {
-    const exportData = generateExportData();
-    if (exportData.length === 0) return;
-    
-    const csv = Papa.unparse(exportData);
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `geofence-violations-${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+
+
+  const paginatedData = reportData || [];
+
+  const totalPages = Math.ceil(
+    totalRecords /
+    pagination.pageSize
+  );
+
+  const firstRowIndex =
+    totalRecords === 0
+      ? 0
+      : pagination.pageIndex *
+      pagination.pageSize +
+      1;
+
+  const lastRowIndex =
+    Math.min(
+      (
+        pagination.pageIndex + 1
+      ) * pagination.pageSize,
+      totalRecords
+    );
+
+  useEffect(() => {
+    loadData();
+  }, [
+    pagination.pageIndex,
+    pagination.pageSize,
+    sortConfig,
+    selectedVehicle,
+    date,
+  ]);
+
+
+
+
+  const authData = JSON.parse(
+    localStorage.getItem("trackmaster-auth") || "{}"
+  );
+
+  const request: DataTableRequestModel = {
+    CustId: authData?.custId || 0,
+
+    sEcho: 1,
+
+    iDisplayStart:
+      pagination.pageIndex *
+      pagination.pageSize,
+
+    iDisplayLength:
+      pagination.pageSize,
+
+    sSearch: "",
+
+    sortColumn: sortConfig.key,
+
+    sortDirection: sortConfig.direction,
+
+    beginDate: format(
+      startOfDay(date?.from || new Date()),
+      "M/d/yyyy h:mm:ss a"
+    ),
+
+    endDate: date?.to
+      ? format(date.to, "M/d/yyyy h:mm:ss a")
+      : "",
+
+    Status: "",
   };
 
-  const paginatedData = sortedData.slice(
-    page * rowsPerPage,
-    page * rowsPerPage + rowsPerPage
+
+
+  const {
+    exportExcel: originalExportExcel,
+    exportPdf: originalExportPdf,
+  } = useReportDownload(
+    "/GeoFence/GetGeoFenceViolation", request,
+    { bbid: "null" }
   );
 
-  const totalPages = Math.ceil(sortedData.length / rowsPerPage);
-  const firstRowIndex = page * rowsPerPage + 1;
-  const lastRowIndex = Math.min(
-    (page + 1) * rowsPerPage,
-    sortedData.length
-  );
-  const { data: vehicleList } = useVehicleList();
+  const exportExcel = async () => {
+    try {
+      setLoading(true);
+      await originalExportExcel();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
+  const exportPdf = async () => {
+    try {
+      setLoading(true);
+      await originalExportPdf();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+
+      const params = new URLSearchParams();
+
+      Object.entries(request).forEach(([key, value]) => {
+        if (
+          value !== null &&
+          value !== undefined
+        ) {
+          params.append(
+            key,
+            String(value)
+          );
+        }
+      });
+
+      params.append(
+        "bbid",
+        selectedVehicle !== "all"
+          ? selectedVehicle
+          : "null"
+      );
+      const response = await fetch(
+        `${API_BASE_URL}/GeoFence/GetGeoFenceViolation?${params.toString()}`,
+        {
+          method: "GET",
+        }
+      );
+
+      if (!response.ok)
+        throw new Error("API Failed");
+
+      const result = await response.json();
+
+      setReportData(
+        Array.isArray(result?.data)
+          ? result.data
+          : []
+      );
+
+      setTotalRecords(
+        result?.recordsTotal || 0
+      );
+    }
+    catch (error) {
+      console.log(error);
+
+      setReportData([]);
+      setTotalRecords(0);
+    }
+    finally {
+      setLoading(false);
+    }
+  };
+
 
   return (
-    <Card className="shadow-sm overflow-hidden">
+    <Card className="shadow-sm overflow-hidden flex flex-col h-full">
+      {loading && (
+        <div className="absolute inset-0 bg-white/70 z-10 flex items-center justify-center rounded-md">
+          <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-lg shadow">
+            <div className="animate-spin h-4 w-4 border-2 border-black border-t-transparent rounded-full"></div>
+            <span className="text-sm">Please wait ...</span>
+          </div>
+        </div>
+      )}
       <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 px-6 py-4">
         <div>
           <CardTitle className="text-xl font-bold text-foreground">
@@ -324,7 +491,7 @@ const GeofenceViolations = () => {
             </DropdownMenuContent>
           </DropdownMenu>
           <DateRangePicker date={date} setDate={handleDateChange} />
-          <VehicleCombobox vehicles={[{ label: 'All Vehicles', value: 'all' }, ...(vehicleList ?? []),]} value={selectedVehicle} onChange={setSelectedVehicle} className="w-full sm:w-[180px]" />
+          <VehicleCombobox vehicles={[{ label: 'All Vehicles', value: 'all' }, ...(vehicleList ?? []),]} value={selectedVehicle} onChange={handleVehicleChange} className="w-full sm:w-[180px]" />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button className="bg-black text-white hover:bg-black/90 w-full sm:w-auto">
@@ -333,11 +500,11 @@ const GeofenceViolations = () => {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onSelect={handleExportPDF}>
+              <DropdownMenuItem onSelect={exportPdf}>
                 <FileText className="mr-2 h-4 w-4" />
                 Export as PDF
               </DropdownMenuItem>
-              <DropdownMenuItem onSelect={handleExportCSV}>
+              <DropdownMenuItem onSelect={exportExcel}>
                 <FileSpreadsheet className="mr-2 h-4 w-4" />
                 Export as Excel
               </DropdownMenuItem>
@@ -365,47 +532,133 @@ const GeofenceViolations = () => {
                     {header.label}
                   </SortableHeader>
                 ))}
+                <TableHead className="px-6 py-3 text-right">Detail</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paginatedData.map((row) => (
-                <TableRow
-                  key={row.id}
-                  className="bg-card hover:bg-muted/50 border-b"
-                >
-                  <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                    {row.dateTime}
-                  </TableCell>
-                  <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
-                    {row.machineId}
-                  </TableCell>
-                  <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-foreground font-semibold">
-                    {row.machineName}
-                  </TableCell>
-                  <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                    {row.fenceName}
-                  </TableCell>
-                  <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                    <EventTypeBadge eventType={row.eventType} />
+              {paginatedData.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={3} className="text-center py-10 text-muted-foreground">
+                    No data found
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : paginatedData.map((row) => {
+                const isExpanded = expandedRows.has(row.bbid);
+
+                const events = row.events || [];
+                const sortedDetails = [...events].sort((a: any, b: any) => {
+                  const aVal = a[detailsSortConfig.key] ?? '';
+                  const bVal = b[detailsSortConfig.key] ?? '';
+                  if (aVal < bVal) return detailsSortConfig.direction === 'asc' ? -1 : 1;
+                  if (aVal > bVal) return detailsSortConfig.direction === 'asc' ? 1 : -1;
+                  return 0;
+                });
+
+                return (
+                  <React.Fragment key={row.bbid}>
+                    <TableRow className="bg-card hover:bg-muted/50 border-b transition-colors">
+                      <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-foreground font-semibold">
+                        {row.vehicleName}
+                      </TableCell>
+                      <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+                        {row.fenceViolationsCount}
+                      </TableCell>
+                      <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-right">
+                        <Button
+                          variant="link"
+                          onClick={() => toggleRow(row.bbid)}
+                          className="font-medium text-brand-blue dark:text-blue-400 p-0 h-auto flex items-center justify-end gap-1 ml-auto"
+                        >
+                          Details
+                          <ChevronDown
+                            className={`h-4 w-4 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''
+                              }`}
+                          />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+
+                    {isExpanded && (
+                      <TableRow className="bg-muted/20 hover:bg-muted/20">
+                        <TableCell colSpan={3} className="p-0">
+                          <div className="bg-muted/50 p-6 sm:p-8">
+                            <div className="bg-card rounded-lg shadow-sm border overflow-hidden">
+                              <ScrollArea className="h-[300px]">
+                                <Table>
+                                  <TableHeader className="bg-muted/30 sticky top-0 z-10">
+                                    <TableRow>
+                                      <TableHead className="px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Vehicle Name</TableHead>
+                                      <SortableHeader onClick={() => handleDetailsSort('location')} isSorted={detailsSortConfig.key === 'location'} sortDirection={detailsSortConfig.direction as any}>Location</SortableHeader>
+                                      <SortableHeader onClick={() => handleDetailsSort('geoTime')} isSorted={detailsSortConfig.key === 'geoTime'} sortDirection={detailsSortConfig.direction as any}>GeoTime</SortableHeader>
+                                      <SortableHeader onClick={() => handleDetailsSort('fenceName')} isSorted={detailsSortConfig.key === 'fenceName'} sortDirection={detailsSortConfig.direction as any}>Fence name</SortableHeader>
+                                      <SortableHeader onClick={() => handleDetailsSort('fenceStatus')} isSorted={detailsSortConfig.key === 'fenceStatus'} sortDirection={detailsSortConfig.direction as any}>Fence Status</SortableHeader>
+                                    </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                    {/* {sortedDetails.map(detail => (
+                                      <TableRow key={detail.id} className="hover:bg-muted/30">
+                                        <TableCell className="font-semibold text-xs py-2.5">{detail.vehicleName}</TableCell>
+                                        <TableCell className="text-xs py-2.5 text-muted-foreground">{detail.location}</TableCell>
+                                        <TableCell className="font-mono text-xs py-2.5">{detail.dateTime}</TableCell>
+                                        <TableCell className="text-xs py-2.5 text-foreground">{detail.fenceName}</TableCell>
+                                        <TableCell className="py-2.5">
+                                          <EventTypeBadge eventType={detail.eventType} />
+                                        </TableCell>
+                                      </TableRow>
+                                    ))} */}
+
+                                    {sortedDetails.length === 0 ? (
+                                      <TableRow>
+                                        <TableCell colSpan={5} className="text-center py-4 text-muted-foreground text-xs">No events found</TableCell>
+                                      </TableRow>
+                                    ) : sortedDetails.map((detail: any, index: number) => (
+                                      <TableRow key={index} className="hover:bg-muted/30">
+                                        <TableCell className="font-semibold text-xs py-2.5">
+                                          {row.vehicleName}
+                                        </TableCell>
+                                        <TableCell className="text-xs py-2.5 text-muted-foreground">
+                                          {detail.location}
+                                        </TableCell>
+                                        <TableCell className="font-mono text-xs py-2.5">
+                                          {detail.geoTime}
+                                        </TableCell>
+                                        <TableCell className="text-xs py-2.5 text-foreground">
+                                          {detail.fenceName}
+                                        </TableCell>
+                                        <TableCell className="py-2.5">
+                                          <EventTypeBadge eventType={detail.fenceStatus as 'Fence in' | 'Fence out'} />
+                                        </TableCell>
+                                      </TableRow>
+                                    ))}
+                                  </TableBody>
+                                </Table>
+                              </ScrollArea>
+                            </div>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </React.Fragment>
+                );
+              })}
             </TableBody>
           </Table>
         </div>
       </CardContent>
-      <CardFooter className="flex items-center justify-between py-3 px-6 border-t bg-card">
+      <CardFooter className="flex items-center justify-between py-3 px-6 border-t bg-card mt-auto">
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">Rows per page:</span>
           <Select
-            value={String(rowsPerPage)}
+            value={String(pagination.pageSize)}
             onValueChange={(value) => {
-              setRowsPerPage(Number(value));
-              setPage(0);
+              setPagination({
+                pageIndex: 0,
+                pageSize: Number(value),
+              });
             }}
           >
             <SelectTrigger className="w-20 h-9 text-sm focus:ring-2 focus:ring-primary">
-              <SelectValue placeholder={rowsPerPage} />
+              <SelectValue placeholder={pagination.pageSize} />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="10">10</SelectItem>
@@ -416,15 +669,15 @@ const GeofenceViolations = () => {
         </div>
         <div className="flex items-center gap-4">
           <span className="text-sm text-muted-foreground">
-            {firstRowIndex}-{lastRowIndex} of {sortedData.length}
+            {firstRowIndex}-{lastRowIndex} of {totalRecords}
           </span>
           <div className="flex items-center gap-1">
             <Button
               variant="ghost"
               size="icon"
               className="h-8 w-8 text-muted-foreground hover:bg-accent"
-              onClick={() => setPage(0)}
-              disabled={page === 0}
+              onClick={() => setPagination(p => ({ ...p, pageIndex: 0 }))}
+              disabled={pagination.pageIndex === 0}
             >
               <ChevronsLeft className="h-4 w-4" />
             </Button>
@@ -432,8 +685,8 @@ const GeofenceViolations = () => {
               variant="ghost"
               size="icon"
               className="h-8 w-8 text-muted-foreground hover:bg-accent"
-              onClick={() => setPage(page - 1)}
-              disabled={page === 0}
+              onClick={() => setPagination(p => ({ ...p, pageIndex: p.pageIndex - 1 }))}
+              disabled={pagination.pageIndex === 0}
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
@@ -441,8 +694,8 @@ const GeofenceViolations = () => {
               variant="ghost"
               size="icon"
               className="h-8 w-8 text-muted-foreground hover:bg-accent"
-              onClick={() => setPage(page + 1)}
-              disabled={page >= totalPages - 1}
+              onClick={() => setPagination(p => ({ ...p, pageIndex: p.pageIndex + 1 }))}
+              disabled={pagination.pageIndex >= totalPages - 1}
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
@@ -450,8 +703,8 @@ const GeofenceViolations = () => {
               variant="ghost"
               size="icon"
               className="h-8 w-8 text-muted-foreground hover:bg-accent"
-              onClick={() => setPage(totalPages - 1)}
-              disabled={page >= totalPages - 1}
+              onClick={() => setPagination(p => ({ ...p, pageIndex: totalPages - 1 }))}
+              disabled={pagination.pageIndex >= totalPages - 1}
             >
               <ChevronsRight className="h-4 w-4" />
             </Button>
@@ -463,3 +716,4 @@ const GeofenceViolations = () => {
 };
 
 export default GeofenceViolations;
+
