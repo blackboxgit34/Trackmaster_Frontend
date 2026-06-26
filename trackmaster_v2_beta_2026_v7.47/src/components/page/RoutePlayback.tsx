@@ -441,14 +441,25 @@ const RoutePlayback = () => {
   // ─── Loading states ───────────────────────────────────────────────────────
   if (!isLoaded || vehiclesLoading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <Loader className="animate-spin text-muted-foreground" />
+      <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+        <div className="bg-white p-4 rounded-lg flex items-center gap-3 shadow-lg">
+          <div className="animate-spin h-5 w-5 border-2 border-black border-t-transparent rounded-full" />
+          <span>Please wait...</span>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="flex h-full w-full bg-muted/40">
+      {dataLoading && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white p-4 rounded-lg flex items-center gap-3 shadow-lg">
+            <div className="animate-spin h-5 w-5 border-2 border-black border-t-transparent rounded-full" />
+            <span>Please wait...</span>
+          </div>
+        </div>
+      )}
       {/* Sidebar */}
       {summary && playbackData ? (
         <PlaybackSidebar
@@ -456,7 +467,7 @@ const RoutePlayback = () => {
           onVehicleChange={setSelectedVehicle}
           selectedDate={selectedDate}
           onDateChange={setSelectedDate}
-          vehicles={vehicles.map(v => ({ id: v.id, name: v.name }))}
+          vehicles={vehicles.map(v => ({ label: v.name, value: v.id }))}
           vehicleName={summary.vehicleName}
           totalDistance={summary.totalDistance}
           drivingTime={summary.drivingTime}
@@ -469,7 +480,7 @@ const RoutePlayback = () => {
         <div className="w-[350px] flex-shrink-0 bg-card border-r flex flex-col h-full overflow-hidden p-4">
           <div className="flex items-center gap-2">
             <VehicleCombobox
-              vehicles={vehicles.map(v => ({ id: v.id, name: v.name }))}
+              vehicles={vehicles.map(v => ({ label: v.name, value: v.id }))}
               value={selectedVehicle || ''}
               onChange={setSelectedVehicle}
               className="w-full"
@@ -498,11 +509,7 @@ const RoutePlayback = () => {
 
       {/* Map area */}
       <div className="flex-1 relative bg-muted">
-        {dataLoading ? (
-          <div className="flex items-center justify-center h-full">
-            <Loader className="animate-spin text-muted-foreground" />
-          </div>
-        ) : playbackData ? (
+        {dataLoading ? null : playbackData ? (
           <>
             <PlaybackMap
               tripPath={playbackData.path}

@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Calendar as CalendarIcon, Download, Printer, Milestone, Clock, Ban, Hourglass } from 'lucide-react';
@@ -15,7 +15,7 @@ interface PlaybackSidebarProps {
   onVehicleChange: (vehicleId: string) => void;
   selectedDate: Date | undefined;
   onDateChange: (date: Date | undefined) => void;
-  vehicles: { id: string; name: string }[];
+  vehicles: { label: string; value: string }[];
   vehicleName: string;
   totalDistance: number;
   drivingTime: number; // in minutes
@@ -68,8 +68,10 @@ const PlaybackSidebar = ({
   path,
   unifiedStoppages,
 }: PlaybackSidebarProps) => {
+  const [isLoading, setIsLoading] = useState(false);
 
   const handlePrint = () => {
+    setIsLoading(true);
     const appSidebar = document.querySelector('aside');
     const appHeader = document.querySelector('header');
 
@@ -83,12 +85,14 @@ const PlaybackSidebar = ({
       document.body.classList.remove('printing');
       if (appSidebar) (appSidebar as HTMLElement).style.display = '';
       if (appHeader) (appHeader as HTMLElement).style.display = '';
+      setIsLoading(false);
     }, 500);
   };
 
   const handleExportExcel = async () => {
     try {
       if (!selectedVehicle || !selectedDate) return;
+      setIsLoading(true);
 
       const date = format(selectedDate, 'yyyy-MM-dd');
       const url =
@@ -111,6 +115,8 @@ const PlaybackSidebar = ({
       window.URL.revokeObjectURL(downloadUrl);
     } catch (error) {
       console.error('Export Excel Error:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -142,6 +148,15 @@ const PlaybackSidebar = ({
     
     return { startEvent, intermediateEvents, endEvent };
   }, [path, unifiedStoppages]);
+
+  if (isLoading) return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+      <div className="bg-white p-4 rounded-lg flex items-center gap-3 shadow-lg">
+        <div className="animate-spin h-5 w-5 border-2 border-black border-t-transparent rounded-full" />
+        <span>Please wait...</span>
+      </div>
+    </div>
+  );
 
   return (
     <div className="w-[350px] flex-shrink-0 bg-card border-r flex flex-col h-full overflow-hidden">
