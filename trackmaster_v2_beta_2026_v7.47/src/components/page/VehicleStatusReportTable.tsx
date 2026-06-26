@@ -44,6 +44,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import WhatsappPopup from '../WhatsappPopup';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { DateRangePicker } from '@/components/ui/date-range-picker';
 
 type ReportDataKey = keyof Omit<VehicleStatusHistory, 'events'>;
 
@@ -54,7 +55,7 @@ const headers: { key: ReportDataKey; label: string }[] = [
 
 const timeRanges = [
  // { label: 'Last Hour', value: 'last-hour' },
-  { label: 'Last Day', value: 'last-day' },
+ // { label: 'Last Day', value: 'last-day' },
   { label: 'Last Week', value: 'last-week' },
   { label: 'Last Month', value: 'last-month' },
  // { label: 'Last 2 Months', value: 'last-2-months' },
@@ -148,8 +149,10 @@ const requestModel = {
     ? format(startOfDay(date.from), "yyyy-MM-dd HH:mm:ss")
     : "",
   endDate: date?.to
-    ? format(endOfDay(date.to), "yyyy-MM-dd HH:mm:ss")
-    : "",
+        ? format(date.to, "M/d/yyyy h:mm:ss a")
+        : date?.from
+          ? format(date.from, "M/d/yyyy h:mm:ss a")
+          : "",
 };
 
 const {
@@ -212,7 +215,14 @@ if (date?.from) {
 }
 
 if (date?.to) {
-  params.append('endDate', format(endOfDay(date.to), 'yyyy-MM-dd HH:mm:ss'));
+  params.append(
+  'endDate',
+  date?.to
+    ? format(date.to, 'M/d/yyyy h:mm:ss a')
+    : date?.from
+      ? format(date.from, 'M/d/yyyy h:mm:ss a')
+      : ''
+);
 }
 
     try {
@@ -350,7 +360,9 @@ const totalCount = apiData?.count ?? 0;
         </div>
         <div className="flex items-center gap-2 flex-wrap justify-start sm:justify-end">
          
-          <DropdownMenu>
+        <DateRangePicker date={date} setDate={setDate} />
+
+          {/* <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant={'outline'} className={cn('w-full sm:w-[180px] justify-start text-left font-normal', !activeTimeRange && 'text-muted-foreground')}>
                 <CalendarIcon className="mr-2 h-4 w-4" />
@@ -364,100 +376,8 @@ const totalCount = apiData?.count ?? 0;
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
-          </DropdownMenu>
-                <Popover
-        open={isCalendarOpen}
-        onOpenChange={(open) => {
-          setIsCalendarOpen(open);
-
-          if (open) {
-            setTempDate(date);
-            setSelecting('start');
-          }
-        }}
-           >
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="w-full sm:w-[220px] justify-start text-left font-normal">
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {date?.from ? (
-                  date.to ? `${format(date.from, 'LLL dd, y')} - ${format(date.to, 'LLL dd, y')}` : format(date.from, 'LLL dd, y')
-                ) : (
-                  'Pick a date'
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent
-            className="w-auto p-0"
-            align="end"
-            >
-              <div className="p-4">
-                <Calendar
-                  mode="range"
-                  initialFocus
-                  numberOfMonths={2}
-                  selected={{
-                    from: tempDate?.from,
-                    to: tempDate?.to,
-                  }}
-                  onSelect={(range, selectedDay) => {
-                    if (!selectedDay) return;
-
-                    // FIRST CLICK → START DATE
-                    if (selecting === 'start') {
-                      setTempDate({
-                        from: selectedDay,
-                        to: undefined,
-                      });
-
-                      setSelecting('end');
-                      return;
-                    }
-
-                    // SECOND CLICK → END DATE
-                    if (selecting === 'end') {
-                      const start = tempDate?.from;
-
-                      if (!start) return;
-
-                      // IF USER PICKS EARLIER DATE
-                      if (selectedDay < start) {
-                        setTempDate({
-                          from: selectedDay,
-                          to: start,
-                        });
-                      } else {
-                        setTempDate({
-                          from: start,
-                          to: selectedDay,
-                        });
-                      }
-
-                      setSelecting('start');
-                    }
-                  }}
-                />
-              </div>
-              <div className="flex justify-end gap-2 border-t p-3">
-                <Button size="sm" variant="outline" onClick={() => setIsCalendarOpen(false)}>
-                  Cancel
-                </Button>
-                <Button
-                  size="sm"
-                  disabled={!tempDate?.from || !tempDate?.to}
-                  onClick={() => {
-                    if (tempDate?.from && tempDate?.to) {
-                      setDate(tempDate);
-                      setActiveTimeRange(null);
-                      setPage(0);
-                      setIsCalendarOpen(false);
-                    }
-                  }}
-                >
-                  Apply
-                </Button>
-              </div>
-            </PopoverContent>
-          </Popover>
+          </DropdownMenu> */}
+           
           <VehicleCombobox
   vehicles={vehicleSearchOptions}
   value={selectedVehicle}
