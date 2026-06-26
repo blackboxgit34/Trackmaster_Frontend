@@ -1,5 +1,5 @@
 import { subDays, formatISO, format, addHours, subHours, startOfDay, isWithinInterval, parse, endOfDay, addMinutes, addSeconds } from 'date-fns';
-import { Clock, Gauge, type LucideIcon, Power, Ban, BatteryWarning, MapPin, ArrowUp, ArrowDown, Undo2, Fuel, Droplets, Box, Thermometer } from 'lucide-react';
+import { Clock, Gauge, type LucideIcon, Power, Ban, BatteryWarning, MapPin, ArrowUp, ArrowDown, Undo2, Fuel, Droplets, Box, Thermometer, Bug, PlugZap, AirVent, DoorOpen,  } from 'lucide-react';
 
 
 let NUM_VEHICLES = 50;
@@ -535,10 +535,14 @@ export const dashboardAlertsData = {
   fuelAlerts: [
     { id: 'fuel-refil', label: 'Fuel Refil', count: 2, Icon: Fuel, color: 'text-green-500' },
     { id: 'fuel-drainage', label: 'Fuel Drainage', count: 1, Icon: Droplets, color: 'text-red-500' },
+    { id: 'dirt-alert', label: 'Dirt Alert', count: 3, Icon: Bug, color: 'text-yellow-500' },
+    { id: 'sensor-disconnect', label: 'Sensor Disconnect', count: 0, Icon: PlugZap, color: 'text-orange-500' },
   ],
   addonAlerts: [
     { id: 'tank-lid', label: 'Tank Lid Alert', count: 0, Icon: Box, color: 'text-cyan-500' },
     { id: 'temperature', label: 'Temperature Alert', count: 1, Icon: Thermometer, color: 'text-blue-500' },
+    { id: 'ac-on-off', label: 'AC On/Off', count: 4, Icon: AirVent, color: 'text-sky-500' },
+    { id: 'door-open-close', label: 'Door Open/Close', count: 2, Icon: DoorOpen, color: 'text-purple-500' },
   ],
 };
 
