@@ -567,6 +567,47 @@ const playbackDate = useMemo(() => {
               </div>
             </div>
 
+            {false && (
+              <Card>
+                
+                <CardHeader className="p-4 pb-2">
+                  <CardTitle className="text-base">Alerts</CardTitle>
+                </CardHeader>
+
+                <CardContent className="p-2">
+                  <div className="space-y-1">
+                    {Object.entries(alertIcons).map(([name, { icon: Icon, color, slug }]) => {
+                      const count = alertCounts[name as keyof typeof alertCounts] || 0;
+
+                      return (
+                        <Link
+                          key={name}
+                          to={`/alerts/${slug}?vehicle=${vehicle.vehicleNo}&from=${todayStr}&to=${todayStr}`}
+                          className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50"
+                        >
+                          <div className="flex items-center gap-3">
+                            <Icon className={cn("h-5 w-5", color)} />
+                            <span className="text-sm font-medium">{name}</span>
+                          </div>
+
+                          <div
+                            className={cn(
+                              "flex items-center justify-center h-6 min-w-[24px] px-1 rounded-full text-xs font-bold",
+                              count > 0
+                                ? "bg-red-500 text-white"
+                                : "bg-muted text-muted-foreground"
+                            )}
+                          >
+                            {count}
+                          </div>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+=======
             <Card>
               <CardHeader className="p-4 pb-2">
                 <CardTitle className="text-base font-medium">Alerts</CardTitle>
@@ -597,6 +638,7 @@ const playbackDate = useMemo(() => {
                 </div>
               </CardContent>
             </Card>
+
           </div>
         </ScrollArea>
         {/* Footer Actions */}
