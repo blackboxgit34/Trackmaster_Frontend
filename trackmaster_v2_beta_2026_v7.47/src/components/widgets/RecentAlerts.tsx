@@ -41,8 +41,8 @@ const getPriorityBadgeClasses = (priority: Priority): string => {
 
 const RecentAlerts = () => {
   return (
-    <Card>
-      <CardHeader className="p-4 pb-2">
+    <Card className="h-full flex flex-col w-full">
+      <CardHeader className="p-4 pb-2 shrink-0">
         <div className="flex items-center gap-2">
           <CardTitle className="text-base font-semibold">Recent Alerts</CardTitle>
           <TooltipProvider>
@@ -59,8 +59,8 @@ const RecentAlerts = () => {
           </TooltipProvider>
         </div>
       </CardHeader>
-      <CardContent className="p-0">
-        <ScrollArea className="h-[250px]">
+      <CardContent className="p-0 flex-1 overflow-hidden flex flex-col">
+        <ScrollArea className="flex-1 min-h-[250px]">
           <Table>
             <TableHeader className="sticky top-0 bg-card z-10">
               <TableRow>
