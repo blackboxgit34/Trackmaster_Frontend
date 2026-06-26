@@ -258,36 +258,7 @@ const GeofenceViolations = () => {
     }));
   };
 
-  const generateExportData = () => {
-    const dataToExport: any[] = [];
-    sortedData.forEach(row => {
-      if (row.events.length > 0) {
-        row.events.forEach(detail => {
-          dataToExport.push({
-            'Vehicle No': row.vehicleName,
-            'Fence Violations Count': row.violationCount,
-            'Vehicle Name': detail.vehicleName,
-            'Location': detail.location,
-            'GeoTime': detail.dateTime,
-            'Fence name': detail.fenceName,
-            'Fence Status': detail.eventType,
-          });
-        });
-      } else {
-        dataToExport.push({
-          'Vehicle No': row.vehicleName,
-          'Fence Violations Count': row.violationCount,
-          'Vehicle Name': 'N/A',
-          'Location': 'N/A',
-          'GeoTime': 'N/A',
-          'Fence name': 'N/A',
-          'Fence Status': 'N/A',
-        });
-      }
-    });
-    return dataToExport;
-  };
-
+ 
 
 
   const paginatedData = reportData || [];
