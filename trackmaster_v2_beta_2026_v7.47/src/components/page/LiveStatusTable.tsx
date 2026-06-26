@@ -85,8 +85,6 @@ import { getVehiclePngUrl } from '@/lib/map-utils';
 import { toast } from '@/hooks/use-toast';
 import type { VehicleStatus, LiveVehicleStatus } from '@/types';
 
-
-
 const minimalDotCache = new Map<string, string>();
 const StatusBadge = ({ status }: { status: string }) => {
   if (!minimalDotCache.has(status)) {
@@ -426,10 +424,6 @@ const TableSkeleton = () => (
     ))}
   </TableBody>
 );
-
-
-
-
 
 const LiveStatusTable = () => {
   const [searchParams] = useSearchParams();
@@ -988,7 +982,7 @@ const LiveStatusTable = () => {
                         {/* SAME ADDON UI */}
                         <TableCell className="px-6 py-4 whitespace-nowrap">
                           {row.addons ? (
-                            <div    className="grid grid-cols-3 gap-1 w-[80px]">
+                            <div className="grid grid-cols-3 gap-1 w-[80px]">
                               <AddonIcon
                                 status={row.addons.fuel}
                                 icon={Fuel}

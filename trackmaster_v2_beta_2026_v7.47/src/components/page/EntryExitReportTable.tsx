@@ -44,6 +44,7 @@ import {
   ChevronsUpDown,
 } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
+import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { subWeeks, subDays, subMonths, startOfDay, format, endOfDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 import WhatsappPopup from '../WhatsappPopup';
@@ -70,7 +71,7 @@ import { LoadScript, GoogleMap, Marker, InfoWindow } from '@react-google-maps/ap
 import { GOOGLE_MAPS_API_KEY } from '@/config/maps';
 import { DataTableRequestModel } from '@/hooks/DataTableRequestModel';
 import { API_BASE_URL } from '@/config/Api';
-import { DateRangePicker } from '@/components/ui/date-range-picker';//23.06.2026
+
 
 type ReportData = (typeof consolidatedReportTableData)[0] & { distance: number; driverName: string; poisCovered: string; };
 type ReportDataKey = keyof ReportData;
@@ -116,7 +117,7 @@ const locationMapOptions: google.maps.MapOptions = {
 
 const EntryExitReportTable = () => {
   const [detailsSortConfig, setDetailsSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'startTime', direction: 'asc' });
-  const [date, setDate] = useState<DateRange | undefined>({from: new Date(),to: new Date(),});
+  const [date, setDate] = useState<DateRange | undefined>({ from: new Date(), to: new Date(), });
   const [selectedVehicle, setSelectedVehicle] = useState('all');
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
@@ -128,7 +129,7 @@ const EntryExitReportTable = () => {
   const [selectedLocation, setSelectedLocation] = useState<any>(null);
   const [isLocationDialogOpen, setIsLocationDialogOpen] = useState(false);
   const [isInfoWindowOpen, setIsInfoWindowOpen] = useState(false);
-  const [pagination, setPagination] = useState({pageIndex: 0,pageSize: 10,});
+  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10, });
 
 
   const formatDateTime = (value: string | Date | null | undefined) => {
@@ -247,12 +248,16 @@ const EntryExitReportTable = () => {
         "M/d/yyyy h:mm:ss a"
 
       ),
-
-    endDate:
-      format(
-        new Date(),
-        "M/d/yyyy h:mm:ss a"
-      ),
+    endDate: date?.to
+      ? format(date.to, "M/d/yyyy h:mm:ss a")
+      : date?.from
+        ? format(date.from, "M/d/yyyy h:mm:ss a")
+        : "",
+    // endDate:
+    //   format(
+    //     new Date(),
+    //     "M/d/yyyy h:mm:ss a"
+    //   ),
 
     Status: ""
   };
@@ -511,7 +516,8 @@ const EntryExitReportTable = () => {
             <CardDescription>Daily entry and exit of vehicles.</CardDescription>
           </div>
           <div className="flex items-center gap-2 flex-wrap justify-start sm:justify-end">
-            <Popover
+            <DateRangePicker date={date} setDate={setDate} />
+            {/* <Popover
               open={isCalendarOpen}
               onOpenChange={(open) => {
                 setIsCalendarOpen(open);
@@ -620,7 +626,7 @@ const EntryExitReportTable = () => {
                   </div>
                 </div>
               </PopoverContent>
-            </Popover>
+            </Popover> */}
             <VehicleCombobox vehicles={[{ label: 'All Vehicles', value: 'all' }, ...(vehicleList ?? []),]} value={selectedVehicle} onChange={setSelectedVehicle} className="w-full sm:w-[180px]" />
             <Select value={intervalFilter} onValueChange={setIntervalFilter}>
               <SelectTrigger className="w-full sm:w-[180px]">
