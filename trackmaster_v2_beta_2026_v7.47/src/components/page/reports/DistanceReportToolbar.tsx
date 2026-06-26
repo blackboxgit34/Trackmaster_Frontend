@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -6,23 +6,13 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-import { Calendar as CalendarIcon, Download, FileText, FileSpreadsheet } from 'lucide-react';
+import { Download, FileText, FileSpreadsheet } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
-import { subWeeks, subDays, subMonths, format } from 'date-fns';
-import { cn } from '@/lib/utils';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
 import WhatsappPopup from '../../WhatsappPopup';
 import { VehicleCombobox } from '../../VehicleCombobox';
 import { API_BASE_URL } from '@/config/Api';
 import { useSearchParams } from 'react-router-dom';
-
-const timeRanges = [
-  { label: 'Today', value: 'today' },
-  { label: 'Yesterday', value: 'yesterday' },
-  { label: 'Last Week', value: 'last-week' },
-  { label: 'Last Month', value: 'last-month' },
-];
+import { DateRangePicker } from '@/components/ui/date-range-picker';
 
 interface DistanceReportToolbarProps {
   dateRange: DateRange | undefined;
@@ -41,45 +31,23 @@ const DistanceReportToolbar = ({
   onExportPDF,
   onExportCSV,
 }: DistanceReportToolbarProps) => {
-  const [isCalendarOpen, setIsCalendarOpen] = React.useState(false);
-
-  const handleTimeRangeClick = (range: string) => {
-    const now = new Date();
-    let fromDate: Date;
-    let toDate: Date = now;
-
-    switch (range) {
-      case 'today': fromDate = now; break;
-      case 'yesterday': fromDate = subDays(now, 1); toDate = subDays(now, 1); break;
-      case 'last-week': fromDate = subWeeks(now, 1); break;
-      case 'last-month': fromDate = subMonths(now, 1); break;
-      default: fromDate = now;
-    }
-    setDateRange({ from: fromDate, to: toDate });
-    setIsCalendarOpen(false);
-  };
   const [vehicles, setVehicles] = useState<{ label: string; value: string }[]>([]);
   const [searchParams] = useSearchParams();
   const vehicleFromUrl = searchParams.get('vehicle');
-  const [tempRange, setTempRange] = useState<DateRange | undefined>(dateRange);
+
   useEffect(() => {
     const loadVehicles = async () => {
       try {
         const auth = JSON.parse(localStorage.getItem('trackmaster-auth') || '{}');
-
         const custId = auth.custId;
 
         const response = await fetch(
           `${API_BASE_URL}/Dashboard/GetAllVehicleListByCustId?userid=${custId}`
         );
-
         const data = await response.json();
 
         const formattedVehicles = [
-          {
-            label: 'All Vehicles',
-            value: '',
-          },
+          { label: 'All Vehicles', value: '' },
           ...(data.data || []).map((v: any) => ({
             label: v.vehName,
             value: v.bbid,
@@ -88,9 +56,7 @@ const DistanceReportToolbar = ({
 
         setVehicles(formattedVehicles);
 
-        // Only set selected vehicle if parent hasn't provided one yet
         if (formattedVehicles.length > 0) {
-          // If a vehicle is provided in URL, prefer that. Otherwise only set when selectedVehicle is falsy.
           if (vehicleFromUrl) {
             setSelectedVehicle(vehicleFromUrl);
           } else if (!selectedVehicle) {
@@ -104,157 +70,16 @@ const DistanceReportToolbar = ({
 
     loadVehicles();
   }, []);
+
   return (
     <div className="flex items-center gap-2 flex-wrap justify-start sm:justify-end">
-      <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            id="date"
-            variant={'outline'}
-            className={cn('w-full sm:w-[260px] justify-start text-left font-normal')}
-          >
-            <CalendarIcon className="mr-2 h-4 w-4" />
-            {dateRange?.from ? (
-              dateRange.to ? (
-                <>
-                  {format(dateRange.from, 'LLL dd, y')} - {format(dateRange.to, 'LLL dd, y')}
-                </>
-              ) : (
-                format(dateRange.from, 'LLL dd, y')
-              )
-            ) : (
-              <span>Pick a date</span>
-            )}
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="end">
-  
-  {/* LEFT QUICK RANGE PANEL */}
-  <div className="flex">
-    <div className="flex flex-col space-y-1 p-2 border-r">
-      {timeRanges.map((range) => (
-        <Button
-          key={range.value}
-          variant="ghost"
-          className="justify-start"
-          onClick={() => handleTimeRangeClick(range.value)}
-        >
-          {range.label}
-        </Button>
-      ))}
-    </div>
-
-    {/* CALENDAR */}
-    <div className="p-2">
-      <Calendar
-        initialFocus
-        mode="range"
-        defaultMonth={dateRange?.from}
-        selected={tempRange}
-        onSelect={(val) => {
-          if (!val) return setTempRange(undefined);
-
-          const maybeAny: any = val;
-
-          if (maybeAny instanceof Date) {
-            setTempRange({ from: maybeAny, to: undefined });
-            return;
-          }
-
-          if (maybeAny.from && !maybeAny.to) {
-            setTempRange({ from: maybeAny.from, to: undefined });
-            return;
-          }
-
-          if (maybeAny.from && maybeAny.to) {
-            setTempRange({ from: maybeAny.from, to: maybeAny.to });
-            return;
-          }
-
-          setTempRange(maybeAny);
-        }}
-        numberOfMonths={1}
+      <DateRangePicker date={dateRange} setDate={setDateRange} />
+      <VehicleCombobox
+        vehicles={vehicles}
+        value={selectedVehicle}
+        onChange={setSelectedVehicle}
+        className="w-full sm:w-[180px]"
       />
-    </div>
-  </div>
-
-  {/* ✅ BUTTONS BELOW EVERYTHING */}
-  <div className="flex justify-end gap-2 p-3 border-t bg-white">
-    <Button
-      variant="outline"
-      onClick={() => {
-        setTempRange(dateRange);
-        setIsCalendarOpen(false);
-      }}
-    >
-      Cancel
-    </Button>
-
-    <Button
-      onClick={() => {
-        setDateRange(tempRange);
-        setIsCalendarOpen(false);
-      }}
-      disabled={!tempRange?.from || !tempRange?.to}
-    >
-      Apply
-    </Button>
-  </div>
-
-</PopoverContent>
-        {/* <PopoverContent className="w-auto p-0 flex" align="end">
-          <div className="flex flex-col space-y-1 p-2 border-r">
-            {timeRanges.map((range) => (
-              <Button
-                key={range.value}
-                variant="ghost"
-                className="justify-start"
-                onClick={() => handleTimeRangeClick(range.value)}
-              >
-                {range.label}
-              </Button>
-            ))}
-          </div>
-          <Calendar
-            initialFocus
-            mode="range"
-            defaultMonth={dateRange?.from}
-            selected={dateRange}
-            onSelect={(val) => {
-              // If cleared
-              if (!val) {
-                setDateRange(undefined);
-                return;
-              }
-
-              const maybeAny: any = val;
-
-              // If a single Date is returned, treat it as the start (from) and wait for the user to pick end
-              if (maybeAny instanceof Date) {
-                setDateRange({ from: maybeAny, to: undefined });
-                return;
-              }
-
-              // If only from present (user clicked first date), set from and wait for end (do not auto-set to same day)
-              if (maybeAny.from && !maybeAny.to) {
-                setDateRange({ from: maybeAny.from, to: undefined });
-                return;
-              }
-
-              // If both from and to present, respect user's click order: first click becomes `from`, second becomes `to`.
-              // Do NOT automatically swap — this preserves the user's selection flow (start then end).
-              if (maybeAny.from && maybeAny.to) {
-                setDateRange({ from: maybeAny.from as Date, to: maybeAny.to as Date });
-                return;
-              }
-
-              setDateRange(maybeAny as any);
-            }}
-            numberOfMonths={1}
-          />
-        </PopoverContent> */}
-      </Popover>
-      <VehicleCombobox vehicles={vehicles} value={selectedVehicle} onChange={setSelectedVehicle} className="w-full sm:w-[180px]" />
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button className="bg-foreground text-background hover:bg-foreground/90 w-full sm:w-auto">
@@ -262,8 +87,12 @@ const DistanceReportToolbar = ({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem onSelect={onExportPDF}><FileText className="mr-2 h-4 w-4" />Export as PDF</DropdownMenuItem>
-          <DropdownMenuItem onSelect={onExportCSV}><FileSpreadsheet className="mr-2 h-4 w-4" />Export as CSV</DropdownMenuItem>
+          <DropdownMenuItem onSelect={onExportPDF}>
+            <FileText className="mr-2 h-4 w-4" />Export as PDF
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={onExportCSV}>
+            <FileSpreadsheet className="mr-2 h-4 w-4" />Export as CSV
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
       <WhatsappPopup />

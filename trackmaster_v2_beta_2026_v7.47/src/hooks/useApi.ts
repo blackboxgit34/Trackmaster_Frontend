@@ -153,18 +153,23 @@ const getVehicleStatus = (
   lastUpdated: string,
   ignitionStatus: boolean
 ): string => {
-  const hoursDiff =
-    (new Date().getTime() - new Date(lastUpdated).getTime()) /
-    (1000 * 60 * 60);
 
-    debugger
+  // const hoursDiff =
+  //   (new Date().getTime() - new Date(lastUpdated).getTime()) /
+  //   (1000 * 60 * 60);
+
+
+  const lastCleaned = lastUpdated.replace('Z', '').replace('T', ' ');
+  const now = new Date();
+  const last = new Date(lastCleaned);
+  const hoursDiff = (now.getTime() - last.getTime()) / (1000 * 60 * 60);
   switch (true) {
     case hoursDiff > 6:
       return 'Unreachable';
 
     case speed > 0 &&
       speed >= overspeed &&
-      ignitionStatus ===true:
+      ignitionStatus === true:
       return 'High Speed';
 
     case speed > 0 &&
@@ -225,21 +230,20 @@ export const getVehicleStatusList = async ({
 
   const result = await response.json();
 
-  debugger
   return result.data.map((item: any) => ({
 
     id: item.bbid,
     vehicleNo: item.vehName,
     type: item.type || 'Other',
     model: item.model || '',
-      
+
     // status: item.vehicleStatus as VehicleStatus,
 
     status: getVehicleStatus(
       Number(item.speed),
       Number(item.overspeed ?? 60),
       item.lastUpdated,
-        item.ignitionStatus
+      item.ignitionStatus
     ) as VehicleStatus,
 
     lat: Number(item.lat),
@@ -251,9 +255,9 @@ export const getVehicleStatusList = async ({
     workingHours: 0,
     idlingHours: 12.5,
     fuelConsumed: 0,
-    gsmSignal: item.gsmSignal,
-    deviceSignal: item.gpsAntConStatus,
-    GPSFix: item.hasfix,
+    gsmSignal: 30,// item.gsmSignal,
+    deviceSignal: 1,// item.gpsAntConStatus,
+    GPSFix: 2,//item.hasfix,
     battery: item.vehBattery,
     gpsDeviceBattery: item.deviceBattery,
     alerts: 0,
@@ -262,20 +266,39 @@ export const getVehicleStatusList = async ({
     errorDetails: [],
     distance: 0,
     fuelLevel: item.remainingFuelLevel || 0,
-    fuelLiters: 0,
+    fuelLiters: 50,
     fuelTankCapacity: 0,
-    engineTemp: 0,
+    engineTemp: 50,
     hydraulicTemp: 0,
     acStatus: item.acSignal,
     ignitionStatus: item.ignitionStatus,
     totalRecords: item.totalRecords || 0,
     driverName: item.driverName || '',
     mob_no: item.mob_no || '',
-
+    addons: {
+      fuel: getAddonStatus(true),
+      temp: getAddonStatus(true),
+      ac: getAddonStatus(true),
+      door: getAddonStatus(true),
+      lid: getAddonStatus(true),
+      immobilizer: getAddonStatus(item.immobilizer),
+    },
   }));
 };
 
+const getAddonStatus = (
+  value: unknown
+): 'working' | 'error' | 'uninstalled' => {
+  if (value === 1 || value === '1' || value === true) {
+    return 'working';
+  }
 
+  if (value === -1 || value === 'error') {
+    return 'error';
+  }
+
+  return 'uninstalled';
+};
 // ==============================
 // EXCEL PDF & EXCEL DOWNLOAD HOOK
 // ==============================

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import {
   Signal, SignalMedium, SignalHigh, SignalZero, TriangleAlert, BatteryFull, BatteryMedium, BatteryLow,
   Gauge, Clock, Share2, MapPin, Play, Copy, Thermometer, Wrench, BatteryWarning, AirVent, Power,
-  Pause
+  Pause,  Hand, Navigation
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -22,49 +22,49 @@ import ShareLocationDialog from './ShareLocationDialog';
 import { format, parse , isValid, parseISO } from 'date-fns';
 import BlackboxSignalIcon from '../icons/BlackboxSignalIcon';
 import SpeedGauge from './SpeedGauge';
-import { getIconUrl } from '@/lib/map-utils';
+import { getIconUrl, getVehiclePngUrl } from '@/lib/map-utils';
+
 
 const DeviceSignalIcon = ({
-  
+
   gpsAntConStatus,
   GPSFix,
 }: {
   gpsAntConStatus: number | null;
   GPSFix: number | null;
 }) => {
-  
   let text = 'Unknown';
   let color = 'text-muted-foreground';
   let Icon;
   switch (true) {
-    case gpsAntConStatus === 15 && GPSFix === 1:
+    case gpsAntConStatus === 1 && GPSFix === 2:
       Icon = Signal;
       text = 'Full GPS Signal';
-      color = 'text-green-500';
+      color = 'green';
       break;
 
     case gpsAntConStatus === 1 && GPSFix === 1:
       Icon = SignalMedium;
       text = 'Low GPS Signal';
-      color = 'text-yellow-500';
+      color = 'yellow';
       break;
 
     case gpsAntConStatus === 1 && GPSFix === 0:
       Icon = SignalZero;
       text = 'GPS Antena Connected But No GPS Signal';
-      color = 'text-red-500';
+      color = 'red';
       break;
 
     case gpsAntConStatus === 0:
       Icon = TriangleAlert;
       text = 'GPS Antena Disconnected';
-      color = 'text-gray-500';
+      color = 'gray';
       break;
 
     default:
       Icon = TriangleAlert;
       text = 'Unknown';
-      color = 'text-muted-foreground';
+      color = 'gray';
       break;
   }
 
@@ -72,18 +72,19 @@ const DeviceSignalIcon = ({
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <button>
-            <BlackboxSignalIcon className={cn('h-5 w-5', color)} />
+          <button className="flex items-center justify-center">
+            <img src={`/icons/system%20status%20icons/gps-${color}.svg`} alt="GPS Signal" className="h-5 w-5" />
           </button>
         </TooltipTrigger>
-
-        <TooltipContent>
-          <p>{text}</p>
+        <TooltipContent className="bg-black text-white border-black">
+          <p>GPS Signal: {text}</p>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
   );
 };
+
+
 const GsmSignalIcon = ({ signal }: { signal: number }) => {
   let Icon, text, color;
 
@@ -91,34 +92,34 @@ const GsmSignalIcon = ({ signal }: { signal: number }) => {
     case signal == null:
       Icon = TriangleAlert;
       text = 'Unknown';
-      color = 'text-muted-foreground';
+      color = 'gray';
       break;
     // No GSM Signal
     case signal > 31:
       Icon = SignalZero;
       text = 'No GSM Signal';
-      color = 'text-red-500';
+      color = 'red';
       break;
 
     // Excellent GSM Signal
     case signal < 32 && signal >= 25:
       Icon = Signal;
       text = 'Full GSM Signal';
-      color = 'text-green-500';
+      color = 'green';
       break;
 
     // Good GSM Signal
     case signal < 25 && signal >= 20:
       Icon = SignalHigh;
       text = 'Low GSM Signal';
-      color = 'text-lime-500';
+      color = 'green';
       break;
 
     // InSufficient GSM Signal
     case signal < 20 && signal >= 10:
       Icon = SignalMedium;
       text = 'Very Low GSM Signal';
-      color = 'text-yellow-500';
+      color = 'yellow';
       break;
 
     // GSM Signal Very Low
@@ -132,7 +133,7 @@ const GsmSignalIcon = ({ signal }: { signal: number }) => {
     default:
       Icon = TriangleAlert;
       text = 'Unknown';
-      color = 'text-muted-foreground';
+      color = 'gray';
       break;
   }
 
@@ -140,121 +141,118 @@ const GsmSignalIcon = ({ signal }: { signal: number }) => {
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <button>
-            <Icon className={cn('h-5 w-5', color)} />
+          <button className="flex items-center justify-center">
+            <img src={`/icons/system%20status%20icons/gsm-${color}.svg`} alt="GSM Signal" className="h-5 w-5" />
           </button>
         </TooltipTrigger>
-
         <TooltipContent className="bg-black text-white border-black">
-          <p>{text}</p>
+          <p>GSM Signal: {text}</p>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
   );
 };
+
 const BatteryIcon = ({ battery, tooltipLabel }: { battery: number; tooltipLabel: string }) => {
-    let Icon, text, color;
+  let Icon, text, color;
   switch (true) {
     case battery == null:
       Icon = TriangleAlert;
       text = 'Battery Disconnected';
-      color = 'text-muted-foreground';
+      color = 'red';
       break;
-    
+
     case battery >= 12.5:
       Icon = BatteryFull;
       text = 'High';
-      color = 'text-green-500';
+      color = 'green';
       break;
 
-    
+
     case battery < 12.5 && battery >= 10:
       Icon = BatteryMedium;
       text = 'Low';
-      color = 'text-lime-500';
+      color = 'lime';
       break;
 
-    
+
     case battery < 10 && battery >= 5:
       Icon = BatteryLow;
       text = 'Very Low';
-      color = 'text-yellow-500';
+      color = 'yellow';
       break;
 
-    
+
     case battery < 5:
       Icon = TriangleAlert;
       text = 'Battery Disconnected';
-      color = 'text-muted-foreground';
+      color = 'red';
       break;
 
     default:
       Icon = TriangleAlert;
       text = 'Unknown';
-      color = 'text-muted-foreground';
+      color = 'red';
   }
-return (
+
+  return (
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <button>
-            <Icon className={cn('h-5 w-5', color)} />
+          <button className="flex items-center justify-center">
+            <img src={`/icons/system%20status%20icons/device-battery-${color}.svg`} alt={tooltipLabel} className="h-5 w-5" />
           </button>
         </TooltipTrigger>
-
         <TooltipContent className="bg-black text-white border-black">
-          <p>
-            {tooltipLabel}: {text} ({battery}%)
-          </p>
+          <p>{tooltipLabel}: {text} ({battery}%)</p>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
   );
-  
+
 };
+
 const BatteryIconDevice = ({ deviceBattery, tooltipLabel }: { deviceBattery: number; tooltipLabel: string }) => {
   let Icon, text, color;
-  
   switch (true) {
     case deviceBattery == null:
       Icon = TriangleAlert;
       text = 'Battery Disconnected';
-      color = 'text-muted-foreground';
+      color = 'red';
       break;
-    
+
     case deviceBattery == 33:
       Icon = BatteryFull;
       text = 'High';
-      color = 'text-green-500';
+      color = 'green';
       break;
 
-    
+
     case deviceBattery == 2:
       Icon = BatteryMedium;
       text = 'Low';
-      color = 'text-lime-500';
+      color = 'lime';
       break;
-    
+
     case deviceBattery == 1:
       Icon = BatteryLow;
       text = 'Very Low';
-      color = 'text-yellow-500';
+      color = 'yellow';
       break;
-    
+
     default:
       Icon = TriangleAlert;
       text = 'Unknown';
-      color = 'text-muted-foreground';
+      color = 'red';
   }
-return (
+  return (
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <button>
-            <Icon className={cn('h-5 w-5', color)} />
+          <button className="flex items-center justify-center">
+            <img src={`/icons/system%20status%20icons/vehicle-battery-${color}.svg`} alt={tooltipLabel} className="h-5 w-5" />
           </button>
         </TooltipTrigger>
-
         <TooltipContent className="bg-black text-white border-black">
           <p>
             {tooltipLabel}: {text} ({deviceBattery}%)
@@ -264,6 +262,7 @@ return (
     </TooltipProvider>
   );
 };
+
 const DistanceDisplay = ({ distance }: { distance: number }) => {
 
   
@@ -391,26 +390,6 @@ const playbackDate = useMemo(() => {
   }
 }, [vehicle.lastUpdated, todayStr]);
 
-// const playbackDate = useMemo(() => {
-//   try {
-//     const parsedDate = parse(
-//       vehicle.lastUpdated,
-//       'M/d/yyyy hh:mm:ss a',
-//       new Date()
-//     );
-
-//     console.log(vehicle.lastUpdated);
-//     if (!isValid(parsedDate)) {
-//       console.error('Invalid date:', vehicle.lastUpdated);
-//       return todayStr;
-//     }
-
-//     return format(parsedDate, 'yyyy-MM-dd');
-//   } catch (e) {
-//     console.error('Failed to parse date for playback link:', e);
-//     return todayStr;
-//   }
-// }, [vehicle.lastUpdated, todayStr]);
 
   const stopTimeHours = Math.floor(vehicle.stoppageTime);
   // const stopTimeMinutes = Math.round((vehicle.idlingHours - stopTimeHours) * 60);
@@ -421,39 +400,42 @@ const playbackDate = useMemo(() => {
         <ScrollArea className="flex-1">
           <div className="p-4 space-y-4">
             {/* Header */}
+            {/* Row 1: Vehicle Number + Status Badge */}
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-xl font-bold" title={vehicle.vehicleNo}>{vehicle.vehicleNo.length > 10 ? vehicle.vehicleNo.slice(0, 10) + '...' : vehicle.vehicleNo}</h3>
+              <span className={cn('px-4 py-1 text-xs font-medium rounded-full shrink-0', getStatusBadgeClasses(vehicle.status))}>
+                {vehicle.status}
+              </span>
+            </div>
+
+            {/* Row 2: Vehicle Image + Details */}
             <div className="flex items-start gap-4">
-              <img
-               src={getIconUrl(vehicle.type, vehicle.status)}
-                // src="https://www.yanmar.com/ltc/global/construction/products/excavator/vio20/img/e666979970/img_mainvisual_top_01_sp.jpg"
-                alt={vehicle.type}
-                className="h-16 w-16 object-contain"
-              />
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="text-xl font-bold">{vehicle.vehicleNo}</h3>
-                  <span className={cn('px-2.5 py-1 text-xs font-semibold rounded-full', getStatusBadgeClasses(vehicle.status))}>
-                    {vehicle.status}
-                  </span>
-                </div>
-                {/* <p className="text-sm text-muted-foreground">Model: {vehicle.model}</p> */}
+              <div className="w-20 h-20 flex items-center justify-center shrink-0">
+                <img
+                  src={getVehiclePngUrl(vehicle.type)}
+                  alt={vehicle.type}
+                  className="w-16 h-16 object-contain"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?q=80&w=200&auto=format&fit=crop';
+                  }}
+                />
+              </div>
+              <div className="flex flex-col justify-center min-w-0 py-1">
+                <p className="text-sm text-muted-foreground">Model: {vehicle.model}</p>
                 <p className="text-sm text-muted-foreground">Type: {vehicle.type}</p>
-                <div className="text-xs text-muted-foreground flex items-center gap-2 mt-1">
-                  Vehicle ID: {vehicle.id}
-                  <Copy className="h-3 w-3 cursor-pointer hover:text-foreground" onClick={() => handleCopy(vehicle.id, 'Vehicle ID')} />
-                </div>
-                <div className="text-xs text-muted-foreground flex items-center gap-2">
-                  BBID: {vehicle.bbid}
-                  <Copy className="h-3 w-3 cursor-pointer hover:text-foreground" onClick={() => handleCopy('559493339504954', 'BBID')} />
+                <div className="flex items-center gap-2 mt-0.5">
+                  <p className="text-sm text-muted-foreground truncate" title={vehicle.bbid}>BBID: {vehicle.bbid}</p>
+                  <Copy className="h-3.5 w-3.5 cursor-pointer text-muted-foreground hover:text-foreground shrink-0" onClick={() => handleCopy(vehicle.bbid, 'BBID')} />
                 </div>
               </div>
             </div>
 
-            {/* Distance */}
+            {/* Distance Display Segment */}
             <DistanceDisplay distance={vehicle.distance} />
 
             {/* Location */}
             <div className="flex items-start gap-3">
-              <MapPin className="h-5 w-5 text-blue-500 mt-1 flex-shrink-0" />
+              <MapPin className="h-5 w-5 text-blue-500 mt-1 flex-shrink-0" strokeWidth={1.5} />
               <div>
                 <p className="text-sm font-medium text-blue-500">{vehicle.location}</p>
                 <p className="text-xs text-muted-foreground">Last Updated: {vehicle.lastUpdated}</p>
@@ -461,75 +443,78 @@ const playbackDate = useMemo(() => {
             </div>
 
             {/* Gauges */}
-            <div className="flex items-center justify-around">
+            <div className="flex items-center justify-around pb-2">
               {vehicle.sensorStatus === 'ok' && <FuelGauge fuelLevel={vehicle.fuelLevel} fuelLiters={vehicle.fuelLiters} />}
               <SpeedGauge speed={vehicle.speed} />
             </div>
 
-            <div className="grid grid-cols-2 gap-4 pt-2">
-              <div className="p-4 flex flex-col items-center justify-center text-center">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100 dark:bg-purple-900/30 mb-2">
-                  <MapPin className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+            {/* Stacked Stats - Clean Grid layout */}
+            <div className="flex flex-col gap-3 pt-2">
+
+              {/* Total Distance */}
+              <div className="flex items-center justify-between p-3 border border-border/60 rounded-[14px] bg-card shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] transition-all hover:shadow-[0_4px_12px_-4px_rgba(0,0,0,0.1)]">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-[10px] bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center shrink-0">
+                    <MapPin className="h-5 w-5 text-blue-500" strokeWidth={1.5} />
+                  </div>
+                  <span className="text-[13px] font-medium text-slate-500 dark:text-slate-400">Total Distance</span>
                 </div>
-                <p className="text-xs text-muted-foreground uppercase">Driven</p>
-                <p className="text-xl font-bold">
-                  {vehicle.distance.toFixed(1)}
-                  <span className="text-sm font-medium text-muted-foreground ml-1">km</span>
-                </p>
+                <div className="flex items-baseline gap-0.5">
+                  <span className="text-[19px] font-bold text-foreground tracking-tight">{vehicle.distance.toFixed(1)}</span>
+                  <span className="text-[11px] text-muted-foreground font-normal ml-0.5">km</span>
+                </div>
               </div>
 
-              <div className="p-4 flex flex-col items-center justify-center text-center">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-100 dark:bg-orange-900/30 mb-2">
-                  <Clock className="h-5 w-5 text-orange-500 dark:text-orange-400" />
+              {/* Travel Time */}
+              <div className="flex items-center justify-between p-3 border border-border/60 rounded-[14px] bg-card shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] transition-all hover:shadow-[0_4px_12px_-4px_rgba(0,0,0,0.1)]">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-[10px] bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center shrink-0">
+                    <Clock className="h-5 w-5 text-amber-500" strokeWidth={1.5} />
+                  </div>
+                  <span className="text-[13px] font-medium text-slate-500 dark:text-slate-400">Travel Time</span>
                 </div>
-                <p className="text-xs text-muted-foreground uppercase">Stoppage Time</p>
-                <p className="text-xl font-bold">
-                  {formatDuration(stopTimeHours)}
-                  {/* <span className="text-sm font-medium text-muted-foreground">h</span> {stopTimeMinutes}
-                  <span className="text-sm font-medium text-muted-foreground">m</span> */}
-                </p>
+                <div className="flex items-baseline gap-0.5">
+                  <span className="text-[19px] font-bold text-foreground tracking-tight">{Math.floor(vehicle.workingHours)}</span>
+                  <span className="text-[11px] text-muted-foreground font-normal ml-0.5 mr-1.5">h</span>
+                  <span className="text-[19px] font-bold text-foreground tracking-tight">{Math.round((vehicle.workingHours % 1) * 60)}</span>
+                  <span className="text-[11px] text-muted-foreground font-normal ml-0.5">m</span>
+                </div>
               </div>
-            </div>
 
-            <div className="space-y-2">
-                <Card className="p-3">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800">
-                                <Pause className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                            </div>
-                            <div>
-                                <p className="text-xs font-semibold text-muted-foreground">PARKING STATUS</p>
-                                {/* <p className="text-xs text-muted-foreground">{formatDuration(vehicle.idlingHours)}</p> */}
-                            </div>
-                        </div>
-                        <div className="text-right">
-                            <p className="text-xs text-muted-foreground">TOTAL TODAY</p>
-                            <p className="text-xl font-bold">{formatDuration(vehicle.idlingHours)}</p>
-                        </div>
-                    </div>
-                </Card>
-                <Card className="p-3">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/20">
-                                <Play className="h-4 w-4 text-green-500" />
-                            </div>
-                            <div>
-                                <p className="text-xs font-semibold text-muted-foreground">MOVING STATUS</p>
-                                {/* <p className="text-xs text-muted-foreground">{formatDuration(vehicle.workingHours)}</p> */}
-                            </div>
-                        </div>
-                        <div className="text-right">
-                            <p className="text-xs text-muted-foreground">TOTAL TODAY</p>
-                            <p className="text-xl font-bold text-green-500">{formatDuration(vehicle.workingHours)}</p>
-                        </div>
-                    </div>
-                </Card>
+              {/* Total Halt */}
+              <div className="flex items-center justify-between p-3 border border-border/60 rounded-[14px] bg-card shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] transition-all hover:shadow-[0_4px_12px_-4px_rgba(0,0,0,0.1)]">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-[10px] bg-red-50 dark:bg-red-500/10 flex items-center justify-center shrink-0">
+                    <Hand className="h-5 w-5 text-red-400" strokeWidth={1.5} />
+                  </div>
+                  <span className="text-[13px] font-medium text-slate-500 dark:text-slate-400">Total Halt</span>
+                </div>
+                <div className="flex items-baseline gap-0.5">
+                  <span className="text-[19px] font-bold text-foreground tracking-tight">{Math.floor(vehicle.idlingHours)}</span>
+                  <span className="text-[11px] text-muted-foreground font-normal ml-0.5 mr-1.5">h</span>
+                  <span className="text-[19px] font-bold text-foreground tracking-tight">{Math.round((vehicle.idlingHours % 1) * 60)}</span>
+                  <span className="text-[11px] text-muted-foreground font-normal ml-0.5">m</span>
+                </div>
+              </div>
+
+              {/* Moving from last halt */}
+              <div className="flex items-center justify-between p-3 border border-border/60 rounded-[14px] bg-card shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] transition-all hover:shadow-[0_4px_12px_-4px_rgba(0,0,0,0.1)]">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-[10px] bg-green-50 dark:bg-green-500/10 flex items-center justify-center shrink-0">
+                    <Navigation className="h-5 w-5 text-green-500" strokeWidth={1.5} />
+                  </div>
+                  <span className="text-[13px] font-medium text-slate-500 dark:text-slate-400">Moving from last halt</span>
+                </div>
+                <div className="flex items-baseline gap-0.5">
+                  <span className="text-[19px] font-bold text-foreground tracking-tight">{(vehicle.distance % 12).toFixed(1)}</span>
+                  <span className="text-[11px] text-muted-foreground font-normal ml-0.5">km</span>
+                </div>
+              </div>
+
             </div>
 
             {/* System Status */}
-            <div className="space-y-3">
+            <div className="space-y-3 pt-4">
               <h4 className="text-sm font-semibold text-muted-foreground">System Status</h4>
               <div className="flex justify-between items-center text-sm">
                 <span className="text-muted-foreground">AC Status</span>
@@ -537,7 +522,7 @@ const playbackDate = useMemo(() => {
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <button>
-                        <AirVent className={cn("h-5 w-5", vehicle.acStatus === true ? 'text-green-500' : 'text-red-500')} />
+                        <AirVent className={cn("h-5 w-5", vehicle.acStatus === true ? 'text-green-500' : 'text-red-500')} strokeWidth={1.5} />
                       </button>
                     </TooltipTrigger>
                     <TooltipContent>
@@ -552,7 +537,7 @@ const playbackDate = useMemo(() => {
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <button>
-                        <Power className={cn("h-5 w-5", vehicle.ignitionStatus === true ? 'text-green-500' : 'text-red-500')} />
+                        <Power className={cn("h-5 w-5", vehicle.ignitionStatus === true ? 'text-green-500' : 'text-red-500')} strokeWidth={1.5} />
                       </button>
                     </TooltipTrigger>
                     <TooltipContent>
@@ -574,14 +559,15 @@ const playbackDate = useMemo(() => {
               </div>
               <div className="flex justify-between items-center text-sm">
                 <span className="text-muted-foreground">Vehicle Battery</span>
-                <BatteryIcon battery={vehicle.battery} tooltipLabel="Vehicle Battery" />
+                <BatteryIconDevice deviceBattery={vehicle.gpsDeviceBattery} tooltipLabel="Blackbox Battery" />
               </div>
               <div className="flex justify-between items-center text-sm">
                 <span className="text-muted-foreground">Blackbox Battery</span>
-                <BatteryIconDevice deviceBattery={vehicle.gpsDeviceBattery} tooltipLabel="Blackbox Battery" />
+                <BatteryIcon battery={vehicle.battery} tooltipLabel="Vehicle Battery" />
               </div>
             </div>
 
+<<<<<<< HEAD
             {false && (
               <Card>
                 
@@ -622,24 +608,54 @@ const playbackDate = useMemo(() => {
                 </CardContent>
               </Card>
             )}
+=======
+            <Card>
+              <CardHeader className="p-4 pb-2">
+                <CardTitle className="text-base font-medium">Alerts</CardTitle>
+              </CardHeader>
+              <CardContent className="p-2">
+                <div className="space-y-1">
+                  {Object.entries(alertIcons).map(([name, { icon: Icon, color, slug }]) => {
+                    const count = alertCounts[name as keyof typeof alertCounts] || 0;
+                    return (
+                      <Link
+                        key={name}
+                        to={`/alerts/${slug}?vehicle=${vehicle.vehicleNo}&from=${todayStr}&to=${todayStr}`}
+                        className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50"
+                      >
+                        <div className="flex items-center gap-3">
+                          <Icon className={cn("h-5 w-5", color)} strokeWidth={1.5} />
+                          <span className="text-sm font-medium">{name}</span>
+                        </div>
+                        <div className={cn(
+                          "flex items-center justify-center h-6 min-w-[24px] px-1 rounded-full text-xs font-bold",
+                          count > 0 ? 'bg-red-500 text-white' : 'bg-muted text-muted-foreground'
+                        )}>
+                          {count}
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+>>>>>>> f6018d33add463e20509e9d741261d958eab3269
           </div>
         </ScrollArea>
         {/* Footer Actions */}
         <div className="p-4 border-t shrink-0 grid grid-cols-3 gap-2">
-          <Button variant="outline" className="flex flex-col h-16 gap-1" onClick={() => onRecenter(vehicle)}>
-            <MapPin className="h-5 w-5" />
+          <Button variant="outline" className="flex flex-col h-16 gap-1 font-medium" onClick={() => onRecenter(vehicle)}>
+            <MapPin className="h-5 w-5" strokeWidth={1.5} />
             <span className="text-xs">Recenter</span>
           </Button>
-          <Button asChild variant="outline" className="flex flex-col h-16 gap-1">
-            <Link
-              to={`/vehicle-status/route-playback?vehicle=${vehicle.bbid}&date=${playbackDate}`}
-            >
-              <Play className="h-5 w-5" />
+          <Button asChild variant="outline" className="flex flex-col h-16 gap-1 font-medium">
+            <Link to={`/vehicle-status/route-playback?vehicle=${vehicle.vehicleNo}&date=${playbackDate}`}>
+              <Play className="h-5 w-5" strokeWidth={1.5} />
               <span className="text-xs">Playback</span>
             </Link>
           </Button>
-          <Button variant="outline" className="flex flex-col h-16 gap-1" onClick={() => setIsShareDialogOpen(true)}>
-            <Share2 className="h-5 w-5" />
+          <Button variant="outline" className="flex flex-col h-16 gap-1 font-medium" onClick={() => setIsShareDialogOpen(true)}>
+            <Share2 className="h-5 w-5" strokeWidth={1.5} />
             <span className="text-xs">Share</span>
           </Button>
         </div>

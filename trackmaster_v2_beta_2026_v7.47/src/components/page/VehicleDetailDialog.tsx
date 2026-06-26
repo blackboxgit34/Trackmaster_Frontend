@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import type { LiveVehicleStatus } from '@/types';
 import { actualVehicles } from '@/data/mockData';
 import { GoogleMap, OverlayView, Polyline, Marker } from '@react-google-maps/api';
-import { getIconUrl, calculateBearing, getStatusColor } from '@/lib/map-utils';
+import { getIconUrl, calculateBearing, getStatusColor, getVehiclePngUrl } from '@/lib/map-utils';
 import { cn } from '@/lib/utils';
 import { useEffect, useRef, useState } from 'react';
 
@@ -25,10 +25,10 @@ const DetailItem = ({ label, value }: { label: string; value: string | number | 
 );
 
 const DailyStatusItem = ({ label, value }: { label: string; value: string | number | undefined | null }) => (
-    <div className="flex justify-between text-sm">
-        <p className="text-muted-foreground">{label}:</p>
-        <p className="font-semibold text-foreground">{value || 'Not Provided'}</p>
-    </div>
+  <div className="flex justify-between text-sm">
+    <p className="text-muted-foreground">{label}:</p>
+    <p className="font-semibold text-foreground">{value || 'Not Provided'}</p>
+  </div>
 );
 
 const containerStyle = {
@@ -107,17 +107,26 @@ const VehicleDetailDialog = ({ open, onOpenChange, vehicle }: VehicleDetailDialo
           {/* Top Left Card */}
           <Card>
             <CardContent className="p-4 flex items-center gap-6">
-              <img
+              {/* <img
                 src="https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?q=80&w=400&auto=format&fit=crop"
                 alt={vehicle.vehicleNo}
                 className="h-40 w-40 object-cover rounded-lg"
+              /> */}
+
+              <img
+                src={getVehiclePngUrl(vehicle.type)}
+                alt={vehicle.vehicleNo}
+                className="h-12 w-12 object-contain"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?q=80&w=200&auto=format&fit=crop';
+                }}
               />
               <div className="grid grid-cols-2 gap-x-8 gap-y-4 flex-1">
                 <div>
                   <h2 className="text-2xl font-bold">{vehicle.vehicleNo}</h2>
                   <p className="text-sm text-muted-foreground">Vehicle ID: {vehicle.id}</p>
                 </div>
-                <div/>
+                <div />
                 <DetailItem label="Vehicle Type" value={vehicle.type} />
                 <DetailItem label="Make" value={vehicleDetails?.make} />
                 <DetailItem label="Model" value={vehicle.model} />
@@ -223,23 +232,23 @@ const VehicleDetailDialog = ({ open, onOpenChange, vehicle }: VehicleDetailDialo
               <p className="text-xs text-muted-foreground">As of {new Date().toLocaleDateString('en-GB')}</p>
             </CardHeader>
             <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 text-center">
-                    <div>
-                        <p className="text-xs text-muted-foreground">DISTANCE</p>
-                        <p className="text-lg font-bold">{vehicle.distance.toFixed(1)} km</p>
-                    </div>
-                    <div>
-                        <p className="text-xs text-muted-foreground">SPEED</p>
-                        <p className="text-lg font-bold">{vehicle.speed} km/h</p>
-                    </div>
+              <div className="grid grid-cols-2 text-center">
+                <div>
+                  <p className="text-xs text-muted-foreground">DISTANCE</p>
+                  <p className="text-lg font-bold">{vehicle.distance.toFixed(1)} km</p>
                 </div>
-                <div className="space-y-2 pt-4 border-t">
-                    <DailyStatusItem label="BBID" value={vehicle.id} />
-                    <DailyStatusItem label="Driver Name" value={vehicle.driverName} />
-                    <DailyStatusItem label="Driver Mobile" value={vehicle.mob_no} />
-                    <DailyStatusItem label="Coordinates" value={`${vehicle.lat}, ${vehicle.lng}`} />
-                    <DailyStatusItem label="Two Way Comms" value="5754160173629" />
+                <div>
+                  <p className="text-xs text-muted-foreground">SPEED</p>
+                  <p className="text-lg font-bold">{vehicle.speed} km/h</p>
                 </div>
+              </div>
+              <div className="space-y-2 pt-4 border-t">
+                <DailyStatusItem label="BBID" value={vehicle.id} />
+                <DailyStatusItem label="Driver Name" value={vehicle.driverName} />
+                <DailyStatusItem label="Driver Mobile" value={vehicle.mob_no} />
+                <DailyStatusItem label="Coordinates" value={`${vehicle.lat}, ${vehicle.lng}`} />
+                <DailyStatusItem label="Two Way Comms" value="5754160173629" />
+              </div>
             </CardContent>
           </Card>
         </div>

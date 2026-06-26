@@ -38,6 +38,7 @@ import {
   ChevronsUpDown,
 } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
+import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { subWeeks, subDays, subMonths, startOfDay, format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
@@ -52,8 +53,8 @@ import {
 } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
+// import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+// import { Calendar } from '@/components/ui/calendar';
 
 import { useReportDownload, useVehicleList } from '@/hooks/useApi';
 import { API_BASE_URL } from '@/config/Api';
@@ -76,12 +77,12 @@ const headers: { key: ReportDataKey; label: string }[] = [
   { key: 'poisCovered', label: 'POIs Covered' },
 ];
 
-const timeRanges = [
-  { label: 'Today', value: 'today' },
-  { label: 'Yesterday', value: 'yesterday' },
-  { label: 'Last Week', value: 'last-week' },
-  { label: 'Last Month', value: 'last-month' },
-];
+// const timeRanges = [
+//   { label: 'Today', value: 'today' },
+//   { label: 'Yesterday', value: 'yesterday' },
+//   { label: 'Last Week', value: 'last-week' },
+//   { label: 'Last Month', value: 'last-month' },
+// ];
 
 
 
@@ -110,7 +111,7 @@ const ExitEntryReportTable = () => {
   });
   const [selectedVehicle, setSelectedVehicle] = useState('all');
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
-  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  // const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [tempDate, setTempDate] = useState<DateRange | undefined>(date);
   const [reportData, setReportData] = useState<ReportData[]>([]);
   const [loading, setLoading] = useState(false);
@@ -185,11 +186,17 @@ const ExitEntryReportTable = () => {
 
       ),
 
-    endDate:
-      format(
-        new Date(),
-        "M/d/yyyy h:mm:ss a"
-      ),
+    endDate: date?.to
+      ? format(date.to, "M/d/yyyy h:mm:ss a")
+      : date?.from
+        ? format(date.from, "M/d/yyyy h:mm:ss a")
+        : "",
+
+    // endDate:
+    //   format(
+    //     new Date(),
+    //     "M/d/yyyy h:mm:ss a"
+    //   ),
 
     Status: ""
   };
@@ -473,106 +480,7 @@ const ExitEntryReportTable = () => {
           <CardDescription>Daily exit and entry of vehicles.</CardDescription>
         </div>
         <div className="flex items-center gap-2 flex-wrap justify-start sm:justify-end">
-          <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                id="date"
-                variant={'outline'}
-                className={cn(
-                  'w-full sm:w-[260px] justify-start text-left font-normal'
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {date?.from ? (
-                  date.to ? (
-                    <>
-                      {format(date.from, 'LLL dd, y')} -{' '}
-                      {format(date.to, 'LLL dd, y')}
-                    </>
-                  ) : (
-                    format(date.from, 'LLL dd, y')
-                  )
-                ) : (
-                  <span>Pick a date</span>
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="end">
-              <div className="flex">
-                <div className="flex flex-col space-y-1 p-2 border-r">
-                  {timeRanges.map((range) => (
-                    <Button
-                      key={range.value}
-                      variant="ghost"
-                      className="justify-start"
-                      onClick={() => {
-                        const now = new Date();
-                        let fromDate: Date;
-                        let toDate: Date = now;
-
-                        switch (range.value) {
-                          case "today":
-                            fromDate = now;
-                            break;
-                          case "yesterday":
-                            fromDate = subDays(now, 1);
-                            toDate = subDays(now, 1);
-                            break;
-                          case "last-week":
-                            fromDate = subWeeks(now, 1);
-                            break;
-                          case "last-month":
-                            fromDate = subMonths(now, 1);
-                            break;
-                          default:
-                            fromDate = now;
-                        }
-
-                        setTempDate({
-                          from: fromDate,
-                          to: toDate,
-                        });
-                      }}
-                    >
-                      {range.label}
-                    </Button>
-                  ))}
-                </div>
-
-                <div className="flex flex-col">
-                  <Calendar
-                    initialFocus
-                    mode="range"
-                    defaultMonth={tempDate?.from}
-                    selected={tempDate}
-                    onSelect={setTempDate}
-                    numberOfMonths={1}
-                  />
-
-                  <div className="flex justify-end gap-2 border-t p-3">
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setTempDate(date); // restore old date
-                        setIsCalendarOpen(false);
-                      }}
-                    >
-                      Cancel
-                    </Button>
-
-                    <Button
-                      onClick={() => {
-                        setDate(tempDate); // apply selected date
-                        setIsCalendarOpen(false);
-                      }}
-                    >
-                      Apply
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </PopoverContent>
-          </Popover>
+          <DateRangePicker date={date} setDate={setDate} />
           <VehicleCombobox vehicles={[{ label: 'All Vehicles', value: 'all' }, ...(vehicleList ?? []),]} value={selectedVehicle} onChange={setSelectedVehicle} className="w-full sm:w-[180px]" />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

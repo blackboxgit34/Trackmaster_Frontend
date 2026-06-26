@@ -52,6 +52,7 @@ export const menuItems = [
         icon: Milestone,
         children: [
           { title: 'Distance Report', icon: FileText, href: '/reports/trip-distance/distance' },
+          { title: 'Distance Report 2', icon: FileText, href: '/reports/trip-distance/distance-2' },
           { title: 'Trip Report', icon: FileText, href: '/reports/trip-distance/trip-report' },
           { title: 'Monthly Day-Wise Distance Report', icon: FileText, href: '/reports/trip-distance/monthly-day-wise' },
         ],
