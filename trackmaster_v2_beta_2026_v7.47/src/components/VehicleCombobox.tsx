@@ -80,7 +80,7 @@ const selectedVehicle = vehicles.find(
                 </CommandItem>
               ))}
             </CommandGroup> */}
-
+  
                     <CommandGroup>
               {vehicles.map((vehicle) => (
                 <CommandItem
