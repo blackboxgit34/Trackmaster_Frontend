@@ -1,22 +1,31 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+// import { Card, CardContent } from '@/components/ui/card'; // KPI summary cards — disabled
 import {
-  Route,
-  Gauge,
-  Car,
+  // Route,        // KPI: Total Distance icon
+  // Gauge,        // KPI: Avg Distance / Vehicle icon
+  // Car,          // KPI: Fleet Utilization icon
   Clock,
-  TrendingUp,
-  TrendingDown,
+  // TrendingUp,   // KPI cards trend indicator
+  // TrendingDown, // KPI cards trend indicator
   Hand,
   ChevronDown,
   ChevronUp,
   Pause,
 } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
-import { subWeeks, subDays, format, parse, differenceInMinutes, differenceInDays, startOfDay, endOfDay } from 'date-fns';
+import {
+  subWeeks,
+  // subDays,           // KPI: previous period calculation
+  format,
+  parse,
+  differenceInMinutes,
+  // differenceInDays,  // KPI: day count for badges
+  // startOfDay,        // KPI: period stats fetch
+  // endOfDay,          // KPI: period stats fetch
+} from 'date-fns';
 import DistanceReportToolbar from './reports/DistanceReportToolbar';
 import { useDistanceReportData } from '@/hooks/useDistanceReportData';
-import { API_BASE_URL } from '@/config/Api';
+// import { API_BASE_URL } from '@/config/Api'; // KPI summary — disabled
 import type { ReportSortKey } from '@/types/report-types';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -232,6 +241,7 @@ const DistanceReport2 = () => {
   const [pageIndex, setPageIndex] = useState(0);
   const itemsPerPage = 5;
 
+  /* ── KPI summary state — disabled (uncomment to re-enable) ─────────────────
   const [totalVehicleCount, setTotalVehicleCount] = useState(0);
   interface PeriodStats {
     currentTotal: number;
@@ -241,6 +251,7 @@ const DistanceReport2 = () => {
   }
   const [allPeriodsStats, setAllPeriodsStats] = useState<PeriodStats | null>(null);
   const [badgesLoading, setBadgesLoading] = useState(true);
+  ── end KPI summary state ─────────────────────────────────────────────────── */
 
   // Fixed sort config — no sort UI in card view
   const sortConfig = useMemo(
@@ -260,6 +271,8 @@ const DistanceReport2 = () => {
   useEffect(() => {
     setPageIndex(0);
   }, [dateRange, selectedVehicle]);
+
+  /* ── KPI summary useEffects — disabled (uncomment to re-enable) ─────────────
 
   // Fetch total fleet count once
   useEffect(() => {
@@ -340,7 +353,9 @@ const DistanceReport2 = () => {
     fetchPeriodStats();
   }, [dateRange, selectedVehicle]);
 
-  // ── Compute KPI Stats ─────────────────────────────────────────────────────
+  ── end KPI summary useEffects ──────────────────────────────────────────── */
+
+  /* ── Compute KPI Stats — disabled (uncomment to re-enable) ──────────────────
   const stats = useMemo(() => {
     const totalDistance = allPeriodsStats?.currentTotal
       ?? reportRows.reduce((sum, r) => sum + (r.distance || 0), 0);
@@ -451,6 +466,7 @@ const DistanceReport2 = () => {
       },
     ];
   }, [reportRows, detailRows, totalRows, allPeriodsStats, totalVehicleCount, dateRange]);
+  ── end Compute KPI Stats ─────────────────────────────────────────────────── */
 
   // ── Build per-vehicle report data ─────────────────────────────────────────
   const reportData: VehicleReportRow[] = useMemo(() => {
@@ -658,7 +674,7 @@ const DistanceReport2 = () => {
         />
       </div>
 
-      {/* KPI Cards */}
+      {/* KPI Cards — disabled (uncomment to re-enable along with state/logic above)
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
         {stats.map((card) => {
           const Icon = card.icon;
@@ -682,22 +698,16 @@ const DistanceReport2 = () => {
                 hover:shadow-lg
               "
             >
-              {/* Accent Bar */}
               <div
                 className="absolute left-0 top-0 h-1 w-full"
-                style={{
-                  backgroundColor: card.accent,
-                }}
+                style={{ backgroundColor: card.accent }}
               />
-
               <CardContent className="p-5">
                 <div className="flex items-start justify-between">
-                  {/* Content */}
                   <div className="flex-1">
                     <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                       {card.label}
                     </p>
-
                     {badgesLoading ? (
                       <div className="mt-4 flex items-center h-12">
                         <div className="animate-spin h-5 w-5 border-2 border-slate-200 border-t-blue-500 rounded-full" />
@@ -708,56 +718,30 @@ const DistanceReport2 = () => {
                           <span className="text-3xl font-bold leading-none tracking-tight text-slate-900">
                             {card.value}
                           </span>
-
                           <span className="mb-1 text-sm font-medium text-slate-500">
                             {card.unit}
                           </span>
                         </div>
-
                         <div className="mt-4 flex items-center justify-between">
                           <div
-                            className={`flex items-center gap-1 text-xs font-semibold ${card.trendUp
-                              ? 'text-emerald-600'
-                              : 'text-red-500'
-                              }`}
+                            className={`flex items-center gap-1 text-xs font-semibold ${card.trendUp ? 'text-emerald-600' : 'text-red-500'}`}
                           >
                             {card.trendUp ? (
                               <TrendingUp className="h-3.5 w-3.5" />
                             ) : (
                               <TrendingDown className="h-3.5 w-3.5" />
                             )}
-
                             <span>{card.trend}</span>
                           </div>
-
-                          <span className="text-xs text-slate-400">
-                            {card.subtitle}
-                          </span>
+                          <span className="text-xs text-slate-400">{card.subtitle}</span>
                         </div>
                       </>
                     )}
                   </div>
-
-                  {/* Icon */}
                   <div
-                    className={`
-                      ml-4
-                      flex
-                      h-10
-                      w-10
-                      flex-shrink-0
-                      items-center
-                      justify-center
-                      rounded-xl
-                      ${card.iconBg}
-                      transition-transform
-                      duration-300
-                      group-hover:scale-110
-                    `}
+                    className={`ml-4 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl ${card.iconBg} transition-transform duration-300 group-hover:scale-110`}
                   >
-                    <Icon
-                      className={`h-5 w-5 ${card.iconColor}`}
-                    />
+                    <Icon className={`h-5 w-5 ${card.iconColor}`} />
                   </div>
                 </div>
               </CardContent>
@@ -765,6 +749,7 @@ const DistanceReport2 = () => {
           );
         })}
       </div>
+      */}
 
       {/* List Section */}
       <div className="space-y-4">

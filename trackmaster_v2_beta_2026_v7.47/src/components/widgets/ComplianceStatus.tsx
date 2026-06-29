@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ShieldCheck, CreditCard, FileText, Leaf, FileHeart, CalendarClock, FileWarning } from 'lucide-react';
+import { ShieldCheck, CreditCard, FileText, Leaf, FileHeart, CalendarClock, FileWarning, IdCard, Receipt, Activity } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 type Status = 'safe' | 'warning' | 'expired';
@@ -61,6 +61,27 @@ const complianceData = [
     Icon: CalendarClock,
     iconColor: 'orange',
   },
+  {
+    count: 8,
+    title: 'License',
+    statusText: 'Expires in 12 days',
+    Icon: IdCard,
+    iconColor: 'purple',
+  },
+  {
+    count: 3,
+    title: 'eChallan',
+    statusText: 'Due in 5 days',
+    Icon: Receipt,
+    iconColor: 'red',
+  },
+  {
+    count: 42,
+    title: 'Fitness',
+    statusText: 'Expires in 60 days',
+    Icon: Activity,
+    iconColor: 'cyan',
+  },
 ];
 
 const colorVariants = {
@@ -84,11 +105,19 @@ const colorVariants = {
     bg: 'bg-pink-100 dark:bg-pink-900/30',
     text: 'text-pink-600 dark:text-pink-400',
   },
+  purple: {
+    bg: 'bg-purple-100 dark:bg-purple-900/30',
+    text: 'text-purple-600 dark:text-purple-400',
+  },
+  cyan: {
+    bg: 'bg-cyan-100 dark:bg-cyan-900/30',
+    text: 'text-cyan-600 dark:text-cyan-400',
+  },
 };
 
 const ComplianceStatus = () => {
   return (
-    <Card>
+    <Card className="h-full w-full">
       <CardHeader className="p-4">
         <CardTitle className="flex items-center gap-2 text-base font-semibold">
           <FileWarning className="h-5 w-5 text-muted-foreground" />
