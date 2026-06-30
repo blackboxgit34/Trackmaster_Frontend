@@ -265,7 +265,7 @@ const RoutePlayback = () => {
           path: processedPath,
           startTime,
           endTime,
-          duration: drivingSeconds, // playback duration = driving seconds (matches original logic)
+          duration: totalDuration,
           stoppages: unifiedStoppages,
         });
 
@@ -367,8 +367,8 @@ const RoutePlayback = () => {
       jumpTs = new Date(playbackData.path[stopEndIndex + 1].timestamp).getTime();
     }
     const newTime = (jumpTs - tripStart) / 1000;
+    lastPausedTime.current = newTime;
     if (isPlaying) {
-      lastPausedTime.current = newTime;
       playbackStartTime.current = performance.now();
     }
     updatePosition(newTime);
