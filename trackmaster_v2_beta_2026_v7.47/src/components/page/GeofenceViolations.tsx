@@ -437,7 +437,7 @@ const GeofenceViolations = () => {
           </CardDescription>
         </div>
         <div className="flex items-center gap-2 flex-wrap justify-start sm:justify-end">
-          <DropdownMenu>
+          {/* <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
                 variant={'outline'}
@@ -460,7 +460,7 @@ const GeofenceViolations = () => {
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
-          </DropdownMenu>
+          </DropdownMenu> */}
           <DateRangePicker date={date} setDate={handleDateChange} />
           <VehicleCombobox vehicles={[{ label: 'All Vehicles', value: 'all' }, ...(vehicleList ?? []),]} value={selectedVehicle} onChange={handleVehicleChange} className="w-full sm:w-[180px]" />
           <DropdownMenu>
