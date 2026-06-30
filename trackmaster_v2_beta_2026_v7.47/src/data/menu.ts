@@ -35,14 +35,107 @@ export const menuItems = [
     href: '/',
   },
   {
-    title: 'Vehicle Status',
+    title: 'Live Status', //29.06.2026
+    icon: Map,
+    href: '/vehicle-status/live',
+  },
+  {
+    title: 'Map',
     icon: Car,
     children: [
-      { title: 'Live Status', icon: Map, href: '/vehicle-status/live' },
       { title: 'Vehicle On Map', icon: MapPin, href: '/vehicle-status/on-map' },
       { title: 'Route Playback', icon: Milestone, href: '/vehicle-status/route-playback' },
     ],
   },
+  // {
+  //   title: 'Vehicle Status',
+  //   icon: Car,
+  //   children: [
+  //     { title: 'Live Status', icon: Map, href: '/vehicle-status/live' },
+  //     { title: 'Vehicle On Map', icon: MapPin, href: '/vehicle-status/on-map' },
+  //     { title: 'Route Playback', icon: Milestone, href: '/vehicle-status/route-playback' },
+  //   ],
+  // },
+  // {
+  //   title: 'Reports',
+  //   icon: FileText,
+  //   children: [
+  //     {
+  //       title: 'Trip & Distance Reports',
+  //       icon: Milestone,
+  //       children: [
+  //         { title: 'Distance Report', icon: FileText, href: '/reports/trip-distance/distance' },
+  //         { title: 'Distance Report 2', icon: FileText, href: '/reports/trip-distance/distance-2' },
+  //         { title: 'Trip Report', icon: FileText, href: '/reports/trip-distance/trip-report' },
+  //         { title: 'Monthly Day-Wise Distance Report', icon: FileText, href: '/reports/trip-distance/monthly-day-wise' },
+  //       ],
+  //     },
+  //     {
+  //       title: 'Time & Activity Analysis',
+  //       icon: Clock,
+  //       children: [
+  //         { title: 'Stoppage Analysis', icon: FileText, href: '/reports/time-activity/stoppage-analysis' },
+  //         { title: 'Idling Analysis', icon: FileText, href: '/reports/time-activity/idling-analysis' },
+  //         { title: 'Ignition On/Off Analysis', icon: FileText, href: '/reports/time-activity/ignition-on-off-analysis' },
+  //         { title: 'Combined Trip Report', icon: FileText, href: '/reports/time-activity/combined-trip-report' },
+  //       ],
+  //     },
+  //     {
+  //       title: 'Speed & Driving Behavior',
+  //       icon: Gauge,
+  //       children: [
+  //         { title: 'Over-Speed Report', icon: FileText, href: '/reports/speed-driving/speed-analysis' },
+  //       ],
+  //     },
+  //     {
+  //       title: 'Vehicle Status & Health',
+  //       icon: Activity,
+  //       children: [
+  //         { title: 'Vehicle Status Report', icon: FileText, href: '/reports/vehicle-status-health/vehicle-status' },
+  //         { title: 'Battery Disconnection Report', icon: FileText, href: '/reports/vehicle-status-health/battery-disconnection' },
+  //       ],
+  //     },
+  //     {
+  //       title: 'Location & Zone Reports',
+  //       icon: MapPin,
+  //       children: [
+  //         { title: 'Entry / Exit Report', icon: FileText, href: '/reports/location-zone/entry-exit-report' },
+  //         { title: 'Exit / Entry Report', icon: FileText, href: '/reports/location-zone/exit-entry-report' },
+  //       ],
+  //     },
+  //     {
+  //       title: 'Operational & Crew Reports',
+  //       icon: Users,
+  //       children: [
+  //         { title: 'Crew Report', icon: FileText, href: '/reports/operational-crew/crew-report' },
+  //       ],
+  //     },
+  //     {
+  //       title: 'Communication & Alerts',
+  //       icon: MessageSquare,
+  //       children: [
+  //         { title: 'SMS & Notification Report', icon: FileText, href: '/reports/communication-alerts/sms-notification-report' },
+  //       ],
+  //     },
+  //     {
+  //       title: 'Custom Report',
+  //       icon: ClipboardList,
+  //       children: [
+  //         { title: 'Create Report', icon: PlusCircle, href: '/reports/custom-report/create' },
+  //         { title: 'My Templates', icon: FileText, href: '/reports/custom-report/templates' },
+  //       ]
+  //     },
+  //     {
+  //       title: 'Consolidated Reports',
+  //       icon: FileText,
+  //       children: [
+  //         { title: 'Consolidated Report', icon: FileText, href: '/reports/consolidated/consolidatedreport' },
+  //         { title: 'Monthly Report', icon: FileText, href: '/reports/consolidated/monthlyreport' },
+  //         { title: 'Day wise report', icon: FileText, href: '/reports/consolidated/daywisereport' },
+  //       ],
+  //     },
+  //   ],
+  // },
   {
     title: 'Reports',
     icon: FileText,
@@ -65,23 +158,18 @@ export const menuItems = [
           { title: 'Idling Analysis', icon: FileText, href: '/reports/time-activity/idling-analysis' },
           { title: 'Ignition On/Off Analysis', icon: FileText, href: '/reports/time-activity/ignition-on-off-analysis' },
           { title: 'Combined Trip Report', icon: FileText, href: '/reports/time-activity/combined-trip-report' },
+          { title: 'Monthly Day-Wise Stoppage Analysis', icon: FileText, href: '/reports/time-activity/monthly-day-wise-stoppage' },
         ],
       },
       {
-        title: 'Speed & Driving Behavior',
+        title: 'Speed Analysis',
         icon: Gauge,
         children: [
-          { title: 'Over-Speed Report', icon: FileText, href: '/reports/speed-driving/speed-analysis' },
+          { title: 'Speed Report', icon: FileText, href: '/reports/speed-driving/speed-analysis' },
         ],
       },
-      {
-        title: 'Vehicle Status & Health',
-        icon: Activity,
-        children: [
-          { title: 'Vehicle Status Report', icon: FileText, href: '/reports/vehicle-status-health/vehicle-status' },
-          { title: 'Battery Disconnection Report', icon: FileText, href: '/reports/vehicle-status-health/battery-disconnection' },
-        ],
-      },
+      { title: 'Vehicle Status Report', icon: FileText, href: '/reports/vehicle-status-health/vehicle-status' },
+      { title: 'Battery Disconnection Report', icon: FileText, href: '/reports/vehicle-status-health/battery-disconnection' },
       {
         title: 'Location & Zone Reports',
         icon: MapPin,
@@ -123,6 +211,37 @@ export const menuItems = [
       },
     ],
   },
+   {
+    title: 'Addons',
+    icon: Puzzle,
+    children: [
+      {
+        title: 'Fuel Reports',
+        icon: Fuel,
+        children: [
+          { title: 'Fuel Dashboard', icon: FileText, href: '/addons/fuel-reports/fuel-analysis' },
+          { title: 'Fuel Graphical Report', icon: FileText, href: '/addons/fuel-reports/graphical-report' },
+          { title: 'Fuel Filling Report', icon: FileText, href: '/addons/fuel-reports/filling-report' },
+          { title: 'Fuel Theft Report', icon: FileText, href: '/addons/fuel-reports/theft-report' },
+          { title: 'Disconnection Report', icon: FileText, href: '/addons/fuel-reports/disconnection-report' },
+          { title: 'Dirt Error Report', icon: FileText, href: '/addons/fuel-reports/dirt-error-report' },
+          { title: 'Consolidated Report', icon: FileText, href: '/addons/fuel-reports/consolidated-report' },
+          { title: 'Fuel Consumption Playback', icon: FileText, href: '/addons/fuel-reports/consumption-timeline' },
+        ],
+      },
+      { title: 'Refrigerator Temp.', icon: Thermometer, href: '/addons/refrigerator-temp' },
+      { title: 'AC On/Off', icon: AirVent, href: '/addons/ac-on-off' },
+      { title: 'Engine Working Hours', icon: Clock, href: '/addons/engine-working-hours' },
+      { title: 'Door Report', icon: FileText, href: '/addons/door-report' },
+      { title: 'Lid Report', icon: Box, href: '/addons/lid-report' },
+      { title: 'Panic Report', icon: ShieldAlert, href: '/addons/panic-report' },
+      { title: 'Dumper Tilt Report', icon: ArrowUpCircle, href: '/addons/dumper-tilt-report' },
+      { title: 'Tilt Angle Report', icon: BarChart, href: '/addons/camera-images' },
+      { title: 'Camera Images', icon: Camera, href: '/addons/camera-images' },
+      { title: 'RFID Report', icon: Radio, href: '/addons/rfid-report' },
+      { title: 'MDVR Streaming', icon: Video, href: '/addons/mdvr-streaming' },
+    ],
+  },
   {
     title: 'Geofencing',
     icon: MapPin,
@@ -156,36 +275,36 @@ export const menuItems = [
     icon: Settings,
     href: '/settings',
   },
-  {
-    title: 'Addons',
-    icon: Puzzle,
-    children: [
-      {
-        title: 'Fuel Reports',
-        icon: Fuel,
-        children: [
-          { title: 'Fuel Analysis', icon: FileText, href: '/addons/fuel-reports/fuel-analysis' },
-          { title: 'Fuel Graphical Report', icon: FileText, href: '/addons/fuel-reports/graphical-report' },
-          { title: 'Fuel Filling Report', icon: FileText, href: '/addons/fuel-reports/filling-report' },
-          { title: 'Fuel Theft Report', icon: FileText, href: '/addons/fuel-reports/theft-report' },
-          { title: 'Disconnection Report', icon: FileText, href: '/addons/fuel-reports/disconnection-report' },
-          { title: 'Dirt Error Report', icon: FileText, href: '/addons/fuel-reports/dirt-error-report' },
-          { title: 'Consolidated Report', icon: FileText, href: '/addons/fuel-reports/consolidated-report' },
-          { title: 'Fuel Consumption Playback', icon: FileText, href: '/addons/fuel-reports/consumption-timeline' },
-        ],
-      },
-      { title: 'Refrigerator Temp.', icon: Thermometer, href: '/addons/refrigerator-temp' },
-      { title: 'AC On/Off', icon: AirVent, href: '/addons/ac-on-off' },
-      { title: 'Engine Working Hours', icon: Clock, href: '/addons/engine-working-hours' },
-      { title: 'Thresher Working Hours', icon: Clock, href: '/addons/thresher-working-hours' },
-      { title: 'Door Report', icon: FileText, href: '/addons/door-report' },
-      { title: 'Lid Report', icon: Box, href: '/addons/lid-report' },
-      { title: 'Panic Report', icon: ShieldAlert, href: '/addons/panic-report' },
-      { title: 'Dumper Tilt Report', icon: ArrowUpCircle, href: '/addons/dumper-tilt-report' },
-      { title: 'Tilt Angle Report', icon: BarChart, href: '/addons/camera-images' },
-      { title: 'Camera Images', icon: Camera, href: '/addons/camera-images' },
-      { title: 'RFID Report', icon: Radio, href: '/addons/rfid-report' },
-      { title: 'MDVR Streaming', icon: Video, href: '/addons/mdvr-streaming' },
-    ],
-  },
+  // {
+  //   title: 'Addons',
+  //   icon: Puzzle,
+  //   children: [
+  //     {
+  //       title: 'Fuel Reports',
+  //       icon: Fuel,
+  //       children: [
+  //         { title: 'Fuel Analysis', icon: FileText, href: '/addons/fuel-reports/fuel-analysis' },
+  //         { title: 'Fuel Graphical Report', icon: FileText, href: '/addons/fuel-reports/graphical-report' },
+  //         { title: 'Fuel Filling Report', icon: FileText, href: '/addons/fuel-reports/filling-report' },
+  //         { title: 'Fuel Theft Report', icon: FileText, href: '/addons/fuel-reports/theft-report' },
+  //         { title: 'Disconnection Report', icon: FileText, href: '/addons/fuel-reports/disconnection-report' },
+  //         { title: 'Dirt Error Report', icon: FileText, href: '/addons/fuel-reports/dirt-error-report' },
+  //         { title: 'Consolidated Report', icon: FileText, href: '/addons/fuel-reports/consolidated-report' },
+  //         { title: 'Fuel Consumption Playback', icon: FileText, href: '/addons/fuel-reports/consumption-timeline' },
+  //       ],
+  //     },
+  //     { title: 'Refrigerator Temp.', icon: Thermometer, href: '/addons/refrigerator-temp' },
+  //     { title: 'AC On/Off', icon: AirVent, href: '/addons/ac-on-off' },
+  //     { title: 'Engine Working Hours', icon: Clock, href: '/addons/engine-working-hours' },
+  //     { title: 'Thresher Working Hours', icon: Clock, href: '/addons/thresher-working-hours' },
+  //     { title: 'Door Report', icon: FileText, href: '/addons/door-report' },
+  //     { title: 'Lid Report', icon: Box, href: '/addons/lid-report' },
+  //     { title: 'Panic Report', icon: ShieldAlert, href: '/addons/panic-report' },
+  //     { title: 'Dumper Tilt Report', icon: ArrowUpCircle, href: '/addons/dumper-tilt-report' },
+  //     { title: 'Tilt Angle Report', icon: BarChart, href: '/addons/camera-images' },
+  //     { title: 'Camera Images', icon: Camera, href: '/addons/camera-images' },
+  //     { title: 'RFID Report', icon: Radio, href: '/addons/rfid-report' },
+  //     { title: 'MDVR Streaming', icon: Video, href: '/addons/mdvr-streaming' },
+  //   ],
+  // },
 ];
