@@ -67,6 +67,7 @@ import {
 } from '@/components/ui/select';
 
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { DateRangePicker } from '@/components/ui/date-range-picker';
 
 import {
   Popover,
@@ -226,6 +227,8 @@ const BatteryDisconnectionReportTable = () => {
   });
   const [tempDate, setTempDate] = useState<DateRange | undefined>(date);
 
+  
+
   const [selectedVehicle, setSelectedVehicle] = useState('all');
 
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
@@ -317,7 +320,11 @@ const exportPdf = async () => {
       iDisplayStart: String(iDisplayStart),
       iDisplayLength: String(iDisplayLength),
       beginDate: format(beginDate, 'yyyy-MM-dd HH:mm:ss'),
-      endDate: format(endDate, 'yyyy-MM-dd HH:mm:ss'),
+       endDate: date?.to
+      ? format(date.to, "M/d/yyyy h:mm:ss a")
+      : date?.from
+        ? format(date.from, "M/d/yyyy h:mm:ss a")
+        : "",
     });
 
     if (selectedVehicle !== 'all') {
@@ -546,99 +553,7 @@ const exportPdf = async () => {
             className="w-full sm:w-[180px]"
           />
 
-          <Popover
-            open={isCalendarOpen}
-            onOpenChange={(open) => {
-            setIsCalendarOpen(open);
-
-            if (open) {
-              setTempDate(date); // reset temp when opening
-            }
-          }}
-          >
-            <PopoverTrigger asChild>
-              <Button
-                id="date"
-                variant={'outline'}
-                className={cn(
-                  'w-full sm:w-[260px] justify-start text-left font-normal',
-                  !date && 'text-muted-foreground'
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-
-                {date?.from ? (
-                  date.to ? (
-                    <>
-                      {format(date.from, 'LLL dd, y')} -{' '}
-                      {format(date.to, 'LLL dd, y')}
-                    </>
-                  ) : (
-                    format(date.from, 'LLL dd, y')
-                  )
-                ) : (
-                  <span>Pick a date</span>
-                )}
-              </Button>
-            </PopoverTrigger>
-
-            <PopoverContent className="w-auto p-0 flex" align="end">
-            <div className="flex flex-col space-y-1 p-2 border-r">
-              {timeRanges.map((range) => (
-                <Button
-                  key={range.value}
-                  variant="ghost"
-                  className="justify-start"
-                  onClick={() => {
-                    handleTimeRangeClick(range.value);
-
-                    // IMPORTANT: sync temp + applied state
-                    setTempDate(date);
-                  }}
-                >
-                  {range.label}
-                </Button>
-              ))}
-            </div>
-
-            <div className="flex flex-col">
-              <Calendar
-                initialFocus
-                mode="range"
-                defaultMonth={tempDate?.from}
-                selected={tempDate}
-                onSelect={handleCalendarSelect}
-                numberOfMonths={1}
-              />
-
-              {/* ✅ ADD THIS FOOTER */}
-              <div className="flex justify-end gap-2 border-t p-3">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    setTempDate(date); // revert changes
-                    setIsCalendarOpen(false);
-                  }}
-                >
-                  Cancel
-                </Button>
-
-                <Button
-                  size="sm"
-                  disabled={!tempDate?.from || !tempDate?.to}
-                  onClick={() => {
-                    setDate(tempDate);   // 🔥 API triggers here
-                    setPage(0);
-                    setIsCalendarOpen(false);
-                  }}
-                >
-                  Apply
-                </Button>
-              </div>
-            </div>
-          </PopoverContent>
-          </Popover>
+            <DateRangePicker date={date} setDate={setDate} />
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

@@ -22,7 +22,7 @@ import {
 import VehicleDataSidebar from './VehicleDataSidebar';
 import MapControls from './MapControls';
 import MapComponent from './MapComponent';
-import { LoadScript } from '@react-google-maps/api';
+import { useJsApiLoader } from '@react-google-maps/api';
 import { GOOGLE_MAPS_API_KEY } from '@/config/maps';
 import { useApi } from '@/hooks/useApi';
 import { getIconUrl, getMinimalDotUrl, getVehiclePngUrl } from '@/lib/map-utils';
@@ -30,7 +30,15 @@ import type {LiveVehicleStatus,VehicleStatus} from '@/types';
 import { getVehicleStatusList } from '@/hooks/useApi';
 import { fetchAndCalculatePlaybackData } from '@/lib/playback-utils';
 
-  const VehicleOnMap = () => {   
+const libraries: ('drawing' | 'places')[] = ['drawing', 'places'];
+
+  const VehicleOnMap = () => {
+  const { isLoaded } = useJsApiLoader({
+    id: 'google-map-script',
+    googleMapsApiKey: GOOGLE_MAPS_API_KEY,
+    libraries,
+  });
+
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
   const [isDataSidebarOpen, setIsDataSidebarOpen] = useState(false);
@@ -201,11 +209,15 @@ const handleSelectVehicle = useCallback((vehicleId: string) => {
     }
   };
 
+  if (!isLoaded) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <Loader className="animate-spin" />
+      </div>
+    );
+  }
+
   return (
-    <LoadScript
-      googleMapsApiKey={GOOGLE_MAPS_API_KEY}
-      loadingElement={<div className="flex items-center justify-center h-full"><Loader className="animate-spin" /></div>}
-    >
       <div className="absolute inset-0 flex h-full w-full bg-background">
         {/* Left Sidebar: Vehicle List */}
         <div className="w-[350px] flex-shrink-0 bg-card border-r flex flex-col h-full overflow-hidden">
@@ -410,7 +422,6 @@ const handleSelectVehicle = useCallback((vehicleId: string) => {
           </Button>
         </div>
       </div>
-    </LoadScript>
   );
 };
 

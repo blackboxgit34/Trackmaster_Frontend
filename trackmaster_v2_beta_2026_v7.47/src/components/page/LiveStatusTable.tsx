@@ -125,7 +125,6 @@ const StatusBadge = ({ status }: { status: string }) => {
   );
 };
 export const getStatusColorHex = (status: string) => {
-  debugger
   switch (status) {
     case 'Moving': return '#22c55e';
     case 'Parked': return '#eab308';
@@ -445,11 +444,10 @@ const LiveStatusTable = () => {
     sortColumn: 'vehname',
     sortDirection: 'asc' as 'asc' | 'desc',
   });
-  const getLiveStatusData = async (silent = false) => {
+  const getLiveStatusData = async (silent = false, forcedPageIndex?: number) => {
     const requestId = ++latestRequestRef.current;
 
     try {
-      // Loader only manual load
       if (!silent) {
         setLoading(true);
       }
@@ -458,35 +456,69 @@ const LiveStatusTable = () => {
         localStorage.getItem("trackmaster-auth") || "{}"
       );
 
-      const requestModel: DataTableRequestModel = {
-        CustId: authData?.custId || 0,
-        iDisplayStart:
-          pagination.pageIndex * pagination.pageSize,
-        iDisplayLength: pagination.pageSize,
-        sSearch: searchTerm || "",
-        sortColumn: sortConfig.sortColumn,
-        sortDirection: sortConfig.sortDirection,
-        Status: statusFromUrl || null,
-      };
+      const effectivePageIndex =
+        forcedPageIndex !== undefined ? forcedPageIndex : pagination.pageIndex;
 
-      const response = await getVehicleStatusList({
-        pageName: "livestatus",
-        CustId: authData?.custId || 0,
-        requestModel,
-      });
+      let vehiclesToDisplay: any[] = [];
+      let totalCount = 0;
 
-      if (requestId !== latestRequestRef.current) return;
+      if (statusFromUrl) {
+        // Server paginates ALL records first then filters, so page 2+ returns empty
+        // when a status filter is active. Fix: fetch all vehicles, filter + paginate client-side.
+        const requestModel: DataTableRequestModel = {
+          CustId: authData?.custId || 0,
+          iDisplayStart: 0,
+          iDisplayLength: 9999,
+          sSearch: searchTerm || "",
+          sortColumn: sortConfig.sortColumn,
+          sortDirection: sortConfig.sortDirection,
+        };
 
-      if (response) {
-        setLiveStatus(response);
+        const allRecords = await getVehicleStatusList({
+          pageName: "livestatus",
+          CustId: authData?.custId || 0,
+          requestModel,
+        });
 
-        const total =
-          response?.length > 0
-            ? response[0]?.totalRecords || 0
+        if (requestId !== latestRequestRef.current) return;
+
+        const filtered = (allRecords || []).filter(r => r.status === statusFromUrl);
+        totalCount = filtered.length;
+
+        const start = effectivePageIndex * pagination.pageSize;
+        vehiclesToDisplay = filtered.slice(start, start + pagination.pageSize);
+
+        if (vehiclesToDisplay.length === 0 && effectivePageIndex > 0) {
+          vehiclesToDisplay = filtered.slice(0, pagination.pageSize);
+          setPagination(prev => ({ ...prev, pageIndex: 0 }));
+        }
+      } else {
+        const requestModel: DataTableRequestModel = {
+          CustId: authData?.custId || 0,
+          iDisplayStart: effectivePageIndex * pagination.pageSize,
+          iDisplayLength: pagination.pageSize,
+          sSearch: searchTerm || "",
+          sortColumn: sortConfig.sortColumn,
+          sortDirection: sortConfig.sortDirection,
+        };
+
+        const response = await getVehicleStatusList({
+          pageName: "livestatus",
+          CustId: authData?.custId || 0,
+          requestModel,
+        });
+
+        if (requestId !== latestRequestRef.current) return;
+
+        vehiclesToDisplay = response || [];
+        totalCount =
+          vehiclesToDisplay.length > 0
+            ? vehiclesToDisplay[0]?.totalRecords || 0
             : 0;
-
-        setTotalRecords(total);
       }
+
+      setLiveStatus(vehiclesToDisplay);
+      setTotalRecords(totalCount);
 
     } catch (error) {
       console.log(error);
@@ -542,14 +574,15 @@ const LiveStatusTable = () => {
     pagination.pageIndex,
     pagination.pageSize,
     searchTerm,
-    statusFromUrl,
     sortConfig
   ]);
+
   useEffect(() => {
     setPagination(prev => ({
       pageIndex: 0,
-      pageSize: prev.pageSize, // preserve user selection
+      pageSize: prev.pageSize,
     }));
+    getLiveStatusData(false, 0);
   }, [statusFromUrl]);
 
 

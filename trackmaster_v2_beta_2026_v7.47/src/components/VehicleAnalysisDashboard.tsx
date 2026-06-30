@@ -12,6 +12,7 @@ import RecentAlerts from './widgets/RecentAlerts';
 import SystemAlerts from './widgets/SystemAlerts';
 import DistanceCovered from './widgets/DistanceCovered';
 import AverageUptime from './widgets/AverageUptime';
+import TimeSlots from './widgets/TimeSlots'; //25.06.2026
 
 const VehicleAnalysisDashboard = () => {
   const [dashboardData, setDashboardData] = useState<any | null>(null);
@@ -108,13 +109,25 @@ const [dateRange, setDateRange] = useState(getTodayRange());
             setDateRange={setDateRange}
           />
       </div>
-      <div className="lg:col-span-8 flex flex-col gap-4">
-        <ComplianceStatus />
-        <RecentAlerts />
+
+      {/* Row 1: Time Slots & Compliance Status (50% / 50%) */}
+      <div className="lg:col-span-6 flex">
+        <TimeSlots />
       </div>
-      <div className="lg:col-span-4 flex">
+      <div className="lg:col-span-6 flex">
+        <ComplianceStatus />
+      </div>
+
+      {/* Row 2: Today's Alerts & Recent Alerts (60% / 40%) */}
+      {/* (12 columns: 7 cols = ~58%, 5 cols = ~42%) */}
+      <div className="lg:col-span-7 flex">
         <SystemAlerts />
       </div>
+      <div className="lg:col-span-5 flex">
+        <RecentAlerts />
+      </div>
+
+
     </div>
   );
 };

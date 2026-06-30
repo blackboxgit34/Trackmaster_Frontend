@@ -37,7 +37,7 @@ const VehicleUtilization = ({ data }: Props) => {
       {
         name: 'Parked',
         value: data.parked || 0,
-        color: '#facc15',
+        color: '#eab308',
 
       },
     ];
