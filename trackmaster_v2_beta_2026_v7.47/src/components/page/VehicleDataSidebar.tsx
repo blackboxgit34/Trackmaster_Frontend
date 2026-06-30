@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import {
   Signal, SignalMedium, SignalHigh, SignalZero, TriangleAlert, BatteryFull, BatteryMedium, BatteryLow,
   Gauge, Clock, Share2, MapPin, Play, Copy, Thermometer, Wrench, BatteryWarning, AirVent, Power,
-  Pause,  Hand, Navigation
+    Hand, Navigation
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -19,11 +19,9 @@ import type { LiveVehicleStatus, VehicleStatus } from '@/types';
 import FuelGauge from './FuelGauge';
 import { useToast } from '@/hooks/use-toast';
 import ShareLocationDialog from './ShareLocationDialog';
-import { format, parse , isValid, parseISO } from 'date-fns';
-import BlackboxSignalIcon from '../icons/BlackboxSignalIcon';
+import { format , isValid, parseISO } from 'date-fns';
 import SpeedGauge from './SpeedGauge';
-import { getIconUrl, getVehiclePngUrl } from '@/lib/map-utils';
-
+import { getVehiclePngUrl } from '@/lib/map-utils';
 
 const DeviceSignalIcon = ({
 
@@ -292,14 +290,6 @@ const DistanceDisplay = ({ distance }: { distance: number }) => {
     </div>
   );
 };
-const formatHoursMinutes = (hoursDecimal: number, format: 'short' | 'long' = 'short') => {
-  const hours = Math.floor(hoursDecimal);
-  const minutes = Math.round((hoursDecimal - hours) * 60);
-  if (format === 'long') {
-    return `${hours} H ${minutes} M`;
-  }
-  return `${hours}h ${minutes}m`;
-};
 
 interface VehicleDataSidebarProps {
   machine: LiveVehicleStatus;
@@ -421,7 +411,7 @@ const playbackDate = useMemo(() => {
                 />
               </div>
               <div className="flex flex-col justify-center min-w-0 py-1">
-                <p className="text-sm text-muted-foreground">Model: {vehicle.model}</p>
+                {/* <p className="text-sm text-muted-foreground">Model: {vehicle.model}</p> */}
                 <p className="text-sm text-muted-foreground">Type: {vehicle.type}</p>
                 <div className="flex items-center gap-2 mt-0.5">
                   <p className="text-sm text-muted-foreground truncate" title={vehicle.bbid}>BBID: {vehicle.bbid}</p>
@@ -607,8 +597,8 @@ const playbackDate = useMemo(() => {
                 </CardContent>
               </Card>
             )}
-=======
-            <Card>
+
+            {/* <Card>
               <CardHeader className="p-4 pb-2">
                 <CardTitle className="text-base font-medium">Alerts</CardTitle>
               </CardHeader>
@@ -637,7 +627,7 @@ const playbackDate = useMemo(() => {
                   })}
                 </div>
               </CardContent>
-            </Card>
+            </Card> */}
 
           </div>
         </ScrollArea>

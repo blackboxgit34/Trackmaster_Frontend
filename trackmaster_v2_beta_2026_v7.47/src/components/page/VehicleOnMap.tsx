@@ -160,46 +160,7 @@ const handleSelectVehicle = useCallback((vehicleId: string) => {
   }, []);
   
   
-// const handleSelectVehicle = async (
-//   vehicleId: string
-// ) => {
 
-//   try {
-
-//     setSelectedVehicleId(vehicleId);
-
-//     setIsDataSidebarOpen(true);
-
-//     // Find selected vehicle
-//     const selectedVehicle =
-//       liveStatusData?.find(
-//         (v) => v.id === vehicleId
-//       );
-
-//     if (!selectedVehicle?.bbid) return;
-
-//     // Playback API calculation
-//     const playbackStats =
-//       await fetchAndCalculatePlaybackData(
-//         selectedVehicle.bbid,
-//         new Date()
-//       );
-
-//     setVehicleExtraDetails({
-//       distance: playbackStats.totalDistance || 0,
-//       workingHours: playbackStats.drivingTime || 0,
-//       idlingHours: playbackStats.totalIdlingTime || 0,
-//       stoppageTime: playbackStats.totalStoppageTime || 0,
-//     });
-//   } catch (error) {
-
-//     console.error(
-//       'Failed to fetch playback data',
-//       error
-//     );
-
-//   }
-// };
   const handleStatusChange = (status: VehicleStatus) => {
     setSelectedStatuses(prev => {
       const newSet = new Set(prev);
