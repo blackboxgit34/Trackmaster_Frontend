@@ -58,14 +58,22 @@ export function DateRangePicker({
 
   // Time-input state (kept as string so the native time input works smoothly)
   const [startTime, setStartTime] = React.useState("00:00")
-  const [endTime, setEndTime] = React.useState("23:59")
+  const [endTime, setEndTime] = React.useState(format(new Date(), "HH:mm"))
 
   // Sync internal state when popover opens or external date changes
   React.useEffect(() => {
     if (isOpen) {
       setTempDate(date)
-      if (date?.from) setStartTime(format(date.from, "HH:mm"))
-      if (date?.to) setEndTime(format(date.to, "HH:mm"))
+      if (date?.from) {
+        setStartTime(format(date.from, "HH:mm"))
+      } else {
+        setStartTime("00:00")
+      }
+      if (date?.to) {
+        setEndTime(format(date.to, "HH:mm"))
+      } else {
+        setEndTime(format(new Date(), "HH:mm"))
+      }
     }
   }, [isOpen, date])
 
@@ -76,8 +84,12 @@ export function DateRangePicker({
 
       // If a complete range is already selected, start a new range from the clicked date
       if (tempDate?.from && tempDate?.to) {
+        setStartTime("00:00")
+        const currentEndTime = format(new Date(), "HH:mm")
+        setEndTime(currentEndTime)
+        
         setTempDate({
-          from: mergeTime(selectedDay, startTime),
+          from: mergeTime(selectedDay, "00:00"),
           to: undefined,
         })
         return
@@ -85,8 +97,19 @@ export function DateRangePicker({
 
       if (!newRange) { setTempDate(undefined); return }
 
-      const from = newRange.from ? mergeTime(newRange.from, startTime) : undefined
-      const to = newRange.to ? mergeTime(newRange.to, endTime) : undefined
+      let currentStartTime = startTime
+      let currentEndTime = endTime
+
+      // If starting a brand new selection
+      if (newRange.from && !newRange.to && !tempDate?.from) {
+        currentStartTime = "00:00"
+        setStartTime(currentStartTime)
+        currentEndTime = format(new Date(), "HH:mm")
+        setEndTime(currentEndTime)
+      }
+
+      const from = newRange.from ? mergeTime(newRange.from, currentStartTime) : undefined
+      const to = newRange.to ? mergeTime(newRange.to, currentEndTime) : undefined
       
       setTempDate({ from, to })
     },
@@ -280,7 +303,11 @@ export function DateRangePicker({
                 <Button variant="ghost" size="sm" onClick={handleCancel}>
                   Cancel
                 </Button>
-                <Button size="sm" onClick={handleApply}>
+                <Button 
+                  size="sm" 
+                  onClick={handleApply}
+                  disabled={!!tempDate?.from && !tempDate?.to}
+                >
                   Apply
                 </Button>
               </div>

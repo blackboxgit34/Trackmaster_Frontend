@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { notificationTypes, type NotificationData } from '@/data/notificationData';// neha k
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Download, FileText, FileSpreadsheet, ChevronsUpDown, } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
-import { subWeeks } from 'date-fns';
+//import { subWeeks } from 'date-fns';
+import { subWeeks, subDays, subMonths,startOfDay, format,endOfDay } from 'date-fns';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import WhatsappPopup from '../WhatsappPopup';
 import { VehicleCombobox } from '../VehicleCombobox';
@@ -93,7 +94,9 @@ const SmsNotificationReportTable = () => {
   const [search, setSearch] = useState("");
   const [sortColumn, setSortColumn] = useState<ReportDataKey>("messageDate");
   const [sortDirection, setSortDirection] = useState("desc");
-  const [date, setDate] = useState<DateRange | undefined>({ from: subWeeks(new Date(), 1), to: new Date() });
+  //const [date, setDate] = useState<DateRange | undefined>({ from: subWeeks(new Date(), 1), to: new Date() });
+  //const [date, setDate] = useState<DateRange | undefined>({ from: new Date(), to: new Date(), });
+  const [date, setDate] = useState<DateRange | undefined>({from: startOfDay(new Date()), to: new Date(),}); //30.06.2026
   const [selectedVehicle, setSelectedVehicle] = useState('all');
   const [messageTypeFilter, setMessageTypeFilter] = useState('0');// neha k 22.05.2026
   const [notificationTypeFilter, setNotificationTypeFilter] = useState('1');
@@ -137,8 +140,10 @@ const SmsNotificationReportTable = () => {
         sortDirection: requestModel.sortDirection || "",
         typeid: String(typeId),
         messagetype: messageTypeFilter,
-        beginDate: date?.from ? date.from.toLocaleString("en-US").replace(",", "") : "",
-        endDate: date?.to ? date.to.toLocaleString("en-US").replace(",", "") : "",
+        //beginDate: date?.from ? date.from.toLocaleString("en-US").replace(",", "") : "",
+        //endDate: date?.to ? date.to.toLocaleString("en-US").replace(",", "") : "",
+        beginDate:format(startOfDay(date?.from ||new Date()),"M/d/yyyy h:mm:ss a"),
+        endDate: date?.to? format(date.to, "M/d/yyyy h:mm:ss a"): date?.from? format(date.from, "M/d/yyyy h:mm:ss a"): "",
         vehicleNo: selectedVehicle // neha k extra parameter added
       });
 
@@ -321,12 +326,10 @@ const SmsNotificationReportTable = () => {
   const extraParams = {
     typeid: String(typeId),
     messagetype: messageTypeFilter,
-    beginDate: date?.from
-      ? date.from.toLocaleString("en-US").replace(",", "")
-      : "",
-    endDate: date?.to
-      ? date.to.toLocaleString("en-US").replace(",", "")
-      : "",
+    //beginDate: date?.from? date.from.toLocaleString("en-US").replace(",", ""): "",
+    //endDate: date?.to? date.to.toLocaleString("en-US").replace(",", ""): "",
+    beginDate:format(startOfDay(date?.from ||new Date()),"M/d/yyyy h:mm:ss a"),
+    endDate: date?.to? format(date.to, "M/d/yyyy h:mm:ss a"): date?.from? format(date.from, "M/d/yyyy h:mm:ss a"): "",
     vehicleNo: selectedVehicle,
   };
 

@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle, 
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Download, CalendarIcon, ChevronDown } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
-import { subWeeks, subDays, subMonths, format } from 'date-fns';
+import { subWeeks, subDays, subMonths,startOfDay, format,endOfDay } from 'date-fns';
 import { cn } from '@/lib/utils'; // excel and pdf download 06.06.2026
 import { VehicleCombobox } from '../VehicleCombobox';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -17,6 +17,8 @@ import { API_BASE_URL } from '@/config/Api';
 //import { downloadReport } from '@/hooks/downloadReport'; //
 import type { DataTableRequestModel } from '@/hooks/DataTableRequestModel';
 import { useReportDownload } from '@/hooks/useApi';//excel 06.06.2026
+
+
 
 
 
@@ -57,7 +59,9 @@ const headers: { key: ReportDataKey; label: string }[] = [
 const IgnitionOnOffAnalysisTable = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [date, setDate] = useState<DateRange | undefined>({ from: subWeeks(new Date(), 1), to: new Date() });
+  //const [date, setDate] = useState<DateRange | undefined>({ from: subWeeks(new Date(), 1), to: new Date() });
+  const [date, setDate] = useState<DateRange | undefined>({from: startOfDay(new Date()), to: new Date(),}); //30.06.2026
+  
   const [selectedVehicle, setSelectedVehicle] = useState('all');
   const [vehicleList, setVehicleList] = useState<any[]>([]);
   const [reportData, setReportData] = useState<IgnitionVehicle[]>([]);
@@ -120,6 +124,9 @@ const IgnitionOnOffAnalysisTable = () => {
         sortDirection: "asc",
       };
 
+      //30.06.2026
+    const searchValue =selectedVehicle !== "all"? vehicleList.find(v => v.value === selectedVehicle)?.label || "": "";
+
       const params = new URLSearchParams({
         CustId: String(requestModel.CustId),
         sEcho: String(requestModel.sEcho),
@@ -128,8 +135,10 @@ const IgnitionOnOffAnalysisTable = () => {
         sSearch: selectedVehicle !== "all" ? vehicleList.find(v => v.value === selectedVehicle)?.label || "" : "",
         sortColumn: requestModel.sortColumn || "",
         sortDirection: requestModel.sortDirection || "",
-        beginDate: date?.from ? date.from.toLocaleString("en-US").replace(",", "") : "",
-        endDate: date?.to ? date.to.toLocaleString("en-US").replace(",", "") : "",
+        //beginDate: date?.from ? date.from.toLocaleString("en-US").replace(",", "") : "",
+        //endDate: date?.to ? date.to.toLocaleString("en-US").replace(",", "") : "",
+        beginDate:format(startOfDay(date?.from ||new Date()),"M/d/yyyy h:mm:ss a"),
+        endDate: date?.to? format(date.to, "M/d/yyyy h:mm:ss a"): date?.from? format(date.from, "M/d/yyyy h:mm:ss a"): "",
         bbid: selectedVehicle === "all" ? "null" : selectedVehicle,
         reportName: "null",
       });
@@ -177,12 +186,10 @@ const IgnitionOnOffAnalysisTable = () => {
   };
 
   const extraParams = {
-    beginDate: date?.from
-      ? date.from.toLocaleString("en-US").replace(",", "")
-      : "",
-    endDate: date?.to
-      ? date.to.toLocaleString("en-US").replace(",", "")
-      : "",
+    //beginDate: date?.from? date.from.toLocaleString("en-US").replace(",", ""): "",
+    //endDate: date?.to? date.to.toLocaleString("en-US").replace(",", ""): "",
+    beginDate:format(startOfDay(date?.from ||new Date()),"M/d/yyyy h:mm:ss a"),
+    endDate: date?.to? format(date.to, "M/d/yyyy h:mm:ss a"): date?.from? format(date.from, "M/d/yyyy h:mm:ss a"): "",
     bbid: selectedVehicle === "all" ? "null" : selectedVehicle,
     reportName: "null",
   };
