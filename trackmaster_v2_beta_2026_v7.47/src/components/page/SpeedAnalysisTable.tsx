@@ -83,23 +83,23 @@ const SpeedAnalysisTable = () => {
   sortDirection: 'asc' as 'asc' | 'desc',
 });
 
-const getDefaultDateRange = (): DateRange => {
-  const today = new Date();
-  return {
-    from: today,
-    to: today,
-  };
-};
+// const getDefaultDateRange = (): DateRange => {
+//   const today = new Date();
+//   return {
+//     from: today,
+//     to: today,
+//   };
+// };
 
   const [detailsSortConfig, setDetailsSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'dateTime', direction: 'desc' });
-  const [date, setDate] = useState<DateRange | undefined>(getDefaultDateRange());
-  const [searchParams] = useSearchParams();
-  const statusFromUrl = searchParams.get('status');
-  const vehicleFromUrl = searchParams.get('vehicle');
-  const [selectedVehicle, setSelectedVehicle] = useState(vehicleFromUrl || 'all');
+  //const [date, setDate] = useState<DateRange | undefined>(getDefaultDateRange());
+  const [date, setDate] = useState<DateRange | undefined>({from: startOfDay(new Date()), to: new Date(),}); //30.06.2026
+  const [selectedVehicle, setSelectedVehicle] = useState('all');
   const [activeTimeRange, setActiveTimeRange] = useState<string | null>(null);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [showOverspeedOnly, setShowOverspeedOnly] = useState(false);
+  const [searchParams] = useSearchParams();
+  const statusFromUrl = searchParams.get('status');
 
   //=== bind vehicle list using common API
   const { data: vehicleOptions } = useVehicleList();
@@ -111,7 +111,7 @@ const getDefaultDateRange = (): DateRange => {
   const [totalRecords, setTotalRecords] = useState(0);
 
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
-  const [tempDate, setTempDate] = useState<DateRange | undefined>(getDefaultDateRange());
+  //const [tempDate, setTempDate] = useState<DateRange | undefined>(getDefaultDateRange());
   const [selecting, setSelecting] = useState<'start' | 'end'>('start');
 
   // For Live Location Dialog
@@ -129,7 +129,8 @@ const getDefaultDateRange = (): DateRange => {
   sortColumn: sortConfig.sortColumn,
   sortDirection: sortConfig.sortDirection,
   Status: statusFromUrl || null,
-  beginDate: date?.from ? format(startOfDay(date.from), "yyyy-MM-dd HH:mm:ss")  : "",
+  //beginDate: date?.from ? format(startOfDay(date.from), "yyyy-MM-dd HH:mm:ss")  : "",
+  beginDate: date?.from? format(date.from, "M/d/yyyy h:mm:ss a"): "",
   endDate: date?.to
         ? format(date.to, "M/d/yyyy h:mm:ss a")
         : date?.from
