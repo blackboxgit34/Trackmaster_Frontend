@@ -17,7 +17,6 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { stoppageAnalysisData, type StoppageData, type StoppageDetail } from '@/data/stoppageData';
-import { vehicles } from '@/data/mockData';
 import {
   ArrowUp,
   ArrowDown,
@@ -26,7 +25,6 @@ import {
   ChevronsLeft,
   ChevronsRight,
   Download,
-  CalendarIcon,
   ChevronDown,
   PlusCircle,
   ChevronsUpDown,FileSpreadsheet,
@@ -34,15 +32,12 @@ import {
 } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
 import { subWeeks, subDays, subMonths, format, startOfDay } from 'date-fns';
-import { cn } from '@/lib/utils';
+import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { VehicleCombobox } from '../VehicleCombobox';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import WhatsappPopup from '../WhatsappPopup';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { API_BASE_URL } from '@/config/Api';
@@ -166,9 +161,6 @@ const IdlingAnalysisTable = () => {
   const [vehicleList, setVehicleList] = useState<any[]>([]);
   const [selectedVehicle, setSelectedVehicle] = useState(vehicleFromUrl || '');
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
- const [tempDate, setTempDate] = useState<any>();
- const [isCalendarOpen, setIsCalendarOpen] = useState(false);
- const [isCustomMode, setIsCustomMode] = useState(false);
   const [intervalFilter, setIntervalFilter] = useState('0-0');
   const [idlingAboveValue, setIdlingAboveValue] = useState(0);
   const [idlingAboveUnit, setIdlingAboveUnit] = useState<'min' | 'hr'>('min');
@@ -181,65 +173,6 @@ const IdlingAnalysisTable = () => {
       return newSet;
     });
   };
-
- const handleTimeRangeClick = (range: string) => {
-   const now = new Date();
- 
-   let fromDate: Date = now;
-   let toDate: Date = now;
- 
-   switch (range) {
-     case 'today':
-       fromDate = now;
-       toDate = now;
- 
-       setDate({ from: fromDate, to: toDate });
-       setIsCalendarOpen(false);
-       break;
- 
-     case 'yesterday':
-       fromDate = subDays(now, 1);
-       toDate = subDays(now, 1);
- 
-       setDate({ from: fromDate, to: toDate });
-       setIsCalendarOpen(false);
-       break;
- 
-     case 'last-week':
-       fromDate = subWeeks(now, 1);
-       toDate = now;
- 
-       setDate({ from: fromDate, to: toDate });
-       setIsCalendarOpen(false);
-       break;
- 
-     case 'last-month':
-       fromDate = subMonths(now, 1);
-       toDate = now;
- 
-       setDate({ from: fromDate, to: toDate });
-       setIsCalendarOpen(false);
-       break;
- 
-     case 'custom':
-       setIsCustomMode(true);
-       setTempDate(date);
-       break;
- 
-     default:
-       break;
-   }
- };
- 
- const handleApply = () => {
-   setDate(tempDate);
-   setIsCalendarOpen(false);
- };
- 
- const handleCancel = () => {
-   setTempDate(date);
-   setIsCalendarOpen(false);
- };
 
   const handleDetailsSort = (key: string) => {
     setDetailsSortConfig(prev => ({
@@ -293,11 +226,6 @@ const IdlingAnalysisTable = () => {
     setSortConfig({ key, direction });
     setPage(0);
   };
-
-  // const paginatedData = sortedData.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
-  // const totalPages = Math.ceil(sortedData.length / rowsPerPage);
-  // const firstRowIndex = page * rowsPerPage + 1;
-  // const lastRowIndex = Math.min((page + 1) * rowsPerPage, sortedData.length);
     const columnMap: Record<string, string> = {
   VehName: "VehName", 
 };
@@ -486,78 +414,10 @@ const exportPdf = async () => {
         </div>
         <div className="flex flex-col items-end gap-2">
           <div className="flex items-center gap-2 flex-wrap justify-start sm:justify-end">
-            <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  id="date"
-                  variant={'outline'}
-                  className={cn(
-                    'w-full sm:w-[260px] justify-start text-left font-normal',
-                    !date && 'text-muted-foreground'
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {date?.from ? (
-                    date.to ? (
-                      <>
-                        {format(date.from, 'LLL dd, y')} -{' '}
-                        {format(date.to, 'LLL dd, y')}
-                      </>
-                    ) : (
-                      format(date.from, 'LLL dd, y')
-                    )
-                  ) : (
-                    <span>Pick a date</span>
-                  )}
-                </Button>
-              </PopoverTrigger>
-             <PopoverContent className="w-auto p-0 flex flex-col" align="end">
-               <div className="flex">
-                 
-                 {/* Left Side Buttons */}
-                 <div className="flex flex-col space-y-1 p-2 border-r min-w-[140px]">
-                   {timeRanges.map((range) => (
-                     <Button
-                       key={range.value}
-                       variant="ghost"
-                       className="justify-start"
-                       onClick={() => handleTimeRangeClick(range.value)}
-                     >
-                       {range.label}
-                     </Button>
-                   ))}
-                 </div>
-             
-                 {/* Calendar */}
-                 <div className="p-3">
-                   <Calendar
-                     initialFocus
-                     mode="range"
-                     defaultMonth={tempDate?.from || date?.from}
-                     selected={tempDate}
-                     onSelect={(range: any) => setTempDate(range)}
-                     numberOfMonths={1}
-                   />
-             
-                   {/* Apply / Cancel Buttons */}
-                   {isCustomMode && (
-                     <div className="flex justify-end gap-2 mt-4">
-                       <Button
-                         variant="outline"
-                         onClick={handleCancel}
-                       >
-                         Cancel
-                       </Button>
-             
-                       <Button onClick={handleApply}>
-                         Apply
-                       </Button>
-                     </div>
-                   )}
-                 </div>
-               </div>
-             </PopoverContent>            
-            </Popover>
+           <DateRangePicker
+                         date={date}
+                         setDate={setDate}
+                       />
             {/* <VehicleCombobox vehicles={vehicles} value={selectedVehicle} onChange={setSelectedVehicle} className="w-full sm:w-[180px]" /> */}
             <VehicleCombobox vehicles={vehicleList} value={selectedVehicle} onChange={(value) => {setSelectedVehicle(value);// Reset pagination
                 setPage(0); setRowsPerPage(10);}}
