@@ -59,7 +59,6 @@ const getStatusBadgeClasses = (status: string) => {
 
 
 
-// --- Subcomponent: VehiclePopup ---
 const VehiclePopup = memo(({
   activeVehicle,
   nearbyPoi,
@@ -241,6 +240,7 @@ const VehiclePopup = memo(({
 });
 VehiclePopup.displayName = 'VehiclePopup';
 
+
 // --- Main Map Component ---
 interface MapComponentProps {
   machines: LiveVehicleStatus[];
@@ -367,7 +367,7 @@ const AnimatedVehicleMarker = memo(({
             anchor: new window.google.maps.Point(32, 52), // Adjusted to perfectly center behind the 40x40 marker
           }}
           zIndex={40}
-        // optimized={true}
+          optimized={true}
         />
       )}
       <Marker
@@ -376,7 +376,7 @@ const AnimatedVehicleMarker = memo(({
         icon={iconProps}
         onClick={() => onClick(vehicle.id)}
         zIndex={isActive ? 50 : 20}
-      // optimized={true}
+       optimized={true}
       />
     </Fragment>
   );
