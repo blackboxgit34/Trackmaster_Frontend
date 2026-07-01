@@ -142,7 +142,8 @@ const SmsNotificationReportTable = () => {
         messagetype: messageTypeFilter,
         //beginDate: date?.from ? date.from.toLocaleString("en-US").replace(",", "") : "",
         //endDate: date?.to ? date.to.toLocaleString("en-US").replace(",", "") : "",
-        beginDate:format(startOfDay(date?.from ||new Date()),"M/d/yyyy h:mm:ss a"),
+        //beginDate:format(startOfDay(date?.from ||new Date()),"M/d/yyyy h:mm:ss a"),
+        beginDate: date?.from? format(date.from, "M/d/yyyy h:mm:ss a"): "",
         endDate: date?.to? format(date.to, "M/d/yyyy h:mm:ss a"): date?.from? format(date.from, "M/d/yyyy h:mm:ss a"): "",
         vehicleNo: selectedVehicle // neha k extra parameter added
       });
@@ -328,7 +329,8 @@ const SmsNotificationReportTable = () => {
     messagetype: messageTypeFilter,
     //beginDate: date?.from? date.from.toLocaleString("en-US").replace(",", ""): "",
     //endDate: date?.to? date.to.toLocaleString("en-US").replace(",", ""): "",
-    beginDate:format(startOfDay(date?.from ||new Date()),"M/d/yyyy h:mm:ss a"),
+    //beginDate:format(startOfDay(date?.from ||new Date()),"M/d/yyyy h:mm:ss a"),
+    beginDate: date?.from? format(date.from, "M/d/yyyy h:mm:ss a"): "",
     endDate: date?.to? format(date.to, "M/d/yyyy h:mm:ss a"): date?.from? format(date.from, "M/d/yyyy h:mm:ss a"): "",
     vehicleNo: selectedVehicle,
   };
