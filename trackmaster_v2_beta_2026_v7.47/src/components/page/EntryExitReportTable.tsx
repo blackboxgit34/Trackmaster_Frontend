@@ -117,7 +117,8 @@ const locationMapOptions: google.maps.MapOptions = {
 
 const EntryExitReportTable = () => {
   const [detailsSortConfig, setDetailsSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'startTime', direction: 'asc' });
-  const [date, setDate] = useState<DateRange | undefined>({ from: new Date(), to: new Date(), });
+  //const [date, setDate] = useState<DateRange | undefined>({ from: new Date(), to: new Date(), });
+    const [date, setDate] = useState<DateRange | undefined>({from: startOfDay(new Date()), to: new Date()});
   const [selectedVehicle, setSelectedVehicle] = useState('all');
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
@@ -234,20 +235,8 @@ const EntryExitReportTable = () => {
       sortConfig.sortDirection,
     // updated interval mapping
     interval: intervalMap[intervalFilter] || "1",
-    beginDate:
-      format(
-
-        startOfDay(
-
-          date?.from ||
-
-          new Date()
-
-        ),
-
-        "M/d/yyyy h:mm:ss a"
-
-      ),
+    //beginDate:format(startOfDay(date?.from || new Date()),"M/d/yyyy h:mm:ss a"),
+    beginDate: date?.from? format(date.from, "M/d/yyyy h:mm:ss a"): "",
     endDate: date?.to
       ? format(date.to, "M/d/yyyy h:mm:ss a")
       : date?.from
