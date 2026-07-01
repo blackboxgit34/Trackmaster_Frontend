@@ -60,17 +60,11 @@ const headers: { key: ReportDataKey; label: string }[] = [
 const IgnitionOnOffAnalysisTable = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-<<<<<<< HEAD
-  const [date, setDate] = useState<DateRange | undefined>({ from: subWeeks(new Date(), 1), to: new Date() });
+  const [date, setDate] = useState<DateRange | undefined>({from: startOfDay(new Date()), to: new Date()});
   const [searchParams] = useSearchParams();
   const vehicleFromUrl = searchParams.get('vehicle');
+ 
   const [selectedVehicle, setSelectedVehicle] = useState(vehicleFromUrl || 'all');
-=======
-  //const [date, setDate] = useState<DateRange | undefined>({ from: subWeeks(new Date(), 1), to: new Date() });
-  const [date, setDate] = useState<DateRange | undefined>({from: startOfDay(new Date()), to: new Date(),}); //30.06.2026
-  
-  const [selectedVehicle, setSelectedVehicle] = useState('all');
->>>>>>> 2489bf4ef396ac5772f77b211685b6dce5705b76
   const [vehicleList, setVehicleList] = useState<any[]>([]);
   const [reportData, setReportData] = useState<IgnitionVehicle[]>([]);
   const [loading, setLoading] = useState(false);

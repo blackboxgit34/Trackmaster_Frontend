@@ -137,7 +137,7 @@ export function DateRangePicker({
     (preset: string) => {
       const now = new Date()
       let from: Date
-      let to: Date = mergeTime(now, "23:59")
+      let to: Date = now
 
       switch (preset) {
         case "today":
@@ -154,6 +154,8 @@ export function DateRangePicker({
         default:
           from = mergeTime(now, "00:00")
       }
+      setStartTime("00:00")
+      setEndTime(format(to, "HH:mm"))
       setTempDate({ from, to })
       setActivePreset(preset)
     },
