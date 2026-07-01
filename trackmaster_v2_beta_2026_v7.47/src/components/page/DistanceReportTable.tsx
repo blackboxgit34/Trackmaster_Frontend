@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Table,
   TableHeader,
@@ -56,8 +57,10 @@ const SortableHeader = ({ children, sortKey, currentSort, onSort }: { children: 
 };
 
 const DistanceReportTable = () => {
+  const [searchParams] = useSearchParams();
+  const vehicleFromUrl = searchParams.get('vehicle');
   const [dateRange, setDateRange] = useState<DateRange | undefined>({ from: subWeeks(new Date(), 1), to: new Date() });
-  const [selectedVehicle, setSelectedVehicle] = useState('');
+  const [selectedVehicle, setSelectedVehicle] = useState(vehicleFromUrl || '');
   const [sortConfig, setSortConfig] = useState<{ key: ReportSortKey; direction: 'asc' | 'desc' }>({ key: 'BBID', direction: 'asc' });
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
@@ -72,6 +75,7 @@ const DistanceReportTable = () => {
 
   useEffect(() => {
     setPagination(p => (p.pageIndex === 0 ? p : ({ ...p, pageIndex: 0 })));
+    setExpandedRows(new Set());
   }, [selectedVehicle, dateRange, sortConfig]);
 
   // Use server-provided pagination and sorting for parent table
@@ -96,15 +100,16 @@ const DistanceReportTable = () => {
       return newSet;
     });
   };
-  if (isLoading) return <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-    <div className="bg-white p-4 rounded-lg flex items-center gap-3 shadow-lg">
-      <div className="animate-spin h-5 w-5 border-2 border-black border-t-transparent rounded-full"></div>
-      <span>Please wait...</span>
-    </div>
-  </div>;
-
   return (
-    <Card className="shadow-sm overflow-hidden">
+    <Card className="shadow-sm overflow-hidden relative">
+      {isLoading && (
+        <div className="absolute inset-0 bg-white/70 z-10 flex items-center justify-center rounded-md">
+          <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-lg shadow">
+            <div className="animate-spin h-4 w-4 border-2 border-black border-t-transparent rounded-full" />
+            <span className="text-sm">Please wait...</span>
+          </div>
+        </div>
+      )}
       <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 px-6 py-4">
         <div>
           <CardTitle className="text-xl font-bold text-foreground">Distance Report</CardTitle>
