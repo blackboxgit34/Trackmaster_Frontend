@@ -178,10 +178,7 @@ const IgnitionOnOffAnalysisTable = () => {
   const requestModel = {
     CustId: custId,
     sEcho: 1,
-    sSearch:
-      selectedVehicle !== "all"
-        ? vehicleList.find(v => v.value === selectedVehicle)?.label || ""
-        : "",
+    sSearch:selectedVehicle !== "all"? vehicleList.find(v => v.value === selectedVehicle)?.label || "": "",
     sortColumn: "vehicleName",
     sortDirection: "asc",
   };
