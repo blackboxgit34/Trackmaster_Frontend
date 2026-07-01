@@ -229,7 +229,6 @@ export const getVehicleStatusList = async ({
   }
 
   const result = await response.json();
-
   return result.data.map((item: any) => ({
 
     id: item.bbid,
@@ -283,6 +282,7 @@ export const getVehicleStatusList = async ({
       lid: getAddonStatus(true),
       immobilizer: getAddonStatus(item.immobilizer),
     },
+    alertsCount:item.alertsCount|| 0,
   }));
 };
 

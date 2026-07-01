@@ -43,6 +43,7 @@ import { Label } from '@/components/ui/label';
 import { API_BASE_URL } from '@/config/Api';
 import { DataTableRequestModel } from '@/hooks/DataTableRequestModel';
 import { useReportDownload } from '@/hooks/useApi';
+import { useSearchParams } from 'react-router-dom';
 
 type IdlingReportData = {
   vehicleId: string;
@@ -155,8 +156,10 @@ const IdlingAnalysisTable = () => {
   const [sortConfig, setSortConfig] = useState<{ key: ReportDataKey; direction: 'asc' | 'desc'; }>({ key: 'vehicleName', direction: 'asc' });
   const [detailsSortConfig, setDetailsSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'startDate', direction: 'asc' });
   const [date, setDate] = useState<DateRange | undefined>({ from: subWeeks(new Date(), 1), to: new Date() });
+  const [searchParams] = useSearchParams();
+  const vehicleFromUrl = searchParams.get('vehicle');
   const [vehicleList, setVehicleList] = useState<any[]>([]);
-  const [selectedVehicle, setSelectedVehicle] = useState('');
+  const [selectedVehicle, setSelectedVehicle] = useState(vehicleFromUrl || '');
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [intervalFilter, setIntervalFilter] = useState('0-0');
   const [idlingAboveValue, setIdlingAboveValue] = useState(0);

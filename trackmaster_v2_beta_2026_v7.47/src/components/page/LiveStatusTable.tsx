@@ -1021,7 +1021,7 @@ const LiveStatusTable = () => {
                                 icon={Fuel}
                                 tooltipLabel="Fuel Monitoring"
                                 addonDataLabel="Current Fuel Level"
-                                addonDataValue={`${row.fuelLiters.toFixed(1)} Liters`}
+                                addonDataValue={row.fuelLevel != null ? `${Number(row.fuelLevel).toFixed(1)}%` : 'N/A'}
                                 onClick={() => handleAddonClick(row.addons.fuel, "Fuel Monitoring", `/addons/fuel-reports/fuel-analysis?vehicle=${row.vehicleNo}`)}
                               />
                               <AddonIcon
@@ -1104,12 +1104,12 @@ const LiveStatusTable = () => {
                                   <span
                                     className={cn(
                                       'text-3xl font-bold',
-                                      row.alerts > 0
+                                      row.alertsCount > 0
                                         ? 'text-red-500'
                                         : 'text-muted-foreground'
                                     )}
                                   >
-                                    {row.alerts || 0}
+                                    {row.alertsCount || 0}
                                   </span>
 
                                   <span className="text-sm text-muted-foreground">
@@ -1118,35 +1118,25 @@ const LiveStatusTable = () => {
                                 </div>
                               </TooltipTrigger>
 
-                              {row.alertDetails &&
-                                row.alertDetails.length >
-                                0 && (
-                                  <TooltipContent className="bg-black text-white border-black">
-                                    <div className="p-1">
-                                      <p className="font-semibold mb-1">
-                                        Alerts:
-                                      </p>
-
-                                      <ul className="text-xs space-y-1">
-                                        {Object.entries(
-                                          alertCounts
-                                        ).map(
-                                          ([
-                                            alert,
-                                            count,
-                                          ]) => (
-                                            <li key={alert}>
-                                              {alert} -{' '}
-                                              {String(
-                                                count
-                                              )}
-                                            </li>
-                                          )
-                                        )}
-                                      </ul>
-                                    </div>
-                                  </TooltipContent>
+                              <TooltipContent className="bg-black text-white border-black">
+                                {row.alertDetails && row.alertDetails.length > 0 ? (
+                                  <div className="p-1">
+                                    <p className="font-semibold mb-1">Alerts:</p>
+                                    <ul className="text-xs space-y-1">
+                                      {Object.entries(alertCounts).map(([alert, count]) => (
+                                        <li key={alert}>
+                                          {alert} - {String(count)}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                ) : (
+                                  <p className="text-xs font-medium">
+                                    Battery Disconnected: {row.alertsCount || 0}{' '}
+                                    {(row.alertsCount || 0) === 1 ? 'alert' : 'alerts'}
+                                  </p>
                                 )}
+                              </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
                         </TableCell>

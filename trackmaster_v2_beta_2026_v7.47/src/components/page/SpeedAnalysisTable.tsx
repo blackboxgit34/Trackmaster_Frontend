@@ -93,12 +93,13 @@ const getDefaultDateRange = (): DateRange => {
 
   const [detailsSortConfig, setDetailsSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'dateTime', direction: 'desc' });
   const [date, setDate] = useState<DateRange | undefined>(getDefaultDateRange());
-  const [selectedVehicle, setSelectedVehicle] = useState('all');
+  const [searchParams] = useSearchParams();
+  const statusFromUrl = searchParams.get('status');
+  const vehicleFromUrl = searchParams.get('vehicle');
+  const [selectedVehicle, setSelectedVehicle] = useState(vehicleFromUrl || 'all');
   const [activeTimeRange, setActiveTimeRange] = useState<string | null>(null);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [showOverspeedOnly, setShowOverspeedOnly] = useState(false);
-  const [searchParams] = useSearchParams();
-  const statusFromUrl = searchParams.get('status');
 
   //=== bind vehicle list using common API
   const { data: vehicleOptions } = useVehicleList();
