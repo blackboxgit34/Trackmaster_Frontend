@@ -158,10 +158,8 @@ const GeofenceViolations = () => {
 
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const { data: vehicleList } = useVehicleList();
-  const [date, setDate] = useState<DateRange | undefined>({
-    from: subWeeks(new Date(), 1),
-    to: new Date(),
-  });
+  //const [date, setDate] = useState<DateRange | undefined>({from: subWeeks(new Date(), 1),to: new Date(),});
+  const [date, setDate] = useState<DateRange | undefined>({from: startOfDay(new Date()), to: new Date()});
   const [selectedVehicle, setSelectedVehicle] = useState('all');
   const [activeTimeRange, setActiveTimeRange] = useState<string | null>(
     'last-week'
@@ -318,11 +316,8 @@ const GeofenceViolations = () => {
 
     sortDirection: sortConfig.direction,
 
-    beginDate: format(
-      startOfDay(date?.from || new Date()),
-      "M/d/yyyy h:mm:ss a"
-    ),
-
+    //beginDate: format(startOfDay(date?.from || new Date()),"M/d/yyyy h:mm:ss a"),
+    beginDate: date?.from? format(date.from, "M/d/yyyy h:mm:ss a"): "",
     endDate: date?.to
       ? format(date.to, "M/d/yyyy h:mm:ss a")
       : "",

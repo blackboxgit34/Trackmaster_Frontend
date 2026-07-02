@@ -32,7 +32,8 @@ import {
 } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
 import { DateRangePicker } from '@/components/ui/date-range-picker';//23.06.2026
-import { subWeeks} from 'date-fns';
+//import { subWeeks} from 'date-fns';
+import { subWeeks, subDays, subMonths,startOfDay, format,endOfDay } from 'date-fns';
 import { VehicleCombobox } from '../VehicleCombobox';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import WhatsappPopup from '../WhatsappPopup';
@@ -155,7 +156,8 @@ const StoppageAnalysisTable = () => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [sortConfig, setSortConfig] = useState<{ key: ReportDataKey; direction: 'asc' | 'desc'; }>({ key: 'vehicleName', direction: 'asc' });
   const [detailsSortConfig, setDetailsSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'stopDate', direction: 'asc' });
-  const [date, setDate] = useState<DateRange | undefined>({ from: subWeeks(new Date(), 1), to: new Date() });
+  //const [date, setDate] = useState<DateRange | undefined>({ from: subWeeks(new Date(), 1), to: new Date() });
+  const [date, setDate] = useState<DateRange | undefined>({from: startOfDay(new Date()), to: new Date()});
   const [searchParams] = useSearchParams();
   const vehicleFromUrl = searchParams.get('vehicle');
   const [vehicleList, setVehicleList] = useState<any[]>([]);
@@ -302,7 +304,8 @@ sortColumn:columnMap[sortConfig?.key as string] || "VehName",
 
     interval: intervalFilter || undefined,
 
-           beginDate: date?.from ? date.from.toLocaleString("en-US").replace(",", "") : "",
+           //beginDate: date?.from ? date.from.toLocaleString("en-US").replace(",", "") : "",
+            beginDate: date?.from? format(date.from, "M/d/yyyy h:mm:ss a"): "",
         endDate: date?.to ? date.to.toLocaleString("en-US").replace(",", "") : "",
   };
 };

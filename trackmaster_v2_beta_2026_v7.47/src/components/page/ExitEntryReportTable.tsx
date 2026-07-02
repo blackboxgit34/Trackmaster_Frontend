@@ -65,7 +65,7 @@ type ReportData = {
   vehicleId?: string;
   vehicleName?: string;
   driverName?: string;
-  poisCovered?: string;
+  totalpois?: string;
   date?: string;
   [key: string]: any;
 };
@@ -74,7 +74,7 @@ type ReportDataKey = keyof ReportData;
 const headers: { key: ReportDataKey; label: string }[] = [
   { key: 'vehicleName', label: 'Vehicle No' },
   { key: 'driverName', label: 'Driver Name' },
-  { key: 'poisCovered', label: 'POIs Covered' },
+  { key: 'totalpois', label: 'POIs Covered' },
 ];
 
 // const timeRanges = [
@@ -105,10 +105,8 @@ const SortableHeader = ({ children, isSorted, sortDirection, onClick }: { childr
 
 const ExitEntryReportTable = () => {
   const [detailsSortConfig, setDetailsSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'startTime', direction: 'asc' });
-  const [date, setDate] = useState<DateRange | undefined>({
-    from: new Date(),
-    to: new Date(),
-  });
+  //const [date, setDate] = useState<DateRange | undefined>({from: new Date(),to: new Date(),});
+  const [date, setDate] = useState<DateRange | undefined>({from: startOfDay(new Date()), to: new Date()});
   const [selectedVehicle, setSelectedVehicle] = useState('all');
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   // const [isCalendarOpen, setIsCalendarOpen] = useState(false);
@@ -171,21 +169,8 @@ const ExitEntryReportTable = () => {
     sortDirection:
       sortConfig.sortDirection,
     // updated interval mapping
-    beginDate:
-      format(
-
-        startOfDay(
-
-          date?.from ||
-
-          new Date()
-
-        ),
-
-        "M/d/yyyy h:mm:ss a"
-
-      ),
-
+    //beginDate:format(startOfDay(date?.from ||new Date()),"M/d/yyyy h:mm:ss a"),
+    beginDate: date?.from? format(date.from, "M/d/yyyy h:mm:ss a"): "",
     endDate: date?.to
       ? format(date.to, "M/d/yyyy h:mm:ss a")
       : date?.from
@@ -578,7 +563,7 @@ const ExitEntryReportTable = () => {
                       </TableCell>
 
                       <TableCell className="px-6 py-4">
-                        {row.poisCovered ?? 0}
+                        {row.totalpois ?? 0}
                       </TableCell>
                       <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-right">
                         <Button variant="link" onClick={() => toggleRow(row.bbid)} className="font-medium text-brand-blue dark:text-blue-400 p-0 h-auto flex items-center gap-1">
