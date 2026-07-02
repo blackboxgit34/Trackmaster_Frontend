@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { format, endOfDay, startOfDay } from 'date-fns';
+import { format } from 'date-fns';
 import { API_BASE_URL } from '@/config/Api';
 import type { DateRange } from 'react-day-picker';
 import type { DataTableRequestModel } from '@/hooks/DataTableRequestModel';
@@ -37,9 +37,8 @@ const parseNumber = (value: unknown): number => {
   return 0;
 };
 
-const formatDateTime = (date: Date, endOfDayFlag = false): string => {
-  return format(endOfDayFlag ? endOfDay(date) : startOfDay(date), 'yyyy-MM-dd HH:mm:ss');
-};
+const formatBeginDate = (date: Date): string => format(date, 'M/d/yyyy h:mm:ss a');
+const formatEndDate = (date: Date): string => date.toLocaleString('en-US').replace(',', '');
 
 interface DistanceReportRequestOptions {
   dateRange?: DateRange;
@@ -69,8 +68,8 @@ export const useDistanceReportData = ({
         const auth = JSON.parse(localStorage.getItem('trackmaster-auth') || '{}');
         const custId = Number(auth.custId ?? 0) || 0;
 
-        const begin = dateRange?.from ? startOfDay(dateRange.from) : startOfDay(new Date());
-        const end = dateRange?.to ? endOfDay(dateRange.to) : endOfDay(dateRange?.from ?? new Date());
+        const begin = dateRange?.from ?? new Date();
+        const end = dateRange?.to ?? dateRange?.from ?? new Date();
 
         const mapSortKeyToApiColumn = (key: string): string => {
           switch (key) {
@@ -92,8 +91,8 @@ export const useDistanceReportData = ({
           sortColumn: mapSortKeyToApiColumn(String(sortConfig.key)),
           sortDirection: sortConfig.direction,
           sSearch: selectedVehicle && selectedVehicle !== 'all' ? selectedVehicle : undefined,
-          beginDate: formatDateTime(begin),
-          endDate: formatDateTime(end, true),
+          beginDate: formatBeginDate(begin),
+          endDate: formatEndDate(end),
         };
 
         const response = await fetch(`${API_BASE_URL}/Reports/GetDistanceReportData`, {
@@ -172,8 +171,8 @@ export const useDistanceReportData = ({
       const auth = JSON.parse(localStorage.getItem('trackmaster-auth') || '{}');
       const custId = Number(auth.custId ?? 0) || 0;
 
-      const begin = dateRange?.from ? startOfDay(dateRange.from) : startOfDay(new Date());
-      const end = dateRange?.to ? endOfDay(dateRange.to) : endOfDay(dateRange?.from ?? new Date());
+      const begin = dateRange?.from ?? new Date();
+      const end = dateRange?.to ?? dateRange?.from ?? new Date();
 
       const mapSortKeyToApiColumn = (key: string): string => {
         switch (key) {
@@ -194,8 +193,8 @@ export const useDistanceReportData = ({
         sortColumn: mapSortKeyToApiColumn(String(sortConfig.key)),
         sortDirection: sortConfig.direction,
         sSearch: selectedVehicle && selectedVehicle !== 'all' ? selectedVehicle : undefined,
-        beginDate: formatDateTime(begin),
-        endDate: formatDateTime(end, true),
+        beginDate: formatBeginDate(begin),
+        endDate: formatEndDate(end),
         DownloadType: 'Excel'
       };
 
@@ -246,8 +245,8 @@ export const useDistanceReportData = ({
       const auth = JSON.parse(localStorage.getItem('trackmaster-auth') || '{}');
       const custId = Number(auth.custId ?? 0) || 0;
 
-      const begin = dateRange?.from ? startOfDay(dateRange.from) : startOfDay(new Date());
-      const end = dateRange?.to ? endOfDay(dateRange.to) : endOfDay(dateRange?.from ?? new Date());
+      const begin = dateRange?.from ?? new Date();
+      const end = dateRange?.to ?? dateRange?.from ?? new Date();
 
       const mapSortKeyToApiColumn = (key: string): string => {
         switch (key) {
@@ -268,8 +267,8 @@ export const useDistanceReportData = ({
         sortColumn: mapSortKeyToApiColumn(String(sortConfig.key)),
         sortDirection: sortConfig.direction,
         sSearch: selectedVehicle && selectedVehicle !== 'all' ? selectedVehicle : undefined,
-        beginDate: formatDateTime(begin),
-        endDate: formatDateTime(end, true),
+        beginDate: formatBeginDate(begin),
+        endDate: formatEndDate(end),
         DownloadType: 'Pdf'
       };
 
