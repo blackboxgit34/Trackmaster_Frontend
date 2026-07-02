@@ -31,8 +31,8 @@ import {
   FileText,
 } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
-import { subWeeks, subDays, subMonths, format, startOfDay } from 'date-fns';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
+import { subWeeks, subDays, subMonths,startOfDay, format,endOfDay } from 'date-fns';
 import { VehicleCombobox } from '../VehicleCombobox';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import WhatsappPopup from '../WhatsappPopup';
@@ -155,7 +155,7 @@ const IdlingAnalysisTable = () => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [sortConfig, setSortConfig] = useState<{ key: ReportDataKey; direction: 'asc' | 'desc'; }>({ key: 'vehicleName', direction: 'asc' });
   const [detailsSortConfig, setDetailsSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'startDate', direction: 'asc' });
-  const [date, setDate] = useState<DateRange | undefined>({ from: subWeeks(new Date(), 1), to: new Date() });
+  const [date, setDate] = useState<DateRange | undefined>({from: startOfDay(new Date()), to: new Date()});
   const [searchParams] = useSearchParams();
   const vehicleFromUrl = searchParams.get('vehicle');
   const [vehicleList, setVehicleList] = useState<any[]>([]);
@@ -298,26 +298,8 @@ sortColumn:columnMap[sortConfig?.key as string] || "VehName",
 
     interval: intervalFilter || undefined,
 
-    beginDate:
-          format(
- 
-            startOfDay(
- 
-              date?.from ||
- 
-              new Date()
- 
-            ),
- 
-            "M/d/yyyy h:mm:ss a"
- 
-          ),
- 
-        endDate:
-          format(
-            new Date(),
-            "M/d/yyyy h:mm:ss a"
-          ),
+    beginDate: date?.from? format(date.from, "M/d/yyyy h:mm:ss a"): "",
+            endDate: date?.to ? date.to.toLocaleString("en-US").replace(",", "") : "",
   };
 };
 
