@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useJsApiLoader } from '@react-google-maps/api';
+import { LoadScript } from '@react-google-maps/api';
 import { GOOGLE_MAPS_API_KEY } from '@/config/maps';
 import { API_BASE_URL } from '@/config/Api';
 import { parseISO, differenceInSeconds, parse, format, formatISO } from 'date-fns';
@@ -67,12 +67,6 @@ const RoutePlayback = () => {
   const vehicleFromUrl = searchParams.get('vehicle');
   const dateFromUrl = searchParams.get('date');
 
-  const { isLoaded } = useJsApiLoader({
-    id: 'google-map-script',
-    googleMapsApiKey: GOOGLE_MAPS_API_KEY,
-    libraries,
-  });
-
   // ─── Vehicle list from API ───────────────────────────────────────────────
   const [vehicles, setVehicles] = useState<VehicleOption[]>([]);
   const [vehiclesLoading, setVehiclesLoading] = useState(true);
@@ -114,6 +108,13 @@ const RoutePlayback = () => {
     }
     return new Date();
   });
+
+  // Sync URL param → state when navigating to a different vehicle via link
+  useEffect(() => {
+    if (vehicleFromUrl) {
+      setSelectedVehicle(vehicleFromUrl);
+    }
+  }, [vehicleFromUrl]);
 
   // Once vehicles load, default to first if nothing selected
   useEffect(() => {
@@ -438,19 +439,22 @@ const RoutePlayback = () => {
     return v?.type?.toLowerCase().replace(/\s+/g, '-') || 'mini-excavator';
   }, [selectedVehicle, vehicles]);
 
-  // ─── Loading states ───────────────────────────────────────────────────────
-  if (!isLoaded || vehiclesLoading) {
-    return (
-      <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-        <div className="bg-white p-4 rounded-lg flex items-center gap-3 shadow-lg">
-          <div className="animate-spin h-5 w-5 border-2 border-black border-t-transparent rounded-full" />
-          <span>Please wait...</span>
-        </div>
+  const loadingSpinner = (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+      <div className="bg-white p-4 rounded-lg flex items-center gap-3 shadow-lg">
+        <div className="animate-spin h-5 w-5 border-2 border-black border-t-transparent rounded-full" />
+        <span>Please wait...</span>
       </div>
-    );
-  }
+    </div>
+  );
 
   return (
+    <LoadScript
+      googleMapsApiKey={GOOGLE_MAPS_API_KEY}
+      libraries={libraries}
+      loadingElement={loadingSpinner}
+    >
+    {vehiclesLoading ? loadingSpinner : (
     <div className="flex h-full w-full bg-muted/40">
       {dataLoading && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
@@ -623,6 +627,8 @@ const RoutePlayback = () => {
         )}
       </div>
     </div>
+    )}
+    </LoadScript>
   );
 };
 

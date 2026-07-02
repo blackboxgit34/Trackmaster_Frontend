@@ -647,49 +647,50 @@ const LiveStatusTable = () => {
     totalRecords
   );
 
-  useEffect(() => {
-    if (paginatedData.length === 0)
-      return;
+  // useEffect(() => {
+  //   if (paginatedData.length === 0)
+  //     return;
 
-    const bbids =
-      paginatedData.map(x => x.bbid);
+  //   const bbids =
+  //     paginatedData.map(x => x.bbid);
 
-    fetch(`${API_BASE_URL}/VehicleStatus/GetFuelLevels`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        bbids
-      })
-    })
-      .then(res => res.json())
-      .then(result => {
+  //   fetch(`${API_BASE_URL}/VehicleStatus/GetFuelLevels`, {
+  //     method: 'POST',
+  //     headers: {
+  //       'Content-Type': 'application/json'
+  //     },
+  //     body: JSON.stringify({
+  //       bbids
+  //     })
+  //   })
+  //     .then(res => res.json())
+  //     .then(result => {
 
-        if (!result.success)
-          return;
+  //       if (!result.success)
+  //         return;
 
-        const fuelObj =
-          result.data.reduce(
-            (acc: any, item: any) => {
+  //       const fuelObj =
+  //         result.data.reduce(
+  //           (acc: any, item: any) => {
 
-              acc[item.bbid] = item;
+  //             acc[item.bbid] = item;
 
-              return acc;
+  //             return acc;
 
-            }, {});
+  //           }, {});
 
-        setFuelMap(fuelObj);
+  //       setFuelMap(fuelObj);
 
-      })
-      .catch(err => {
+  //     })
+  //     .catch(err => {
 
-        console.log(err);
+  //       console.log(err);
 
-      });
+  //     });
 
-  }, [paginatedData]);
+  // }, [paginatedData]);
 
+  
   // ================= PLAYBACK =================
   useEffect(() => {
     let cancelled = false;
@@ -1021,7 +1022,7 @@ const LiveStatusTable = () => {
                                 icon={Fuel}
                                 tooltipLabel="Fuel Monitoring"
                                 addonDataLabel="Current Fuel Level"
-                                addonDataValue={row.fuelLevel != null ? `${Number(row.fuelLevel).toFixed(1)}%` : 'N/A'}
+                                addonDataValue={row.fuelLevel != null ? `${Number(row.fuelLevel).toFixed(1)}L` : 'N/A'}
                                 onClick={() => handleAddonClick(row.addons.fuel, "Fuel Monitoring", `/addons/fuel-reports/fuel-analysis?vehicle=${row.vehicleNo}`)}
                               />
                               <AddonIcon
