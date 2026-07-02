@@ -20,6 +20,7 @@ import { useApi, useVehicleList } from '@/hooks/useApi';
 import { useReportDownload } from '@/hooks/useApi';
 import { API_BASE_URL } from '@/config/Api';
 
+
 import {
   ArrowUp,
   ArrowDown,
@@ -221,15 +222,17 @@ const BatteryDisconnectionReportTable = () => {
   });
   
 
-  const [date, setDate] = useState<DateRange | undefined>({
-    from: subWeeks(new Date(), 1),
-    to: new Date(),
-  });
+  // const [date, setDate] = useState<DateRange | undefined>({
+  //   from: subWeeks(new Date(), 1),
+  //   to: new Date(),
+  // });
+  const [date, setDate] = useState<DateRange | undefined>({from: startOfDay(new Date()), to: new Date()});
   const [tempDate, setTempDate] = useState<DateRange | undefined>(date);
 
   
 
   const [selectedVehicle, setSelectedVehicle] = useState('all');
+  const [searchText, setSearchText] = useState('');
 
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
@@ -252,16 +255,14 @@ const requestModel = {
   CustId: authData?.custId || 0,
   iDisplayStart: page === 0 ? 0 : page * rowsPerPage + 1,
   iDisplayLength: (page + 1) * rowsPerPage,
-  beginDate: date?.from
-    ? format(startOfDay(date.from), 'yyyy-MM-dd HH:mm:ss')
-    : '',
+  // beginDate: date?.from
+  //   ? format(startOfDay(date.from), 'yyyy-MM-dd HH:mm:ss')
+  //   : '',
+  beginDate: date?.from? format(date.from, "M/d/yyyy h:mm:ss a"): "",
   endDate: date?.to
     ? format(endOfDay(date.to), 'yyyy-MM-dd HH:mm:ss')
     : '',
-  search:
-    selectedVehicle !== 'all'
-      ? selectedVehicle
-      : '',
+  sSearch: searchText || '',
 };
 
 const {
@@ -307,10 +308,10 @@ const exportPdf = async () => {
     const iDisplayStart = page === 0 ? 0 : page * rowsPerPage + 1;
     const iDisplayLength = (page + 1) * rowsPerPage;
 
-    const beginDate = date?.from
-      ? startOfDay(date.from)
-      : startOfDay(new Date());
-
+    // const beginDate = date?.from
+    //   ? startOfDay(date.from)
+    //   : startOfDay(new Date());
+    
     const endDate = date?.to
       ? endOfDay(date.to)
       : endOfDay(new Date());
@@ -319,17 +320,19 @@ const exportPdf = async () => {
       custId: String(custId),
       iDisplayStart: String(iDisplayStart),
       iDisplayLength: String(iDisplayLength),
-      beginDate: format(beginDate, 'yyyy-MM-dd HH:mm:ss'),
+      //beginDate: format(beginDate, 'yyyy-MM-dd HH:mm:ss'),
+      beginDate: date?.from? format(date.from, "M/d/yyyy h:mm:ss a"): "",
        endDate: date?.to
       ? format(date.to, "M/d/yyyy h:mm:ss a")
       : date?.from
         ? format(date.from, "M/d/yyyy h:mm:ss a")
         : "",
+        
     });
 
-    if (selectedVehicle !== 'all') {
-      params.append('search', selectedVehicle);
-    }
+   if (searchText.trim()) {
+  params.append('sSearch', searchText.trim());  // ✅ correct key, same as working file
+}
 
     try {
       const response = await fetch(
@@ -384,7 +387,7 @@ const exportPdf = async () => {
         count: 0,
       };
     }
-  }, [page, rowsPerPage, selectedVehicle, date]);
+  }, [page, rowsPerPage, searchText, date]);
 
   const { data: apiData, loading } = useApi(
     fetchBatteryDisconnectionReport
@@ -547,9 +550,10 @@ const exportPdf = async () => {
             vehicles={vehicleSearchOptions}
             value={selectedVehicle}
             onChange={(value) => {
-              setSelectedVehicle(value);
-              setPage(0);
-            }}
+            setSelectedVehicle(value);
+            setSearchText(value === 'all' ? '' : value);  // ← add this
+            setPage(0);
+          }}
             className="w-full sm:w-[180px]"
           />
 

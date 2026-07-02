@@ -112,22 +112,23 @@ type VehicleStatusHistoryWithApi = VehicleStatusHistory & {
   overspeed: number;
 };
 
-const getDefaultDateRange = (): DateRange => {
-  const today = new Date();
+// const getDefaultDateRange = (): DateRange => {
+//   const today = new Date();
 
-  return {
-    from: today,
-    to: today,
-  };
-};
+//   return {
+//     from: today,
+//     to: today,
+//   };
+// };
 
 const VehicleStatusReportTable = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [sortConfig, setSortConfig] = useState<{ key: ReportDataKey; direction: 'asc' | 'desc'; }>({ key: 'vehicleName', direction: 'asc' });
   const [detailsSortConfig, setDetailsSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'dateTime', direction: 'desc' });
-  const [date, setDate] = useState<DateRange | undefined>(getDefaultDateRange());
-  const [tempDate, setTempDate] = useState<DateRange | undefined>(getDefaultDateRange());
+  //const [date, setDate] = useState<DateRange | undefined>(getDefaultDateRange());
+  const [date, setDate] = useState<DateRange | undefined>({from: startOfDay(new Date()), to: new Date()});
+ // const [tempDate, setTempDate] = useState<DateRange | undefined>(getDefaultDateRange());
   const [selecting, setSelecting] = useState<'start' | 'end'>('start');
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState('all');
@@ -145,9 +146,10 @@ const requestModel = {
   iDisplayStart: page === 0 ? 0 : page * rowsPerPage + 1,
   iDisplayLength: (page + 1) * rowsPerPage,
   sSearch: searchText || "",
-  beginDate: date?.from
-    ? format(startOfDay(date.from), "yyyy-MM-dd HH:mm:ss")
-    : "",
+  // beginDate: date?.from
+  //   ? format(startOfDay(date.from), "yyyy-MM-dd HH:mm:ss")
+  //   : "",
+  beginDate: date?.from? format(date.from, "M/d/yyyy h:mm:ss a"): "",
   endDate: date?.to
         ? format(date.to, "M/d/yyyy h:mm:ss a")
         : date?.from
@@ -211,7 +213,11 @@ const exportPdf = async () => {
 }
 
 if (date?.from) {
-  params.append('beginDate', format(startOfDay(date.from), 'yyyy-MM-dd HH:mm:ss'));
+  // params.append('beginDate', format(startOfDay(date.from), 'yyyy-MM-dd HH:mm:ss'));
+  params.append(
+  'beginDate',
+  date?.from ? format(date.from, 'M/d/yyyy h:mm:ss a') : ''
+);
 }
 
 if (date?.to) {
