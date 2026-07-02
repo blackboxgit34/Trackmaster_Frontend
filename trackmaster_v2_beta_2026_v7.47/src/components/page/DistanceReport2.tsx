@@ -20,7 +20,7 @@ import {
   parse,
   differenceInMinutes,
   // differenceInDays,  // KPI: day count for badges
-  // startOfDay,        // KPI: period stats fetch
+  startOfDay,        // KPI: period stats fetch
   // endOfDay,          // KPI: period stats fetch
 } from 'date-fns';
 import DistanceReportToolbar from './reports/DistanceReportToolbar';
@@ -231,11 +231,11 @@ const SegmentTooltip: React.FC<{ segment: Segment }> = ({ segment }) => {
 // ─── Main Component ──────────────────────────────────────────────────────────
 
 const DistanceReport2 = () => {
-  const [dateRange, setDateRange] = useState<DateRange | undefined>({
-    from: subWeeks(new Date(), 1),
-    to: new Date(),
-  });
-
+  // const [dateRange, setDateRange] = useState<DateRange | undefined>({
+  //   from: subWeeks(new Date(), 1),
+  //   to: new Date(),
+  // });
+const [dateRange, setDateRange] = useState<DateRange | undefined>({from: startOfDay(new Date()), to: new Date()});
   const [selectedVehicle, setSelectedVehicle] = useState('');
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [pageIndex, setPageIndex] = useState(0);
