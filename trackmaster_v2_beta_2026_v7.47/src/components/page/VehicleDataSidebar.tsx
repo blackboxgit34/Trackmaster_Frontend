@@ -638,7 +638,7 @@ const playbackDate = useMemo(() => {
             <span className="text-xs">Recenter</span>
           </Button>
           <Button asChild variant="outline" className="flex flex-col h-16 gap-1 font-medium">
-            <Link to={`/vehicle-status/route-playback?vehicle=${vehicle.vehicleNo}&date=${playbackDate}`}>
+            <Link to={`/vehicle-status/route-playback?vehicle=${vehicle.bbid}`}>
               <Play className="h-5 w-5" strokeWidth={1.5} />
               <span className="text-xs">Playback</span>
             </Link>
