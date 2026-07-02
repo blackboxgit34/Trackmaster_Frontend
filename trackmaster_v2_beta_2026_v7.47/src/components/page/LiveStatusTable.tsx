@@ -1160,9 +1160,9 @@ const LiveStatusTable = () => {
                               <DropdownMenuItem asChild>
                                 <Link to={`/reports/trip-distance/distance?vehicle=${row.bbid}`}>Distance Report</Link>
                               </DropdownMenuItem>
-                              <DropdownMenuItem asChild>
+                              {/* <DropdownMenuItem asChild>
                                 <Link to={`/reports/trip-distance/trip-report?vehicle=${row.bbid}`}>Trip Report</Link>
-                              </DropdownMenuItem>
+                              </DropdownMenuItem> */}
                               <DropdownMenuItem asChild>
                                 <Link to={`/reports/time-activity/stoppage-analysis?vehicle=${row.bbid}`}>Stoppage Analysis</Link>
                               </DropdownMenuItem>
@@ -1172,9 +1172,9 @@ const LiveStatusTable = () => {
                               <DropdownMenuItem asChild>
                                 <Link to={`/reports/time-activity/ignition-on-off-analysis?vehicle=${row.bbid}`}>Ignition Analysis</Link>
                               </DropdownMenuItem>
-                              <DropdownMenuItem asChild>
+                              {/* <DropdownMenuItem asChild>
                                 <Link to={`/reports/summary-management/daily-summary?vehicle=${row.bbid}`}>Summary Report</Link>
-                              </DropdownMenuItem>
+                              </DropdownMenuItem> */}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>
