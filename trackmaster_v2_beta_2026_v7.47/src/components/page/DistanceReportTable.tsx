@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/card';
 import { ArrowUp, ArrowDown, ChevronsUpDown } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
-import { subWeeks } from 'date-fns';
+import { startOfDay } from 'date-fns';
 import { useDistanceReportData } from '@/hooks/useDistanceReportData';
 import type { ReportSortKey } from '@/types/report-types';
 import DistanceReportToolbar from './reports/DistanceReportToolbar';
@@ -59,7 +59,7 @@ const SortableHeader = ({ children, sortKey, currentSort, onSort }: { children: 
 const DistanceReportTable = () => {
   const [searchParams] = useSearchParams();
   const vehicleFromUrl = searchParams.get('vehicle');
-  const [dateRange, setDateRange] = useState<DateRange | undefined>({ from: subWeeks(new Date(), 1), to: new Date() });
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({ from: startOfDay(new Date()), to: new Date() });
   const [selectedVehicle, setSelectedVehicle] = useState(vehicleFromUrl || '');
   const [sortConfig, setSortConfig] = useState<{ key: ReportSortKey; direction: 'asc' | 'desc' }>({ key: 'BBID', direction: 'asc' });
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });

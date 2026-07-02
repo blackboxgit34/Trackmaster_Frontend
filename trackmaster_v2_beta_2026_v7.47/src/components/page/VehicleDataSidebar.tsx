@@ -632,7 +632,7 @@ const playbackDate = useMemo(() => {
           </div>
         </ScrollArea>
         {/* Footer Actions */}
-        <div className="p-4 border-t shrink-0 grid grid-cols-3 gap-2">
+        <div className="p-4 border-t shrink-0 grid grid-cols-2 gap-2">
           <Button variant="outline" className="flex flex-col h-16 gap-1 font-medium" onClick={() => onRecenter(vehicle)}>
             <MapPin className="h-5 w-5" strokeWidth={1.5} />
             <span className="text-xs">Recenter</span>
@@ -643,10 +643,10 @@ const playbackDate = useMemo(() => {
               <span className="text-xs">Playback</span>
             </Link>
           </Button>
-          <Button variant="outline" className="flex flex-col h-16 gap-1 font-medium" onClick={() => setIsShareDialogOpen(true)}>
+          {/* <Button variant="outline" className="flex flex-col h-16 gap-1 font-medium" onClick={() => setIsShareDialogOpen(true)}>
             <Share2 className="h-5 w-5" strokeWidth={1.5} />
             <span className="text-xs">Share</span>
-          </Button>
+          </Button> */}
         </div>
       </div>
       <ShareLocationDialog
