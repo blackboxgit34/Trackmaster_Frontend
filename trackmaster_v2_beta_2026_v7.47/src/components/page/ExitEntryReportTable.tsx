@@ -65,7 +65,7 @@ type ReportData = {
   vehicleId?: string;
   vehicleName?: string;
   driverName?: string;
-  poisCovered?: string;
+  totalpois?: string;
   date?: string;
   [key: string]: any;
 };
@@ -74,7 +74,7 @@ type ReportDataKey = keyof ReportData;
 const headers: { key: ReportDataKey; label: string }[] = [
   { key: 'vehicleName', label: 'Vehicle No' },
   { key: 'driverName', label: 'Driver Name' },
-  { key: 'poisCovered', label: 'POIs Covered' },
+  { key: 'totalpois', label: 'POIs Covered' },
 ];
 
 // const timeRanges = [
@@ -563,7 +563,7 @@ const ExitEntryReportTable = () => {
                       </TableCell>
 
                       <TableCell className="px-6 py-4">
-                        {row.poisCovered ?? 0}
+                        {row.totalpois ?? 0}
                       </TableCell>
                       <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-right">
                         <Button variant="link" onClick={() => toggleRow(row.bbid)} className="font-medium text-brand-blue dark:text-blue-400 p-0 h-auto flex items-center gap-1">
