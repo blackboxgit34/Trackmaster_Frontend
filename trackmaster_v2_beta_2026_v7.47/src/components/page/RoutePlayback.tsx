@@ -63,7 +63,7 @@ interface Summary {
 }
 
 const RoutePlayback = () => {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const vehicleFromUrl = searchParams.get('vehicle');
   const dateFromUrl = searchParams.get('date');
 
@@ -439,6 +439,13 @@ const RoutePlayback = () => {
     return v?.type?.toLowerCase().replace(/\s+/g, '-') || 'mini-excavator';
   }, [selectedVehicle, vehicles]);
 
+  const handleVehicleChange = (val: string) => {
+    setSelectedVehicle(val);
+    const p = new URLSearchParams(searchParams);
+    p.delete('vehicle');
+    setSearchParams(p, { replace: true });
+  };
+
   const loadingSpinner = (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
       <div className="bg-white p-4 rounded-lg flex items-center gap-3 shadow-lg">
@@ -468,7 +475,7 @@ const RoutePlayback = () => {
       {summary && playbackData ? (
         <PlaybackSidebar
           selectedVehicle={selectedVehicle}
-          onVehicleChange={setSelectedVehicle}
+          onVehicleChange={handleVehicleChange}
           selectedDate={selectedDate}
           onDateChange={setSelectedDate}
           vehicles={vehicles.map(v => ({ label: v.name, value: v.id }))}
@@ -486,7 +493,7 @@ const RoutePlayback = () => {
             <VehicleCombobox
               vehicles={vehicles.map(v => ({ label: v.name, value: v.id }))}
               value={selectedVehicle || ''}
-              onChange={setSelectedVehicle}
+              onChange={handleVehicleChange}
               className="w-full"
             />
             <Popover>

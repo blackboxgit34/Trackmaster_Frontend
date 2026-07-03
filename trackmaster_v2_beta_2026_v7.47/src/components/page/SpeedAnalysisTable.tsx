@@ -98,7 +98,7 @@ const SpeedAnalysisTable = () => {
   const [activeTimeRange, setActiveTimeRange] = useState<string | null>(null);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [showOverspeedOnly, setShowOverspeedOnly] = useState(false);
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const statusFromUrl = searchParams.get('status');
     const vehicleFromUrl = searchParams.get('vehicle');
   const [selectedVehicle, setSelectedVehicle] = useState(vehicleFromUrl || 'all');
@@ -381,15 +381,13 @@ const exportPdf = async () => {
            value={selectedVehicle} 
           onChange={(value) => {
     setSelectedVehicle(value);
-
-    // send selected vehicle in API search param
     if (value === 'all') {
       setSearchText('');
     } else {
       setSearchText(value);
     }
-
     setPage(0);
+    const p = new URLSearchParams(searchParams); p.delete('vehicle'); setSearchParams(p, { replace: true });
   }}
             className="w-full sm:w-[180px]" />
           <div className="flex items-center space-x-2">

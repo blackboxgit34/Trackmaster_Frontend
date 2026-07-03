@@ -61,7 +61,7 @@ const IgnitionOnOffAnalysisTable = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [date, setDate] = useState<DateRange | undefined>({from: startOfDay(new Date()), to: new Date()});
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const vehicleFromUrl = searchParams.get('vehicle');
  
   const [selectedVehicle, setSelectedVehicle] = useState(vehicleFromUrl || 'all');
@@ -255,7 +255,7 @@ const IgnitionOnOffAnalysisTable = () => {
               date={date}
               setDate={setDate}
             />
-            <VehicleCombobox vehicles={vehicleList} value={selectedVehicle} onChange={setSelectedVehicle} className="w-full sm:w-[180px]" />
+            <VehicleCombobox vehicles={vehicleList} value={selectedVehicle} onChange={(value) => { setSelectedVehicle(value); const p = new URLSearchParams(searchParams); p.delete('vehicle'); setSearchParams(p, { replace: true }); }} className="w-full sm:w-[180px]" />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button className="bg-black text-white hover:bg-black/90 w-full sm:w-auto">

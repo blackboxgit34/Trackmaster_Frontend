@@ -158,7 +158,7 @@ const StoppageAnalysisTable = () => {
   const [detailsSortConfig, setDetailsSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'stopDate', direction: 'asc' });
   //const [date, setDate] = useState<DateRange | undefined>({ from: subWeeks(new Date(), 1), to: new Date() });
   const [date, setDate] = useState<DateRange | undefined>({from: startOfDay(new Date()), to: new Date()});
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const vehicleFromUrl = searchParams.get('vehicle');
   const [vehicleList, setVehicleList] = useState<any[]>([]);
   const [selectedVehicle, setSelectedVehicle] = useState(vehicleFromUrl || '');
@@ -409,8 +409,7 @@ const exportPdf1 = async () => {
             />
     
             {/* <VehicleCombobox vehicles={vehicleList} value={selectedVehicle} onChange={setSelectedVehicle} className="w-full sm:w-[180px]" /> */}
-            <VehicleCombobox vehicles={vehicleList} value={selectedVehicle} onChange={(value) => {setSelectedVehicle(value);// Reset pagination
-    setPage(0); setRowsPerPage(10);}}
+            <VehicleCombobox vehicles={vehicleList} value={selectedVehicle} onChange={(value) => {setSelectedVehicle(value); setPage(0); setRowsPerPage(10); const p = new URLSearchParams(searchParams); p.delete('vehicle'); setSearchParams(p, { replace: true });}}
   className="w-full sm:w-[180px]"/>
             <Select value={intervalFilter} onValueChange={setIntervalFilter}>
               <SelectTrigger className="w-full sm:w-[180px]">

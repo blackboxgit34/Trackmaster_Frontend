@@ -57,7 +57,7 @@ const SortableHeader = ({ children, sortKey, currentSort, onSort }: { children: 
 };
 
 const DistanceReportTable = () => {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const vehicleFromUrl = searchParams.get('vehicle');
   const [dateRange, setDateRange] = useState<DateRange | undefined>({ from: startOfDay(new Date()), to: new Date() });
   const [selectedVehicle, setSelectedVehicle] = useState(vehicleFromUrl || '');
@@ -119,7 +119,7 @@ const DistanceReportTable = () => {
           dateRange={dateRange}
           setDateRange={setDateRange}
           selectedVehicle={selectedVehicle}
-          setSelectedVehicle={setSelectedVehicle}
+          setSelectedVehicle={(val) => { setSelectedVehicle(val); const p = new URLSearchParams(searchParams); p.delete('vehicle'); setSearchParams(p, { replace: true }); }}
           onExportPDF={handleExportPDF}
           onExportCSV={handleExportExcel}
         />
