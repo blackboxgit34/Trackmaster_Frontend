@@ -254,7 +254,7 @@ export const getVehicleStatusList = async ({
     workingHours: 0,
     idlingHours: 12.5,
     fuelConsumed: 0,
-    gsmSignal: 30,// item.gsmSignal,
+    gsmSignal:  item.gsmSignal,
     deviceSignal: 1,// item.gpsAntConStatus,
     GPSFix: 2,//item.hasfix,
     battery: item.vehBattery,

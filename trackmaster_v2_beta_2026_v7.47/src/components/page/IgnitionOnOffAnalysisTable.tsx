@@ -81,7 +81,7 @@ const IgnitionOnOffAnalysisTable = () => {
       else newSet.add(rowId);
       return newSet;
     });
-  };
+  };  
 
   useEffect(() => {
     if (!custId) return;
@@ -125,16 +125,15 @@ const IgnitionOnOffAnalysisTable = () => {
         sortColumn: "vehicleName",
         sortDirection: "asc",
       };
-
-      //30.06.2026
-    const searchValue =selectedVehicle !== "all"? vehicleList.find(v => v.value === selectedVehicle)?.label || "": "";
-
+//30.06.2026
+    //const searchValue =selectedVehicle !== "all"? vehicleList.find(v => v.value === selectedVehicle)?.label || "": "";
       const params = new URLSearchParams({
         CustId: String(requestModel.CustId),
         sEcho: String(requestModel.sEcho),
         iDisplayStart: String(requestModel.iDisplayStart),
         iDisplayLength: String(requestModel.iDisplayLength),
-        sSearch: selectedVehicle !== "all" ? vehicleList.find(v => v.value === selectedVehicle)?.label || "" : "",
+        //sSearch: selectedVehicle !== "all" ? vehicleList.find(v => v.value === selectedVehicle)?.label || "" : "",
+        sSearch: selectedVehicle !== "all" ? selectedVehicle : "",
         sortColumn: requestModel.sortColumn || "",
         sortDirection: requestModel.sortDirection || "",
         //beginDate: date?.from ? date.from.toLocaleString("en-US").replace(",", "") : "",
@@ -167,13 +166,8 @@ const IgnitionOnOffAnalysisTable = () => {
   };
 
   useEffect(() => {
-    // When a specific vehicle is pre-selected from URL, vehicleList is still empty
-    // on the first render (async fetch). sSearch depends on the label from vehicleList,
-    // so skip the fetch until vehicleList is loaded to avoid sending sSearch="" which
-    // causes the API to return all records instead of the specific vehicle.
-    if (selectedVehicle !== 'all' && vehicleList.length === 0) return;
     getIgnitionReport();
-  }, [page, rowsPerPage, selectedVehicle, date, vehicleList]);
+  }, [page, rowsPerPage, selectedVehicle, date]);
 
  
 
@@ -185,7 +179,7 @@ const IgnitionOnOffAnalysisTable = () => {
   const requestModel = {
     CustId: custId,
     sEcho: 1,
-    sSearch:selectedVehicle !== "all"? vehicleList.find(v => v.value === selectedVehicle)?.label || "": "",
+    sSearch: selectedVehicle !== "all" ? selectedVehicle : "",
     sortColumn: "vehicleName",
     sortDirection: "asc",
   };
