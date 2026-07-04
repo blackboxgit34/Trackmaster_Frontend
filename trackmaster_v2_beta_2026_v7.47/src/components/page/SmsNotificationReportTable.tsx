@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle, } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, } from '@/components/ui/dropdown-menu';
@@ -19,7 +19,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Command, CommandGroup, CommandInput, CommandItem, } from '@/components/ui/command';
 import { Check } from 'lucide-react';
 import type { DataTableRequestModel } from '@/hooks/DataTableRequestModel';
-import { useReportDownload } from "@/hooks/useApi";
+import { useReportDownload, useRawVehicleList } from "@/hooks/useApi";
 //========== searchable dropdown ==================//
 
 type ReportDataKey = keyof NotificationData;
@@ -78,7 +78,17 @@ const sortMap: any = {
 
 const SmsNotificationReportTable = () => {
   const [messageTypeOpen, setMessageTypeOpen] = useState(false);
-  const [vehicleList, setVehicleList] = useState<any[]>([]); // neha k 
+  const { data: rawVehicleList } = useRawVehicleList(); // neha k
+  const vehicleList = useMemo(
+    () => [
+      { label: 'All', value: 'all' },
+      ...(rawVehicleList || []).map((v: any) => ({
+        label: v.vehName,
+        value: v.vehName, // neha k
+      })),
+    ],
+    [rawVehicleList]
+  );
   const [messageTypeList, setMessageTypeList] = useState<any[]>([]); // neha k
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -222,34 +232,6 @@ const SmsNotificationReportTable = () => {
   };
 
   
-  // get vehicle
-  useEffect(() => {
-    if (!custId) return;
-    fetch(`${API_BASE_URL}/Dashboard/GetAllVehicleListByCustId?userid=${custId}`)
-      .then(async (res) => {
-        const text = await res.text();
-        if (!text) {
-          console.warn("Empty response");
-          return [];
-        }
-        return JSON.parse(text);
-      })
-      .then(data => {
-        const vehicles = data?.data || [];
-        const formatted = [
-          { label: 'All', value: 'all' },
-          ...vehicles.map((v: any) => ({
-            label: v.vehName,
-            //value: String(v.bbid)   
-            value: v.vehName // neha k   
-          }))
-        ];
-        setVehicleList(formatted);
-      })
-      .catch(err => console.error("Vehicle API error:", err));
-  }, []);
-
-
   // reset page when filters change
   useEffect(() => {
     setPage(0);
