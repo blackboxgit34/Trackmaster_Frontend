@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle, } from '@/components/ui/card';
@@ -17,7 +17,7 @@ import { DateRangePicker } from '@/components/ui/date-range-picker';//23.06.2026
 import { API_BASE_URL } from '@/config/Api';
 //import { downloadReport } from '@/hooks/downloadReport'; //
 import type { DataTableRequestModel } from '@/hooks/DataTableRequestModel';
-import { useReportDownload } from '@/hooks/useApi';//excel 06.06.2026
+import { useReportDownload, useVehicleList } from '@/hooks/useApi';//excel 06.06.2026
 
 
 
@@ -65,7 +65,11 @@ const IgnitionOnOffAnalysisTable = () => {
   const vehicleFromUrl = searchParams.get('vehicle');
  
   const [selectedVehicle, setSelectedVehicle] = useState(vehicleFromUrl || 'all');
-  const [vehicleList, setVehicleList] = useState<any[]>([]);
+  const { data: vehicleListData } = useVehicleList();
+  const vehicleList = useMemo(
+    () => [{ label: 'All', value: 'all' }, ...(vehicleListData || [])],
+    [vehicleListData]
+  );
   const [reportData, setReportData] = useState<IgnitionVehicle[]>([]);
   const [loading, setLoading] = useState(false);
   const [totalRecords, setTotalRecords] = useState(0);
@@ -82,29 +86,6 @@ const IgnitionOnOffAnalysisTable = () => {
       return newSet;
     });
   };  
-
-  useEffect(() => {
-    if (!custId) return;
-    fetch(
-      `${API_BASE_URL}/Dashboard/GetAllVehicleListByCustId?userid=${custId}`
-    )
-      .then(async (res) => {
-        const text = await res.text();
-        if (!text) return [];
-        return JSON.parse(text);
-      })
-      .then((data) => {
-        const vehicles = data?.data || [];
-        const formatted = [
-          { label: "All", value: "all" },
-          ...vehicles.map((v: any) => ({
-            label: v.vehName,
-            value: v.bbid,
-          })),
-        ];
-        setVehicleList(formatted);
-      });
-  }, []);
 
   const getIgnitionReport = async () => {
     debugger
