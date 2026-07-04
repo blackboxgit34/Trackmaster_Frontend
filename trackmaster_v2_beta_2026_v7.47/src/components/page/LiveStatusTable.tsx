@@ -199,8 +199,8 @@ const DeviceSignalIcon = ({
 };
 
 const GsmSignalIcon = ({ signal }: { signal: number }) => {
-  let Icon, text, color;
 
+  let Icon, text, color;
   switch (true) {
     case signal == null:
       Icon = TriangleAlert;
@@ -239,7 +239,7 @@ const GsmSignalIcon = ({ signal }: { signal: number }) => {
     case signal < 10:
       Icon = SignalZero;
       text = 'No GSM Signal';
-      color = 'text-orange-500';
+      color = 'red';
       break;
 
     // Default
