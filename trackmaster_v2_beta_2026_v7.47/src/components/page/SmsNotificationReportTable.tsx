@@ -16,7 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { API_BASE_URL } from '@/config/Api';
 //========== searchable dropdown ==================//
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Command, CommandGroup, CommandInput, CommandItem, } from '@/components/ui/command';
+import { Command, CommandGroup, CommandInput, CommandItem, CommandList, CommandEmpty, } from '@/components/ui/command';
 import { Check } from 'lucide-react';
 import type { DataTableRequestModel } from '@/hooks/DataTableRequestModel';
 import { useReportDownload, useRawVehicleList } from "@/hooks/useApi";
@@ -399,26 +399,28 @@ const handleExportPdf = async () => {
               >
                 <Command>
                   <CommandInput placeholder="Search message type..." />
-
-                  <CommandGroup className="max-h-64 overflow-y-auto">
-                    {messageTypeList.map((item) => (
-                      <CommandItem
-                        key={item.value}
-                        value={item.label}
-                        onSelect={() => {
-                          setMessageTypeFilter(item.value);
-                          setMessageTypeOpen(false);
-                        }}
-                      >
-                        <Check className={`mr-2 h-4 w-4 ${messageTypeFilter === item.value
-                          ? "opacity-100"
-                          : "opacity-0"
-                          }`}
-                        />
-                        {item.label}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
+                  <CommandList>
+                    <CommandEmpty>No message type found.</CommandEmpty>
+                    <CommandGroup className="max-h-64 overflow-y-auto">
+                      {messageTypeList.map((item) => (
+                        <CommandItem
+                          key={item.value}
+                          value={item.label}
+                          onSelect={() => {
+                            setMessageTypeFilter(item.value);
+                            setMessageTypeOpen(false);
+                          }}
+                        >
+                          <Check className={`mr-2 h-4 w-4 ${messageTypeFilter === item.value
+                            ? "opacity-100"
+                            : "opacity-0"
+                            }`}
+                          />
+                          {item.label}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
                 </Command>
               </PopoverContent>
             </Popover>
