@@ -183,7 +183,7 @@ const VehiclePopup = memo(({
 
           {/* Quick Stats inline */}
           <div className="flex items-center justify-between text-[10px] text-muted-foreground font-medium">
-            <span>Dist: <strong className="text-foreground">{activeVehicle.distance.toFixed(1)} km</strong></span>
+            <span>Dist: <strong className="text-foreground">{(activeVehicle.todayDistance || 0).toFixed(1)} km</strong></span>
             <span>Idle: <strong className="text-foreground">{formatIdling(activeVehicle.idlingHours)}</strong></span>
           </div>
 

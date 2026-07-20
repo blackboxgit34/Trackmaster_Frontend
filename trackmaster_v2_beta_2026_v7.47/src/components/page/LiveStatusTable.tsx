@@ -605,7 +605,7 @@ const LiveStatusTable = () => {
       ...vehicle,
 
       distance:
-        playbackMap[vehicle.bbid]?.totalDistance || 0,
+        vehicle.todayDistance || 0,
 
       speed:
         vehicle.speed || 0,
@@ -997,7 +997,7 @@ const LiveStatusTable = () => {
 
                             <span className="font-semibold">
                               {' '}
-                              {Number(playbackMap[row.bbid]?.totalDistance || 0).toFixed(1)} km
+                              {Number(row.todayDistance || 0).toFixed(1)} km
                             </span>
                           </div>
 

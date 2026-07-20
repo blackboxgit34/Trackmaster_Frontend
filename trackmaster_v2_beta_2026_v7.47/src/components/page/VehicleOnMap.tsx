@@ -82,7 +82,6 @@ const libraries: ('drawing' | 'places')[] = ['drawing', 'places'];
       );
 
     setVehicleExtraDetails({
-      distance: playbackStats.totalDistance || 0,
       workingHours: playbackStats.drivingTime || 0,
       idlingHours: playbackStats.totalIdlingTime || 0,
       stoppageTime: playbackStats.totalStoppageTime || 0,
@@ -386,6 +385,7 @@ const handleSelectVehicle = useCallback((vehicleId: string) => {
                   machine={{
                     ...selectedVehicle,
                     ...vehicleExtraDetails,
+                    distance: selectedVehicle.todayDistance || 0,
                   }}
                   onRecenter={handleRecenter}
                 />

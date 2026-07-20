@@ -26,6 +26,7 @@ export interface LiveVehicleStatus {
   errorDetails: string[];
   speed: number;
   distance: number;
+  todayDistance: number;
   fuelLevel: number;
   fuelLiters: number;
   fuelTankCapacity: number;

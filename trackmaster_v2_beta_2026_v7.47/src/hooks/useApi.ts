@@ -158,7 +158,6 @@ const getVehicleStatus = (
   //   (new Date().getTime() - new Date(lastUpdated).getTime()) /
   //   (1000 * 60 * 60);
 
-
   const lastCleaned = lastUpdated.replace('Z', '').replace('T', ' ');
   const now = new Date();
   const last = new Date(lastCleaned);
@@ -229,6 +228,7 @@ export const getVehicleStatusList = async ({
   }
 
   const result = await response.json();
+
   return result.data.map((item: any) => ({
 
     id: item.bbid,
@@ -240,7 +240,7 @@ export const getVehicleStatusList = async ({
 
     status: getVehicleStatus(
       Number(item.speed),
-      Number(item.overspeed ?? 60),
+      Number(item.overSpeedLimit ?? 60),
       item.lastUpdated,
       item.ignitionStatus
     ) as VehicleStatus,
@@ -251,7 +251,7 @@ export const getVehicleStatusList = async ({
     location: item.location || '',
     lastUpdated: item.lastUpdated || '',
     bbid: item.bbid || '',
-    workingHours: 0,
+    workingHours: item.todayWHour || 0,
     idlingHours: 12.5,
     fuelConsumed: 0,
     gsmSignal:  item.gsmSignal,
@@ -264,6 +264,7 @@ export const getVehicleStatusList = async ({
     alertDetails: [],
     errorDetails: [],
     distance: 0,
+    todayDistance: item.todayDistance || 0,
     fuelLevel: item.remainingFuelLevel || 0,
     fuelLiters: 50,
     fuelTankCapacity: 0,

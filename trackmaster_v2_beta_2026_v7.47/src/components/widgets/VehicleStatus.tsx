@@ -33,7 +33,7 @@ type VehicleStatusType = {
 // New Changes 
 type Vehicle = {
   speed: number;
-  overspeed: 60;
+  overSpeedLimit: number;
   lastUpdated: string;
   ignitionStatus: boolean;
 };
@@ -85,28 +85,13 @@ const getVehicleStatus = (
   }
 };
 
-
-
 const VehicleStatusWidget = ({ data }: Props) => {
-  debugger
-  // const statusData = [
-  //   { label: 'Moving', value: data?.moving || 0, icon: TrendingUp, color: 'text-green-50', bgColor: 'bg-green-500' },
-  //   { label: 'Parked', value: data?.parked || 0, icon: ParkingCircle, color: 'text-yellow-50', bgColor: 'bg-yellow-500' },
-  //   { label: 'Ignition On', value: data?.ignitionON || 0, icon: Power, color: 'text-sky-50', bgColor: 'bg-sky-500' },
-  //   { label: 'High Speed', value: data?.highSpeed || 0, icon: Gauge, color: 'text-orange-50', bgColor: 'bg-orange-500' },
-  //   { label: 'Towed', value: data?.towed || 0, icon: Truck, color: 'text-purple-50', bgColor: 'bg-purple-500' },
-  //   { label: 'Unreachable', value: data?.unreachable || 0, icon: WifiOff, color: 'text-gray-50', bgColor: 'bg-gray-500' },
-  //   { label: 'Battery Disconnect', value: data?.batteryDisconnect || 0, icon: BatteryWarning, color: 'text-orange-50', bgColor: 'bg-orange-500' },
-  //   { label: 'Breakdown', value: data?.breakdown || 0, icon: TriangleAlert, color: 'text-red-50', bgColor: 'bg-red-500' },
-  // ];
-
-// New Changes 
-
+debugger;
 const statusCounts = (data || []).reduce<Record<string, number>>(
     (acc, v: Vehicle) => {
       const status = getVehicleStatus(
         v.speed,
-        v.overspeed,
+        v.overSpeedLimit,
         v.lastUpdated,
         v.ignitionStatus
       );
