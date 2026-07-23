@@ -5,12 +5,12 @@ import FuelTheftReportTable from '@/components/page/addons/FuelTheftReportTable'
 import DisconnectionReportTable from '@/components/page/addons/DisconnectionReportTable';
 import DirtErrorReportTable from '@/components/page/addons/DirtErrorReportTable';
 import FuelConsolidatedReportTable from '@/components/page/addons/FuelConsolidatedReportTable';
-import FuelGraphicalReport from '@/pages/addons/FuelGraphicalReport';
 import FuelAnalysisDashboard from './FuelAnalysisDashboard';
 import FuelConsumptionPlayback from './FuelConsumptionPlayback';
+import FuelGraphicalReport from '@/components/page/addons/FuelGraphicalReport';
 
 const tabs = [
-  { value: 'fuel-analysis', label: 'Fuel Analysis' },
+  { value: 'fuel-analysis', label: 'Fuel Dashboard' },
   { value: 'graphical-report', label: 'Fuel Graphical Report' },
   { value: 'filling-report', label: 'Fuel Filling Report' },
   { value: 'theft-report', label: 'Fuel Theft Report' },
@@ -46,7 +46,7 @@ const FuelReportsPage = ({ activeTab }: { activeTab: string }) => {
         <TabsContent value="fuel-analysis" className="p-6">
           <FuelAnalysisDashboard />
         </TabsContent>
-        <TabsContent value="graphical-report" className="p-6">
+        <TabsContent value="graphical-report" className="p-0 h-full">
           <FuelGraphicalReport />
         </TabsContent>
         <TabsContent value="consumption-timeline" className="h-full m-0">

@@ -22,7 +22,15 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-import { fuelFillingDetails, fuelTheftDetails, consolidatedReportTableData, vehicles } from '@/data/mockData';
+import { 
+  fuelFillingDetails, 
+  fuelTheftDetails, 
+  consolidatedReportTableData, 
+  vehicles,
+  actualVehicles,
+  fuelDisconnectionDetails,
+  liveStatusData
+} from '@/data/mockData';
 import {
   ArrowUp,
   ArrowDown,
@@ -30,17 +38,15 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
-  Calendar as CalendarIcon,
   Download,
   FileText,
   FileSpreadsheet,
   ChevronsUpDown,
 } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
-import { subWeeks, subDays, subMonths, isWithinInterval, parse, startOfDay, endOfDay, format } from 'date-fns';
+import { subWeeks, isWithinInterval, parse, startOfDay, endOfDay } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
+import { DateRangePicker } from '@/components/ui/date-range-picker';
 import WhatsappPopup from '../../WhatsappPopup';
 import { VehicleCombobox } from '../../VehicleCombobox';
 import {
@@ -58,48 +64,66 @@ type ReportData = {
   id: string;
   vehicleId: string;
   vehicleName: string;
+  vehicleType: string;
   totalFilling: number;
   totalTheft: number;
   totalConsumption: number;
   netChange: number;
   mileage: number;
   totalDistance: number;
+  disconnectCount: number;
+  currentRodStatus: string;
 };
 type ReportDataKey = keyof ReportData;
 
-const headers: { key: ReportDataKey; label: string }[] = [
-  { key: 'vehicleName', label: 'Vehicle Name' },
-  { key: 'totalFilling', label: 'Total Filling (L)' },
-  { key: 'totalTheft', label: 'Total Theft (L)' },
-  { key: 'totalConsumption', label: 'Total Consumption (L)' },
-  { key: 'netChange', label: 'Net Change (L)' },
-  { key: 'totalDistance', label: 'Total Distance (km)' },
-  { key: 'mileage', label: 'Mileage (km/L)' },
+const headers: { key: ReportDataKey; label: string; width?: string }[] = [
+  { key: 'vehicleName', label: 'Vehicle Details', width: 'w-[20%]' },
+  { key: 'totalFilling', label: 'Total Filling (L)', width: 'w-[10%]' },
+  { key: 'totalTheft', label: 'Total Theft (L)', width: 'w-[10%]' },
+  { key: 'totalConsumption', label: 'Total Consumption (L)', width: 'w-[11%]' },
+  { key: 'netChange', label: 'Net Change (L)', width: 'w-[10%]' },
+  { key: 'totalDistance', label: 'Total Distance (km)', width: 'w-[11%]' },
+  { key: 'mileage', label: 'Mileage (km/L)', width: 'w-[10%]' },
+  { key: 'disconnectCount', label: 'Disconnect Count', width: 'w-[9%]' },
+  { key: 'currentRodStatus', label: 'Current Rod Status', width: 'w-[9%]' },
 ];
 
-const timeRanges = [
-  { label: 'Today', value: 'today' },
-  { label: 'Yesterday', value: 'yesterday' },
-  { label: 'Last Week', value: 'last-week' },
-  { label: 'Last Month', value: 'last-month' },
-  { label: 'Last 2 Months', value: 'last-2-months' },
-];
-
-const SortableHeader = ({ children, isSorted, sortDirection, onClick, className }: { children: React.ReactNode; isSorted?: boolean; sortDirection?: 'asc' | 'desc'; onClick: () => void; className?: string; }) => (
+const SortableHeader = ({ 
+  children, 
+  isSorted, 
+  sortDirection, 
+  onClick, 
+  className 
+}: { 
+  children: React.ReactNode; 
+  isSorted?: boolean; 
+  sortDirection?: 'asc' | 'desc'; 
+  onClick: () => void; 
+  className?: string; 
+}) => (
   <TableHead
-    className={cn("cursor-pointer px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider group", className)}
+    className={cn(
+      "cursor-pointer px-2.5 sm:px-3 py-3 text-[11px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider group select-none text-left",
+      className
+    )}
     onClick={onClick}
   >
-    <div className={cn("flex items-center gap-2", className?.includes('text-right') && 'justify-end')}>
-      {children}
+    <div className="flex items-center gap-1 sm:gap-1.5 justify-start">
+      <span className="leading-tight">{children}</span>
       {isSorted ? (
-        sortDirection === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />
+        sortDirection === 'asc' ? <ArrowUp className="h-3.5 w-3.5 flex-shrink-0" /> : <ArrowDown className="h-3.5 w-3.5 flex-shrink-0" />
       ) : (
-        <ChevronsUpDown className="h-4 w-4 text-muted-foreground/50 group-hover:text-muted-foreground" />
+        <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground/40 group-hover:text-muted-foreground flex-shrink-0" />
       )}
     </div>
   </TableHead>
 );
+
+const getSensorStatusColor = (status: string) => {
+  if (status === 'Disconnected') return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
+  if (status === 'Dirt Error') return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300';
+  return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
+};
 
 const FuelConsolidatedReportTable = () => {
   const [page, setPage] = useState(0);
@@ -107,30 +131,6 @@ const FuelConsolidatedReportTable = () => {
   const [sortConfig, setSortConfig] = useState<{ key: ReportDataKey; direction: 'asc' | 'desc'; }>({ key: 'vehicleName', direction: 'asc' });
   const [date, setDate] = useState<DateRange | undefined>({ from: subWeeks(new Date(), 1), to: new Date() });
   const [selectedVehicle, setSelectedVehicle] = useState('all');
-  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
-  const [activeTimeRange, setActiveTimeRange] = useState<string | null>('last-week');
-
-  const handleTimeRangeClick = (range: string) => {
-    const now = new Date();
-    let fromDate: Date;
-    let toDate: Date = now;
-    switch (range) {
-      case 'today': fromDate = now; break;
-      case 'yesterday': fromDate = subDays(now, 1); toDate = subDays(now, 1); break;
-      case 'last-week': fromDate = subWeeks(now, 1); break;
-      case 'last-month': fromDate = subMonths(now, 1); break;
-      case 'last-2-months': fromDate = subMonths(now, 2); break;
-      default: fromDate = now;
-    }
-    setDate({ from: fromDate, to: toDate });
-    setIsCalendarOpen(false);
-    setActiveTimeRange(range);
-  };
-
-  const handleDateChange = (newDate: DateRange | undefined) => {
-    setDate(newDate);
-    setActiveTimeRange(null);
-  };
 
   const aggregatedData = useMemo(() => {
     const vehicleData = new Map<string, ReportData>();
@@ -148,7 +148,27 @@ const FuelConsolidatedReportTable = () => {
 
     const initializeVehicle = (vehicleId: string) => {
       if (!vehicleData.has(vehicleId)) {
-        vehicleData.set(vehicleId, { id: vehicleId, vehicleId: vehicleId, vehicleName: vehicles.find(v => v.id === vehicleId)?.name || vehicleId, totalFilling: 0, totalTheft: 0, totalConsumption: 0, netChange: 0, mileage: 0, totalDistance: 0 });
+        const liveStatus = liveStatusData.find(v => v.vehicleNo === vehicleId);
+        let rodStatus = 'Connected';
+        if (liveStatus?.sensorStatus === 'disconnected') rodStatus = 'Disconnected';
+        if (liveStatus?.sensorStatus === 'dirt_error') rodStatus = 'Dirt Error';
+
+        const vehicleObj = actualVehicles.find(v => v.id === vehicleId);
+
+        vehicleData.set(vehicleId, { 
+          id: vehicleId, 
+          vehicleId: vehicleId, 
+          vehicleName: vehicleObj?.name || vehicles.find(v => v.id === vehicleId)?.name || vehicleId, 
+          vehicleType: vehicleObj?.type || 'Truck',
+          totalFilling: 0, 
+          totalTheft: 0, 
+          totalConsumption: 0, 
+          netChange: 0, 
+          mileage: 0, 
+          totalDistance: 0,
+          disconnectCount: 0,
+          currentRodStatus: rodStatus
+        });
       }
     };
 
@@ -167,6 +187,11 @@ const FuelConsolidatedReportTable = () => {
       const entry = vehicleData.get(item.vehicleId)!;
       entry.totalConsumption += item.fuelConsumed;
       entry.totalDistance += item.distance || 0;
+    });
+
+    fuelDisconnectionDetails.filter(item => item.type === 'Disconnection' && isInRange(item.date) && vehicleFilter(item)).forEach(item => {
+      initializeVehicle(item.vehicleId);
+      vehicleData.get(item.vehicleId)!.disconnectCount += 1;
     });
 
     vehicleData.forEach(entry => {
@@ -203,19 +228,20 @@ const FuelConsolidatedReportTable = () => {
   );
 
   const totalPages = Math.ceil(sortedData.length / rowsPerPage);
-  const selectedTimeRangeLabel = timeRanges.find((r) => r.value === activeTimeRange)?.label || 'Select a time range';
   const firstRowIndex = page * rowsPerPage + 1;
   const lastRowIndex = Math.min((page + 1) * rowsPerPage, sortedData.length);
 
   const generateExportData = () => {
     return sortedData.map(row => ({
-      'Vehicle Name': row.vehicleName,
+      'Vehicle Details': `${row.vehicleName} (${row.vehicleType})`,
       'Total Filling (L)': row.totalFilling.toFixed(1),
       'Total Theft (L)': row.totalTheft.toFixed(1),
       'Total Consumption (L)': row.totalConsumption.toFixed(1),
       'Net Change (L)': row.netChange.toFixed(1),
       'Total Distance (km)': row.totalDistance.toFixed(1),
       'Mileage (km/L)': row.mileage.toFixed(2),
+      'Disconnect Count': row.disconnectCount,
+      'Current Rod Status': row.currentRodStatus,
     }));
   };
 
@@ -253,59 +279,10 @@ const FuelConsolidatedReportTable = () => {
         </div>
         <div className="flex items-center gap-2 flex-wrap justify-start sm:justify-end">
           <VehicleCombobox vehicles={vehicles} value={selectedVehicle} onChange={setSelectedVehicle} className="w-full sm:w-[180px]" />
-          <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                id="date"
-                variant={'outline'}
-                className={cn(
-                  'w-full sm:w-[260px] justify-start text-left font-normal',
-                  !date && 'text-muted-foreground'
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {activeTimeRange ? selectedTimeRangeLabel : (
-                  date?.from ? (
-                    date.to ? (
-                      <>
-                        {format(date.from, 'LLL dd, y')} -{' '}
-                        {format(date.to, 'LLL dd, y')}
-                      </>
-                    ) : (
-                      format(date.from, 'LLL dd, y')
-                    )
-                  ) : (
-                    <span>Pick a date</span>
-                  )
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0 flex" align="end">
-              <div className="flex flex-col space-y-1 p-2 border-r">
-                {timeRanges.map((range) => (
-                  <Button
-                    key={range.value}
-                    variant="ghost"
-                    className="justify-start"
-                    onClick={() => handleTimeRangeClick(range.value)}
-                  >
-                    {range.label}
-                  </Button>
-                ))}
-              </div>
-              <Calendar
-                initialFocus
-                mode="range"
-                defaultMonth={date?.from}
-                selected={date}
-                onSelect={handleDateChange}
-                numberOfMonths={1}
-              />
-            </PopoverContent>
-          </Popover>
+          <DateRangePicker date={date} setDate={setDate} />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button className="bg-black text-white hover:bg-black/90 w-full sm:w-auto">
+              <Button className="bg-black text-[#ffffff] hover:bg-black/90 w-full sm:w-auto">
                 <Download className="mr-2 h-4 w-4" /> Export
               </Button>
             </DropdownMenuTrigger>
@@ -318,12 +295,18 @@ const FuelConsolidatedReportTable = () => {
         </div>
       </CardHeader>
       <CardContent className="p-0">
-        <div className="overflow-x-auto">
-          <Table>
+        <div className="w-full overflow-x-auto">
+          <Table className="w-full table-auto sm:table-fixed">
             <TableHeader>
               <TableRow className="bg-muted/50 hover:bg-muted/50 border-b">
                 {headers.map((header) => (
-                  <SortableHeader key={header.key} onClick={() => handleSort(header.key)} isSorted={sortConfig.key === header.key} sortDirection={sortConfig.key === header.key ? sortConfig.direction : undefined}>
+                  <SortableHeader 
+                    key={header.key} 
+                    onClick={() => handleSort(header.key)} 
+                    isSorted={sortConfig.key === header.key} 
+                    sortDirection={sortConfig.key === header.key ? sortConfig.direction : undefined}
+                    className={header.width}
+                  >
                     {header.label}
                   </SortableHeader>
                 ))}
@@ -332,13 +315,34 @@ const FuelConsolidatedReportTable = () => {
             <TableBody>
               {paginatedData.map(row => (
                 <TableRow key={row.id} className="bg-card hover:bg-muted/50 border-b">
-                  <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-foreground font-semibold">{row.vehicleName}</TableCell>
-                  <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-green-600">{row.totalFilling.toFixed(1)}</TableCell>
-                  <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-red-600">{row.totalTheft.toFixed(1)}</TableCell>
-                  <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{row.totalConsumption.toFixed(1)}</TableCell>
-                  <TableCell className={cn("px-6 py-4 whitespace-nowrap text-sm font-semibold", row.netChange >= 0 ? 'text-green-600' : 'text-red-600')}>{row.netChange.toFixed(1)}</TableCell>
-                  <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{row.totalDistance.toFixed(1)}</TableCell>
-                  <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{row.mileage.toFixed(2)}</TableCell>
+                  <TableCell className="px-2.5 sm:px-3 py-2.5 text-sm text-foreground text-left">
+                    <div className="flex items-center gap-2.5">
+                      <img
+                        src={`/vehicle-images/${row.vehicleType.toLowerCase().replace(/\s+/g, '-')}.png`}
+                        alt={row.vehicleType}
+                        className="w-8 h-8 object-contain flex-shrink-0"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = '/vehicle-images/truck.png';
+                        }}
+                      />
+                      <div className="flex flex-col min-w-0">
+                        <span className="font-semibold text-foreground text-xs sm:text-sm truncate">{row.vehicleName}</span>
+                        <span className="text-[11px] text-muted-foreground font-normal capitalize">{row.vehicleType}</span>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell className="px-2.5 sm:px-3 py-2.5 text-xs sm:text-sm text-left text-green-600 font-medium">{row.totalFilling.toFixed(1)}</TableCell>
+                  <TableCell className="px-2.5 sm:px-3 py-2.5 text-xs sm:text-sm text-left text-red-600 font-medium">{row.totalTheft.toFixed(1)}</TableCell>
+                  <TableCell className="px-2.5 sm:px-3 py-2.5 text-xs sm:text-sm text-left text-muted-foreground">{row.totalConsumption.toFixed(1)}</TableCell>
+                  <TableCell className={cn("px-2.5 sm:px-3 py-2.5 text-xs sm:text-sm text-left font-semibold", row.netChange >= 0 ? 'text-green-600' : 'text-red-600')}>{row.netChange.toFixed(1)}</TableCell>
+                  <TableCell className="px-2.5 sm:px-3 py-2.5 text-xs sm:text-sm text-left text-muted-foreground">{row.totalDistance.toFixed(1)}</TableCell>
+                  <TableCell className="px-2.5 sm:px-3 py-2.5 text-xs sm:text-sm text-left text-muted-foreground">{row.mileage.toFixed(2)}</TableCell>
+                  <TableCell className="px-2.5 sm:px-3 py-2.5 text-xs sm:text-sm text-left text-muted-foreground">{row.disconnectCount}</TableCell>
+                  <TableCell className="px-2.5 sm:px-3 py-2.5 text-xs sm:text-sm text-left">
+                    <span className={cn("px-2 py-0.5 text-[11px] font-semibold rounded-full whitespace-nowrap inline-block", getSensorStatusColor(row.currentRodStatus))}>
+                      {row.currentRodStatus}
+                    </span>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

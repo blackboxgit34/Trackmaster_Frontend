@@ -12,6 +12,7 @@ import {
 } from 'recharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   Calendar as CalendarIcon,
   Download,
@@ -23,8 +24,12 @@ import {
   ArrowRightFromLine,
   ChevronRight,
   Droplets,
+  Search,
+  Menu,
+  X,
 } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
+import { Input } from '@/components/ui/input';
 import {
   subDays,
   format,
@@ -37,201 +42,22 @@ import {
   subMonths,
 } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { VehicleCombobox } from '@/components/VehicleCombobox';
-import { vehicles, actualVehicles, fuelFillingDetails, fuelTheftDetails } from '@/data/mockData';
+import { DateRangePicker } from '@/components/ui/date-range-picker';
+import { vehicles, actualVehicles, fuelFillingDetails, fuelTheftDetails, currentFuelLevelData } from '@/data/mockData';
 import { routeData } from '@/data/routeData';
-import { ChartConfig, ChartContainer, ChartLegendContent } from '@/components/ui/chart';
+import { ChartConfig, ChartContainer } from '@/components/ui/chart';
 import FuelDeclarationDialog from './FuelDeclarationDialog';
+import FuelChart from '@/components/page/addons/FuelChart';
+import FuelSummaryCards from '@/components/page/addons/FuelSummaryCards';
 
 /* ----------------------------
   Chart config + time ranges
    --------------------------- */
 const chartConfig = {
-  fuel: { label: 'Fuel (L)', color: 'hsl(var(--primary))' },
-  speed: { label: 'Speed (km/h)', color: 'hsl(142.1, 76.2%, 45.1%)' },
-  distance: { label: 'Distance (km)', color: 'hsl(34.9, 82.6%, 52.2%)' },
+  fuel: { label: 'Fuel (L)', color: 'hsl(134, 61%, 41%)' }, // Leaf/plant green color
+  speed: { label: 'Speed (km/h)', color: '#3b82f6' }, // Blue
+  distance: { label: 'Distance (km)', color: '#f59e0b' }, // Amber
 } satisfies ChartConfig;
-
-const timeRanges = [
-  { label: 'Today', value: 'today' },
-  { label: 'Yesterday', value: 'yesterday' },
-  { label: 'Last 7 Days', value: '7d' },
-  { label: 'Last Month', value: 'last-month' },
-  { label: 'Last 2 Months', value: 'last-2-months' },
-];
-
-/* ----------------------------
-  Chart hover tooltip (kept unchanged)
-   --------------------------- */
-const CustomTooltip = ({ active, payload }: any) => {
-  if (active && payload && payload.length) {
-    const data = payload[0].payload;
-    const fullDate = new Date(data.timestamp);
-    const formattedDateTime = format(fullDate, "MMM dd, yyyy HH:mm:ss");
-
-    return (
-      <div className="min-w-[250px] rounded-lg border bg-background p-3 shadow-lg">
-        <p className="font-bold text-foreground mb-2">{formattedDateTime}</p>
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Fuel className="h-4 w-4 text-blue-500" />
-              <span>Fuel Level</span>
-            </div>
-            <span className="font-semibold text-sm">{data.fuel} L</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Gauge className="h-4 w-4 text-green-500" />
-              <span>Speed</span>
-            </div>
-            <span className="font-semibold text-sm">{data.speed} km/h</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Milestone className="h-4 w-4 text-orange-500" />
-              <span>Distance</span>
-            </div>
-            <span className="font-semibold text-sm">{data.distance} km</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <MapPin className="h-4 w-4 text-purple-500" />
-              <span>Location</span>
-            </div>
-            <span className="font-semibold text-sm truncate max-w-[120px]">{data.location || 'N/A'}</span>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return null;
-};
-
-/* ----------------------------
-  Utility
-   --------------------------- */
-const formatEventDuration = (seconds: number) => {
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-};
-
-/* ----------------------------
-  Compact Fuel Event Tooltip Component
-  (Used inside CustomizedDot's PopoverContent)
-  Height reduced: smaller padding, fonts, icons, gaps
-   --------------------------- */
-const FuelEventTooltipContent = ({ event }: { event: any }) => {
-  const { type, amount, beforeLevel, afterLevel, timestamp, location, duration } = event;
-  const isFilling = type === 'filling';
-
-  return (
-    <div className="grid grid-cols-[130px_1fr] shadow-xl rounded-md overflow-hidden text-xs">
-      <div className={cn(
-          'text-white flex flex-col items-center justify-center p-3 rounded-l-md',
-          isFilling ? 'bg-gradient-to-b from-green-500 to-green-700' : 'bg-gradient-to-b from-red-500 to-red-700'
-        )}>
-        <div className="text-3xl font-bold">{amount.toFixed(0)}L</div>
-        <div className="mt-1 flex items-center gap-1 text-[11px] opacity-95">
-          <Fuel className="h-3.5 w-3.5" />
-          {isFilling ? 'Fuel Filled' : 'Fuel Theft'}
-        </div>
-      </div>
-
-      <div className="p-3 bg-card">
-        <div className="mb-2">
-          <h3 className="font-semibold text-sm">{isFilling ? 'Fuel Filling Details' : 'Fuel Theft Details'}</h3>
-          <div className="text-[11px] text-muted-foreground flex items-center gap-1 mt-1">
-            <Clock className="h-3.5 w-3.5" />
-            {format(new Date(timestamp), "dd-MM-yyyy | hh:mma")}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
-          <div className="flex items-center gap-2">
-            <Droplets className="h-3.5 w-3.5 text-muted-foreground" />
-            <span>Before:</span>
-            <span className="font-semibold">{beforeLevel.toFixed(0)}L</span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Gauge className="h-3.5 w-3.5 text-muted-foreground" />
-            <span>Speed:</span>
-            <span className="font-semibold">{event.speed ?? 0}km/h</span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <ArrowRightFromLine className="h-3.5 w-3.5 text-muted-foreground" />
-            <span>After:</span>
-            <span className="font-semibold">{afterLevel.toFixed(0)}L</span>
-          </div>
-
-          {isFilling ? (
-            <div className="flex items-center gap-2">
-              <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-              <span>Duration:</span>
-              <span className="font-semibold">{formatEventDuration(duration)}</span>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2">
-              <Milestone className="h-3.5 w-3.5 text-muted-foreground" />
-              <span>Distance:</span>
-              <span className="font-semibold">{(event.distance ?? 0).toFixed(0)}km</span>
-            </div>
-          )}
-        </div>
-
-        <div className="border-t mt-3 pt-2">
-          <div className="flex items-center justify-between text-sm text-blue-600 hover:underline cursor-pointer">
-            <div className="flex items-center gap-1 overflow-hidden">
-              <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
-              <span className="font-medium truncate">{location || 'Location not available'}</span>
-            </div>
-            <ChevronRight className="h-3.5 w-3.5" />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-/* ----------------------------
-  CustomizedDot (renders pulsing dot + compact popover)
-   --------------------------- */
-const CustomizedDot = (props: any) => {
-  const { cx, cy, payload } = props;
-  const [isOpen, setIsOpen] = useState(false);
-
-  if (!payload?.event) return null;
-
-  const color = payload.event.type === 'filling' ? 'rgb(34 197 94)' : 'rgb(239 68 68)';
-
-  return (
-    <Popover open={isOpen} onOpenChange={setIsOpen}>
-      <PopoverTrigger asChild>
-        <g transform={`translate(${cx}, ${cy})`} style={{ cursor: 'pointer' }}>
-          <circle r="5" fill={color}>
-            {!isOpen && (
-              <>
-                <animate attributeName="r" from="5" to="12" dur="1.5s" repeatCount="indefinite" />
-                <animate attributeName="opacity" from="0.6" to="0" dur="1.5s" repeatCount="indefinite" />
-              </>
-            )}
-          </circle>
-          <circle r="4" fill={color} />
-        </g>
-      </PopoverTrigger>
-
-      <PopoverContent className="p-0 w-auto" side="top" align="center">
-        <FuelEventTooltipContent event={payload.event} />
-      </PopoverContent>
-    </Popover>
-  );
-};
 
 /* ----------------------------
   FuelGraphicalReport (complete)
@@ -239,8 +65,19 @@ const CustomizedDot = (props: any) => {
 const FuelGraphicalReport = () => {
   const [selectedVehicle, setSelectedVehicle] = useState(actualVehicles[0]?.id ?? '');
   const [dateRange, setDateRange] = useState<DateRange | undefined>({ from: new Date(), to: new Date() });
-  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [isDeclarationOpen, setIsDeclarationOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  const filteredVehicles = useMemo(() => {
+    return actualVehicles.filter(
+      (v) =>
+        v.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        v.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        v.model.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        v.type.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [searchQuery]);
 
   useEffect(() => {
     const HIDE_KEY = 'hideFuelDeclarationUntil';
@@ -250,28 +87,11 @@ const FuelGraphicalReport = () => {
     }
   }, []);
 
-  const handleTimeRangeClick = (range: string) => {
-    const now = new Date();
-    let fromDate: Date;
-    let toDate: Date = now;
-
-    switch (range) {
-      case 'today': fromDate = now; break;
-      case 'yesterday': fromDate = subDays(now, 1); toDate = subDays(now, 1); break;
-      case '7d': fromDate = subDays(now, 6); break;
-      case 'last-month': fromDate = subMonths(now, 1); break;
-      case 'last-2-months': fromDate = subMonths(now, 2); break;
-      default: fromDate = now;
-    }
-    setDateRange({ from: fromDate, to: toDate });
-    setIsCalendarOpen(false);
-  };
-
-  const chartData = useMemo(() => {
-    if (!selectedVehicle || !dateRange?.from) return [];
+  const { chartData, vehicleInfo, fillingEvents, theftEvents } = useMemo(() => {
+    if (!selectedVehicle || !dateRange?.from) return { chartData: [], vehicleInfo: null, fillingEvents: [] as any[], theftEvents: [] as any[] };
 
     const vehicleInfo = actualVehicles.find(v => v.id === selectedVehicle);
-    if (!vehicleInfo) return [];
+    if (!vehicleInfo) return { chartData: [], vehicleInfo: null, fillingEvents: [] as any[], theftEvents: [] as any[] };
     const tankCapacity = vehicleInfo.fuelTankCapacity;
 
     const start = startOfDay(dateRange.from);
@@ -334,11 +154,14 @@ const FuelGraphicalReport = () => {
     const allPoints = [...pathPoints, ...fillingEvents, ...theftEvents]
       .sort((a, b) => parseISO(a.timestamp).getTime() - parseISO(b.timestamp).getTime());
 
-    if (allPoints.length < 1) return [];
+    if (allPoints.length < 1) return { chartData: [], vehicleInfo, fillingEvents, theftEvents };
 
     let cumulativeDistance = 0;
     let currentFuel = tankCapacity * (0.8 + Math.random() * 0.2);
     const processedData: any[] = [];
+
+    const isMultiDay = differenceInSeconds(end, start) > 86400;
+    const timeFormat = isMultiDay ? 'MMM dd, HH:mm' : 'HH:mm';
 
     for (let i = 0; i < allPoints.length; i++) {
       const point = allPoints[i] as any;
@@ -368,7 +191,7 @@ const FuelGraphicalReport = () => {
       currentFuel = Math.max(0, currentFuel);
 
       processedData.push({
-        time: format(timestamp, 'HH:mm'),
+        time: format(timestamp, timeFormat),
         timestamp: timestamp.getTime(),
         speed: point.speed || 0,
         distance: parseFloat(cumulativeDistance.toFixed(2)),
@@ -378,8 +201,16 @@ const FuelGraphicalReport = () => {
       });
     }
 
-    return processedData;
+    return { chartData: processedData, vehicleInfo, fillingEvents, theftEvents };
   }, [selectedVehicle, dateRange]);
+
+  const tankCapacity = vehicleInfo?.fuelTankCapacity || 0;
+  const currentFuel = chartData.length > 0 ? chartData[chartData.length - 1].fuel : 0;
+  const emptySpace = Math.max(0, tankCapacity - currentFuel);
+  const refillsCount = fillingEvents.length;
+  const totalFilling = fillingEvents.reduce((sum: number, e: any) => sum + e.event.amount, 0);
+  const drainageCount = theftEvents.length;
+  const totalDrainage = theftEvents.reduce((sum: number, e: any) => sum + e.event.amount, 0);
 
   const [brushIndex, setBrushIndex] = useState({ startIndex: 0, endIndex: 0 });
 
@@ -415,12 +246,12 @@ const FuelGraphicalReport = () => {
     let newStartIndex = startIndex;
     let newEndIndex = endIndex;
 
-    if (deltaY < 0) { // Zoom in
-      if (currentRange <= 20) return; // Minimum zoom range
+    if (deltaY < 0) {
+      if (currentRange <= 20) return;
       const leftRatio = (dataIndex - newStartIndex) / currentRange;
       newStartIndex += Math.round(zoomAmount * leftRatio);
       newEndIndex -= Math.round(zoomAmount * (1 - leftRatio));
-    } else { // Zoom out
+    } else {
       const leftRatio = (dataIndex - newStartIndex) / currentRange;
       newStartIndex -= Math.round(zoomAmount * leftRatio);
       newEndIndex += Math.round(zoomAmount * (1 - leftRatio));
@@ -437,84 +268,139 @@ const FuelGraphicalReport = () => {
   };
 
   return (
-    <>
-      <Card>
-        <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <CardTitle>Fuel Graphical Report</CardTitle>
-            <CardDescription>An interactive view of fuel, speed, and distance.</CardDescription>
+    <div className="flex h-full w-full overflow-hidden relative bg-background text-foreground">
+      {/* Mobile Sidebar Overlay */}
+      {isSidebarOpen && (
+        <div
+          className="lg:hidden fixed inset-0 z-40 bg-background/80 backdrop-blur-sm"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <div className={cn(
+        "absolute inset-y-0 left-0 z-50 transform lg:relative lg:translate-x-0 transition-transform duration-200 ease-in-out",
+        "w-[260px] xl:w-[300px] bg-card text-card-foreground border-r border-border flex flex-col shrink-0 h-full overflow-hidden shadow-xl lg:shadow-none",
+        isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+      )}>
+        <div className="p-3 border-b border-border shrink-0 flex items-center justify-between gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search vehicles..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-8 h-9 text-sm bg-muted/50 border-input"
+            />
           </div>
-          <div className="flex items-center gap-2 flex-wrap justify-start sm:justify-end">
-            <VehicleCombobox vehicles={vehicles} value={selectedVehicle} onChange={setSelectedVehicle} className="w-full sm:w-[180px]" />
-            <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  id="date"
-                  variant={'outline'}
-                  className={cn('w-full sm:w-[260px] justify-start text-left font-normal', !dateRange && 'text-muted-foreground')}
+          <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 lg:hidden" onClick={() => setIsSidebarOpen(false)}>
+            <X className="h-4 w-4 text-muted-foreground" />
+          </Button>
+        </div>
+        <div className="flex-1 overflow-y-auto">
+          {filteredVehicles.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+              <Search className="h-8 w-8 text-muted-foreground/30 mb-3" />
+              <p className="text-sm font-medium text-muted-foreground">No vehicles found</p>
+              <p className="text-xs text-muted-foreground/70 mt-1">Try a different search term</p>
+            </div>
+          ) : (
+            filteredVehicles.map((vehicle) => {
+              const fuelData = currentFuelLevelData.find((d) => d.vehicleId === vehicle.id);
+              const fuelInTank = fuelData ? fuelData.fuelLiters : 0;
+              const percentage = (fuelInTank / vehicle.fuelTankCapacity) * 100;
+
+              let progressColor = 'bg-green-600';
+              if (percentage < 20) progressColor = 'bg-destructive';
+              else if (percentage < 40) progressColor = 'bg-amber-500';
+
+              const imageFileName = vehicle.type.toLowerCase().replace(/ /g, '-') + '.png';
+
+              return (
+                <div
+                  key={vehicle.id}
+                  onClick={() => setSelectedVehicle(vehicle.id)}
+                  className={cn(
+                    "px-3 py-2.5 border-b border-border cursor-pointer transition-colors hover:bg-accent hover:text-accent-foreground flex gap-2.5 items-center",
+                    selectedVehicle === vehicle.id ? "bg-brand-orange/10 border-l-4 border-l-brand-orange" : "border-l-4 border-l-transparent"
+                  )}
                 >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {dateRange?.from ? (dateRange.to ? `${format(dateRange.from, 'LLL dd, y')} - ${format(dateRange.to, 'LLL dd, y')}` : format(dateRange.from, 'LLL dd, y')) : <span>Pick a date</span>}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0 flex" align="end">
-                <div className="flex flex-col space-y-1 p-2 border-r">
-                  {timeRanges.map((range) => (
-                    <Button key={range.value} variant="ghost" className="justify-start" onClick={() => handleTimeRangeClick(range.value)}>{range.label}</Button>
-                  ))}
+                  <img src={`/vehicle-images/${imageFileName}`} alt={vehicle.type} className="w-14 h-10 shrink-0 object-contain" onError={(e) => {
+                    (e.target as HTMLImageElement).src = '/vehicle-images/car.png';
+                  }} />
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-sm truncate text-foreground">{vehicle.id}</div>
+                    <div className="text-[11px] text-muted-foreground truncate mb-1">
+                      {vehicle.model} | {vehicle.type}
+                    </div>
+
+                    <div className="w-full bg-muted h-1.5 rounded-full overflow-hidden mt-2">
+                      <div className={cn("h-full rounded-full transition-all", progressColor)} style={{ width: `${percentage}%` }} />
+                    </div>
+                  </div>
                 </div>
-                <Calendar initialFocus mode="range" defaultMonth={dateRange?.from} selected={dateRange} onSelect={setDateRange} numberOfMonths={1} />
-              </PopoverContent>
-            </Popover>
-            <Button className="bg-black text-white hover:bg-black/90 w-full sm:w-auto">
-              <Download className="mr-2 h-4 w-4" /> Export
+              );
+            })
+          )}
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="flex-1 bg-background text-foreground flex flex-col min-w-0 overflow-hidden">
+        {/* Header - Compact, responsive */}
+        <div className="px-5 py-3 border-b border-border flex flex-wrap items-center justify-between shrink-0 gap-4 bg-card">
+          <div className="flex items-center min-w-0">
+            <Button variant="ghost" size="icon" className="mr-2 h-8 w-8 lg:hidden shrink-0 -ml-2" onClick={() => setIsSidebarOpen(true)}>
+              <Menu className="h-4 w-4 text-muted-foreground" />
+            </Button>
+            <div className="min-w-0">
+              <h2 className="text-[15px] font-semibold tracking-tight text-foreground truncate">Fuel Graphical Report</h2>
+              <p className="text-xs text-muted-foreground truncate">Interactive fuel, speed & distance analysis</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <DateRangePicker date={dateRange} setDate={setDateRange} />
+            <Button size="sm">
+              <Download className="mr-1.5 h-3.5 w-3.5" /> Export
             </Button>
           </div>
-        </CardHeader>
+        </div>
 
-        <CardContent>
-          <div onWheel={handleWheel} style={{ cursor: 'crosshair' }}>
-            <ChartContainer config={chartConfig} className="h-[450px] w-full">
-              <ResponsiveContainer>
-                <ComposedChart data={chartData} margin={{ top: 5, right: 20, left: 20, bottom: 60 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="time" tickLine={false} axisLine={false} tickMargin={10} />
-                  <YAxis yAxisId="left" orientation="left" stroke="var(--color-fuel)" label={{ value: 'Fuel (L)', angle: -90, position: 'insideLeft' }} />
-                  <YAxis yAxisId="right" orientation="right" stroke="var(--color-speed)" label={{ value: 'Speed (km/h) / Distance (km)', angle: 90, position: 'insideRight' }} />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Legend content={<ChartLegendContent />} verticalAlign="top" wrapperStyle={{ paddingBottom: '20px' }} />
-
-                  <Line
-                    type="monotone"
-                    dataKey="fuel"
-                    yAxisId="left"
-                    stroke="var(--color-fuel)"
-                    strokeWidth={2}
-                    name="Fuel"
-                    dot={<CustomizedDot />}
-                    activeDot={false}
-                  />
-
-                  <Line type="monotone" dataKey="speed" yAxisId="right" stroke="var(--color-speed)" strokeWidth={2} dot={false} name="Speed" />
-                  <Line type="monotone" dataKey="distance" yAxisId="right" stroke="var(--color-distance)" strokeWidth={2} dot={false} name="Distance" />
-
-                  <Brush
-                    dataKey="time"
-                    height={30}
-                    stroke="hsl(var(--primary))"
-                    y={380}
-                    startIndex={brushIndex.startIndex}
-                    endIndex={brushIndex.endIndex}
-                    onChange={handleBrushChange}
-                  />
-                </ComposedChart>
-              </ResponsiveContainer>
+        {/* Chart Area - Responsive flex */}
+        <div className="flex-[2] p-5 min-h-[320px]">
+          {chartData.length > 0 ? (
+            <ChartContainer config={chartConfig} className="w-full h-full">
+              <FuelChart
+                chartData={chartData}
+                brushIndex={brushIndex}
+                handleBrushChange={handleBrushChange}
+                handleWheel={handleWheel}
+              />
             </ChartContainer>
-          </div>
-        </CardContent>
-      </Card>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+              <Fuel className="h-12 w-12 mb-4 opacity-20" />
+              <p className="text-sm font-medium">No fuel data available</p>
+              <p className="text-xs mt-1 opacity-70">Try selecting a different date range or vehicle</p>
+            </div>
+          )}
+        </div>
+
+        {/* Summary Cards - Always visible at bottom */}
+        <div className="flex-none max-h-[35vh] px-5 py-4 border-t border-border bg-muted/20 overflow-y-auto">
+          <FuelSummaryCards
+            tankCapacity={tankCapacity}
+            currentFuel={currentFuel}
+            emptySpace={emptySpace}
+            refillsCount={refillsCount}
+            totalFilling={totalFilling}
+            drainageCount={drainageCount}
+            totalDrainage={totalDrainage}
+          />
+        </div>
+      </div>
       <FuelDeclarationDialog open={isDeclarationOpen} onOpenChange={setIsDeclarationOpen} />
-    </>
+    </div>
   );
 };
 

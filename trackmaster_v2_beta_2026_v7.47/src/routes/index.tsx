@@ -29,7 +29,6 @@ import OperationalCrewReportsPage from '@/pages/OperationalCrewReportsPage';
 import CommunicationAlertsReportsPage from '@/pages/CommunicationAlertsReportsPage';
 import SummaryManagementReportsPage from '@/pages/SummaryManagementReportsPage';
 import CustomReport from '@/components/page/CustomReport';
-import SelectCustomerPage from '@/pages/SelectCustomerPage';
 import { cn } from '@/lib/utils';
 import { Toaster } from '@/components/ui/toaster';
 
@@ -40,13 +39,9 @@ function AppLayout() {
   const { menuPosition } = useTheme();
   const [hiddenWidgetIds, setHiddenWidgetIds] = useState<string[]>([]);
   const location = useLocation();
- 
 
-   // =========================
-  // ✅ CHANGE 1: SEARCH STATE ADDED HERE (GLOBAL SOURCE) neha k
-  // =========================
-  const [search, setSearch] = useState("");
   const isMapPage = location.pathname === '/vehicle-status/on-map' || location.pathname === '/vehicle-status/route-playback';
+
   const handleShowWidget = (widgetId: string) => {
     setHiddenWidgetIds((prev) => prev.filter((id) => id !== widgetId));
   };
@@ -60,24 +55,11 @@ function AppLayout() {
         />
       )}
       <div className="flex flex-col flex-1 min-w-0">
-        {/* <Header
-          setIsCustomizationSidebarOpen={setIsCustomizationSidebarOpen}
-        /> */}
-
-        {/* =========================
-            ✅ CHANGE 2: PASS SEARCH HANDLER TO HEADER neha k
-           ========================= */}
         <Header
           setIsCustomizationSidebarOpen={setIsCustomizationSidebarOpen}
-          onSearchChange={setSearch}   // 👈 NEW
         />
         <main className={cn("flex-1 relative", isMapPage ? "overflow-hidden" : "overflow-y-auto")}>
-
-        {/* <Outlet /> */}
-        {/* =========================
-              ✅ CHANGE 3: PASS SEARCH TO ALL PAGES neha k
-             ========================= */}
-        <Outlet context={{ search }} />   {/* 👈 NEW */}
+          <Outlet />
         </main>
       </div>
       <CustomizationSidebar
@@ -93,19 +75,16 @@ function AppLayout() {
     </div>
   );
 }
+
 // This component protects routes that require authentication.
 function ProtectedRoutes() {
-  const { isAuthenticated, isStaffMember } = useUser();
-  const location = useLocation();
-
+  const { isAuthenticated } = useUser();
+  
   // If the user is not authenticated, redirect them to the login page.
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
-
-  if (isStaffMember && location.pathname !== "/select-customer") {
-    return <Navigate to="/select-customer" replace />;
-  }
+  
   // If they are authenticated, render the main application layout.
   // The nested routes will be rendered inside the <Outlet /> of AppLayout.
   return <AppLayout />;
@@ -113,14 +92,16 @@ function ProtectedRoutes() {
 
 export default function AppRoutes() {
   const { isAuthenticated } = useUser();
+
   return (
     <Routes>
       {/* Public Route: Login Page */}
       {/* If the user is already logged in, navigating to /login will redirect them to the dashboard. */}
-      <Route
-        path="/login" element={isAuthenticated ? <Navigate to="/" replace /> : <LoginPage />}
+      <Route 
+        path="/login" 
+        element={isAuthenticated ? <Navigate to="/" replace /> : <LoginPage />} 
       />
-      <Route path="/select-customer" element={<SelectCustomerPage />} />
+
       {/* Protected Routes Wrapper */}
       {/* All routes inside this wrapper require authentication. */}
       <Route element={<ProtectedRoutes />}>
@@ -130,7 +111,7 @@ export default function AppRoutes() {
         <Route path="/vehicle-status/route-playback" element={<RoutePlayback />} />
         <Route path="/reports/consolidated" element={<Navigate to="/reports/consolidated/consolidatedreport" replace />} />
         <Route path="/reports/consolidated/:subpage" element={<Reports />} />
-        <Route path="/reports/vehicle" element={<Navigate to="/reports/vehicle/working-hour" replace />} />
+        <Route path="/reports/vehicle" element={<Navigate to="/reports/vehicle/current-fuel" replace />} />
         <Route path="/reports/vehicle/:subpage" element={<VehicleReports />} />
         <Route path="/reports/summary-management" element={<Navigate to="/reports/summary-management/daily-summary" replace />} />
         <Route path="/reports/summary-management/:subpage" element={<SummaryManagementReportsPage />} />
@@ -159,11 +140,11 @@ export default function AppRoutes() {
         <Route path="/settings" element={<Navigate to="/settings/profile" replace />} />
         <Route path="/settings/:subpage" element={<SettingsPage />} />
         <Route path="/addons" element={<Navigate to="/addons/fuel-reports/fuel-analysis" replace />} />
-        <Route path="/addons/fuel-reports/:reportType" element={<AddonsPage />} />
+        <Route path="/addons/:subpage/:reportType" element={<AddonsPage />} />
         <Route path="/addons/:subpage" element={<AddonsPage />} />
-
+        
         <Route path="/500" element={<Error500 />} />
-
+        
         {/* This is the catch-all route for any invalid paths when the user is logged in. */}
         <Route path="*" element={<NotFound />} />
       </Route>
