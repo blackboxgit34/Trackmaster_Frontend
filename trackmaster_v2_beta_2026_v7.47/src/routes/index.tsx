@@ -26,11 +26,11 @@ import SpeedDrivingReportsPage from '@/pages/SpeedDrivingReportsPage';
 import VehicleStatusHealthReportsPage from '@/pages/VehicleStatusHealthReportsPage';
 import LocationZoneReportsPage from '@/pages/LocationZoneReportsPage';
 import OperationalCrewReportsPage from '@/pages/OperationalCrewReportsPage';
-import CommunicationAlertsReportsPage from '@/pages/CommunicationAlertsReportsPage';
 import SummaryManagementReportsPage from '@/pages/SummaryManagementReportsPage';
 import CustomReport from '@/components/page/CustomReport';
 import { cn } from '@/lib/utils';
 import { Toaster } from '@/components/ui/toaster';
+import TripManagement from '@/components/page/TripManagement';
 
 function AppLayout() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -79,12 +79,12 @@ function AppLayout() {
 // This component protects routes that require authentication.
 function ProtectedRoutes() {
   const { isAuthenticated } = useUser();
-  
+
   // If the user is not authenticated, redirect them to the login page.
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
-  
+
   // If they are authenticated, render the main application layout.
   // The nested routes will be rendered inside the <Outlet /> of AppLayout.
   return <AppLayout />;
@@ -97,9 +97,9 @@ export default function AppRoutes() {
     <Routes>
       {/* Public Route: Login Page */}
       {/* If the user is already logged in, navigating to /login will redirect them to the dashboard. */}
-      <Route 
-        path="/login" 
-        element={isAuthenticated ? <Navigate to="/" replace /> : <LoginPage />} 
+      <Route
+        path="/login"
+        element={isAuthenticated ? <Navigate to="/" replace /> : <LoginPage />}
       />
 
       {/* Protected Routes Wrapper */}
@@ -117,34 +117,44 @@ export default function AppRoutes() {
         <Route path="/reports/summary-management/:subpage" element={<SummaryManagementReportsPage />} />
         <Route path="/reports/trip-distance" element={<Navigate to="/reports/trip-distance/distance" replace />} />
         <Route path="/reports/trip-distance/:subpage" element={<TripDistanceReportsPage />} />
-        <Route path="/reports/time-activity" element={<Navigate to="/reports/time-activity/stoppage-analysis" replace />} />
+        <Route path="/reports/trip-distance/vehicle-status" element={<Navigate to="/reports/time-activity/vehicle-status" replace />} />
+        <Route path="/reports/time-activity" element={<Navigate to="/reports/time-activity/vehicle-status" replace />} />
+        <Route path="/reports/time-activity/stoppage-analysis" element={<Navigate to="/reports/time-activity/combined-stoppage-idling" replace />} />
+        <Route path="/reports/time-activity/idling-analysis" element={<Navigate to="/reports/time-activity/combined-stoppage-idling" replace />} />
         <Route path="/reports/time-activity/:subpage" element={<TimeActivityReportsPage />} />
         <Route path="/reports/speed-driving" element={<Navigate to="/reports/speed-driving/speed-analysis" replace />} />
         <Route path="/reports/speed-driving/:subpage" element={<SpeedDrivingReportsPage />} />
-        <Route path="/reports/vehicle-status-health" element={<Navigate to="/reports/vehicle-status-health/vehicle-status" replace />} />
+        <Route path="/reports/vehicle-status-health/vehicle-status" element={<Navigate to="/reports/time-activity/vehicle-status" replace />} />
+        <Route path="/reports/vehicle-status-health" element={<Navigate to="/reports/vehicle-status-health/battery-disconnection" replace />} />
         <Route path="/reports/vehicle-status-health/:subpage" element={<VehicleStatusHealthReportsPage />} />
         <Route path="/reports/location-zone" element={<Navigate to="/reports/location-zone/entry-exit-report" replace />} />
         <Route path="/reports/location-zone/:subpage" element={<LocationZoneReportsPage />} />
         <Route path="/reports/operational-crew" element={<Navigate to="/reports/operational-crew/crew-report" replace />} />
         <Route path="/reports/operational-crew/:subpage" element={<OperationalCrewReportsPage />} />
-        <Route path="/reports/communication-alerts" element={<Navigate to="/reports/communication-alerts/sms-notification-report" replace />} />
-        <Route path="/reports/communication-alerts/:subpage" element={<CommunicationAlertsReportsPage />} />
+        <Route path="/reports/communication-alerts" element={<Navigate to="/alerts" replace />} />
+        <Route path="/reports/communication-alerts/:subpage" element={<Navigate to="/alerts" replace />} />
         <Route path="/reports/custom-report" element={<Navigate to="/reports/custom-report/create" replace />} />
         <Route path="/reports/custom-report/:subpage" element={<CustomReport />} />
+
+        {/* Trip Management Routes */}
+        <Route path="/trip-management" element={<Navigate to="/trip-management/eta-dashboard" replace />} />
+        <Route path="/trip-management/:subpage" element={<TripManagement />} />
+
         <Route path="/geofencing" element={<Navigate to="/geofencing/manage" replace />} />
         <Route path="/geofencing/:subpage" element={<Geofencing />} />
-        <Route path="/alerts" element={<Navigate to="/alerts/high-rpm" replace />} />
+        <Route path="/alerts" element={<Alerts />} />
         <Route path="/alerts/:subpage" element={<Alerts />} />
         <Route path="/bills" element={<Navigate to="/bills/account-summary" replace />} />
         <Route path="/bills/:subpage" element={<MyBills />} />
         <Route path="/settings" element={<Navigate to="/settings/profile" replace />} />
+        <Route path="/settings/:subpage/:module" element={<SettingsPage />} />
         <Route path="/settings/:subpage" element={<SettingsPage />} />
         <Route path="/addons" element={<Navigate to="/addons/fuel-reports/fuel-analysis" replace />} />
         <Route path="/addons/:subpage/:reportType" element={<AddonsPage />} />
         <Route path="/addons/:subpage" element={<AddonsPage />} />
-        
+
         <Route path="/500" element={<Error500 />} />
-        
+
         {/* This is the catch-all route for any invalid paths when the user is logged in. */}
         <Route path="*" element={<NotFound />} />
       </Route>

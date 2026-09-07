@@ -14,6 +14,8 @@ import { GoogleMap, OverlayView, Polyline, Marker } from '@react-google-maps/api
 import { getIconUrl, calculateBearing, getStatusColor } from '@/lib/map-utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
+import { useSettings } from '@/context/SettingsContext';
+import { cn } from '@/lib/utils';
 
 
 interface LocationDialogProps {
@@ -34,6 +36,8 @@ const mapOptions = {
 };
 
 const LocationDialog = ({ open, onOpenChange, vehicle }: LocationDialogProps) => {
+  const { uiSettings } = useSettings();
+  const showDriverName = uiSettings?.showDriverName ?? true;
   const [pathPoints, setPathPoints] = useState<{ lat: number; lng: number }[]>([]);
   const [markerPosition, setMarkerPosition] = useState<{ lat: number; lng: number } | null>(null);
   const [currentBearing, setCurrentBearing] = useState(0);
@@ -160,15 +164,17 @@ const LocationDialog = ({ open, onOpenChange, vehicle }: LocationDialogProps) =>
             <Skeleton className="w-full h-full" />
           )}
           <Card className="absolute bottom-4 left-4 right-4 shadow-lg">
-            <CardContent className="p-3 grid grid-cols-5 gap-2 text-center">
+            <CardContent className={cn("p-3 grid gap-2 text-center", showDriverName ? "grid-cols-5" : "grid-cols-4")}>
                 <div>
                     <p className="text-xs text-muted-foreground">Vehicle Name</p>
                     <p className="text-sm font-bold">{vehicle.vehicle}</p>
                 </div>
-                <div>
-                    <p className="text-xs text-muted-foreground">Driver Name</p>
-                    <p className="text-sm font-bold">{vehicle.driverName}</p>
-                </div>
+                {showDriverName && (
+                  <div>
+                      <p className="text-xs text-muted-foreground">Driver Name</p>
+                      <p className="text-sm font-bold">{vehicle.driverName || 'N/A'}</p>
+                  </div>
+                )}
                 <div>
                     <p className="text-xs text-muted-foreground">Speed</p>
                     <p className="text-sm font-bold">{vehicle.speed}</p>

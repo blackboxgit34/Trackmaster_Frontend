@@ -106,7 +106,7 @@ const SortableHeader = ({ children, isSorted, sortDirection, onClick }: { childr
 const ExitEntryReportTable = () => {
   const [detailsSortConfig, setDetailsSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({ key: 'startTime', direction: 'asc' });
   //const [date, setDate] = useState<DateRange | undefined>({from: new Date(),to: new Date(),});
-  const [date, setDate] = useState<DateRange | undefined>({from: startOfDay(new Date()), to: new Date()});
+  const [date, setDate] = useState<DateRange | undefined>({ from: startOfDay(new Date()), to: new Date() });
   const [selectedVehicle, setSelectedVehicle] = useState('all');
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   // const [isCalendarOpen, setIsCalendarOpen] = useState(false);
@@ -170,7 +170,7 @@ const ExitEntryReportTable = () => {
       sortConfig.sortDirection,
     // updated interval mapping
     //beginDate:format(startOfDay(date?.from ||new Date()),"M/d/yyyy h:mm:ss a"),
-    beginDate: date?.from? format(date.from, "M/d/yyyy h:mm:ss a"): "",
+    beginDate: date?.from ? format(date.from, "M/d/yyyy h:mm:ss a") : "",
     endDate: date?.to
       ? format(date.to, "M/d/yyyy h:mm:ss a")
       : date?.from

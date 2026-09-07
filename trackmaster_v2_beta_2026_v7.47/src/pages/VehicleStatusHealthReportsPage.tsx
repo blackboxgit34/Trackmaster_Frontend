@@ -1,11 +1,9 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import NotFound from '@/components/page/NotFound';
-import VehicleStatusReportTable from '@/components/page/VehicleStatusReportTable';
 import BatteryDisconnectionReportTable from '@/components/page/BatteryDisconnectionReportTable';
 
 const tabs = [
-  { value: 'vehicle-status', label: 'Vehicle Status Report', component: <VehicleStatusReportTable /> },
   { value: 'battery-disconnection', label: 'Battery Disconnection Report', component: <BatteryDisconnectionReportTable /> },
 ];
 
@@ -13,7 +11,7 @@ const VehicleStatusHealthReportsPage = () => {
   const { subpage } = useParams();
   const navigate = useNavigate();
 
-  const activeTab = subpage || 'vehicle-status';
+  const activeTab = subpage || 'battery-disconnection';
 
   const isValidSubpage = tabs.some((tab) => tab.value === activeTab);
   if (!isValidSubpage) {

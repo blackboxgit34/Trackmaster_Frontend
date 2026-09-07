@@ -121,7 +121,7 @@ const vehicle3 = actualVehicles[2].id;
 const carVehicle = actualVehicles.find(v => v.type === 'Car')?.id || actualVehicles[6].id;
 
 export const routeData: Trip[] = [
-  // More detailed trip for TR-001 (Tata Prima)
+  // More detailed trip for vehicle1 (Tata Prima)
   generateTrip('trip-today-tr001', vehicle1, new Date(new Date(today).setHours(8, 0, 0)), 19.076, 72.8777, 500, 600, 'Mumbai-Pune Route'),
   // Trips for vehicle1
   generateTrip('trip-1', vehicle1, addMinutes(new Date(new Date(today).setHours(9, 5, 0)), 0), 19.076, 72.8777, 150, 45, 'Mumbai Site A'),

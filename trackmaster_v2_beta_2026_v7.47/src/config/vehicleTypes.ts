@@ -28,5 +28,6 @@ export const VEHICLE_TYPES = {
   'Transit Mixer': { prefix: 'TMX', models: ['Tata Prima', 'Ashok Leyland'], make: 'Various' },
   'Truck': { prefix: 'TRK', models: ['Tata Ultra', 'Eicher Pro'], make: 'Various' },
   'Van': { prefix: 'VAN', models: ['Maruti Eeco', 'Tata Winger'], make: 'Various' },
+  'Reefer': { prefix: 'RFR', models: ['Thermo King T-Series', 'Carrier Transicold Supra', 'Tata Signa Reefer', 'Eicher Pro Reefer'], make: 'Various' },
   'Water Tanker': { prefix: 'WTK', models: ['Tata LPT', 'Ashok Leyland Ecomet'], make: 'Various' },
 };

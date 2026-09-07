@@ -73,6 +73,8 @@ const VehiclePopup = memo(({
   isMinimal: boolean
 }) => {
   const { toast } = useToast();
+  const { uiSettings } = useSettings();
+  const showDriverName = uiSettings?.showDriverName ?? true;
 
   const handleCopy = async (text: string, label: string) => { /* unchanged */ };
 
@@ -149,37 +151,22 @@ const VehiclePopup = memo(({
         <div className="p-3 space-y-2 border-b">
 
           {/* Driver Info */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 overflow-hidden">
-              <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center shrink-0">
-                <User className="w-3 h-3 text-muted-foreground" />
+          {showDriverName && (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 overflow-hidden">
+                <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center shrink-0">
+                  <User className="w-3 h-3 text-muted-foreground" />
+                </div>
+                <div className="truncate">
+                  {driverName ? (
+                    <p className="text-[11px] font-semibold truncate leading-none">{driverName}</p>
+                  ) : (
+                    <p className="text-[11px] font-semibold text-red-500 leading-none">Unassigned</p>
+                  )}
+                </div>
               </div>
-              <div className="truncate">
-                {driverName ? (
-                  <p className="text-[11px] font-semibold truncate leading-none">{driverName}</p>
-                ) : (
-                  <p className="text-[11px] font-semibold text-red-500 leading-none">Unassigned</p>
-                )}
-              </div>
-              {/* <div className="truncate">
-                {activeVehicleDetails?.driver ? (
-                  <p className="text-[11px] font-semibold truncate leading-none">{activeVehicleDetails.driver}</p>
-                ) : (
-                  <p className="text-[11px] font-semibold text-red-500 leading-none">Unassigned</p>
-                )}
-              </div> */}
             </div>
-            {/* {driverPhone && (
-              <div className="flex gap-1 shrink-0">
-                <Button size="icon" variant="outline" className="h-6 w-6 rounded-full border-blue-500/30 text-blue-600 hover:bg-blue-50" asChild>
-                  <a href={`tel:${driverPhone}`}><Phone className="w-3 h-3" /></a>
-                </Button>
-                <Button size="icon" variant="outline" className="h-6 w-6 rounded-full border-green-500/30 text-green-600 hover:bg-green-50" asChild>
-                  <a href={`https://wa.me/${driverPhone.replace('+', '')}`} target="_blank" rel="noopener noreferrer"><MessageCircle className="w-3 h-3" /></a>
-                </Button>
-              </div>
-            )} */}
-          </div>
+          )}
 
           {/* Quick Stats inline */}
           <div className="flex items-center justify-between text-[10px] text-muted-foreground font-medium">

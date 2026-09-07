@@ -279,7 +279,7 @@ const FuelGraphicalReport = () => {
 
       {/* Sidebar */}
       <div className={cn(
-        "absolute inset-y-0 left-0 z-50 transform lg:relative lg:translate-x-0 transition-transform duration-200 ease-in-out",
+        "absolute inset-y-0 left-0 z-30 lg:z-auto transform lg:relative lg:translate-x-0 transition-transform duration-200 ease-in-out",
         "w-[260px] xl:w-[300px] bg-card text-card-foreground border-r border-border flex flex-col shrink-0 h-full overflow-hidden shadow-xl lg:shadow-none",
         isSidebarOpen ? "translate-x-0" : "-translate-x-full"
       )}>

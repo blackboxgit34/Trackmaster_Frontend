@@ -86,7 +86,7 @@ import { toast } from '@/hooks/use-toast';
 import type { VehicleStatus, LiveVehicleStatus } from '@/types';
 
 const minimalDotCache = new Map<string, string>();
-const StatusBadge = ({ status }: { status: string }) => {
+export const StatusBadge = ({ status }: { status: string }) => {
   if (!minimalDotCache.has(status)) {
     const color = getStatusColorHex(status);
 
@@ -439,7 +439,6 @@ const LiveStatusTable = () => {
   const [totalRecords, setTotalRecords] = useState(0);
   const latestRequestRef = useRef(0);
   const [fuelMap, setFuelMap] = useState<any>({});
-  const [playbackMap, setPlaybackMap] = useState<any>({});
   const [sortConfig, setSortConfig] = useState({
     sortColumn: 'vehname',
     sortDirection: 'asc' as 'asc' | 'desc',
@@ -599,35 +598,69 @@ const LiveStatusTable = () => {
 
 
 
-  const handleOpenDetail = (vehicle: any) => {
-
-    setSelectedVehicleForDetail({
+  const handleOpenDetail = async (vehicle: any) => {
+    const initialVehicle = {
       ...vehicle,
+      distance: vehicle.todayDistance || 0,
+      speed: vehicle.speed || 0,
+      latLongHistory: vehicle.latLongHistory || [],
+    };
 
-      distance:
-        vehicle.todayDistance || 0,
-
-      speed:
-        vehicle.speed || 0,
-
-      latLongHistory:
-        playbackMap[vehicle.bbid]?.latLongHistory ||
-        vehicle.latLongHistory ||
-        [],
-    });
-
+    setSelectedVehicleForDetail(initialVehicle);
     setIsDetailOpen(true);
+
+    if (vehicle.bbid) {
+      try {
+        const res = await fetchAndCalculatePlaybackData(
+          vehicle.bbid,
+          new Date()
+        );
+        if (res?.playbackData?.latLongHistory) {
+          setSelectedVehicleForDetail((prev: any) =>
+            prev && prev.bbid === vehicle.bbid
+              ? {
+                  ...prev,
+                  latLongHistory: res.playbackData?.latLongHistory || prev.latLongHistory || [],
+                  distance: res.totalDistance || prev.distance,
+                }
+              : prev
+          );
+        }
+      } catch (err) {
+        console.error("Playback API Error:", err);
+      }
+    }
   };
 
-  const handleOpenLiveLocation = (vehicle: any) => {
-    setSelectedVehicleForLive({
+  const handleOpenLiveLocation = async (vehicle: any) => {
+    const initialVehicle = {
       ...vehicle,
-      latLongHistory:
-        playbackMap[vehicle.bbid]?.latLongHistory ||
-        vehicle.latLongHistory ||
-        [],
-    });
+      latLongHistory: vehicle.latLongHistory || [],
+    };
+
+    setSelectedVehicleForLive(initialVehicle);
     setIsLiveLocationOpen(true);
+
+    if (vehicle.bbid) {
+      try {
+        const res = await fetchAndCalculatePlaybackData(
+          vehicle.bbid,
+          new Date()
+        );
+        if (res?.playbackData?.latLongHistory) {
+          setSelectedVehicleForLive((prev: any) =>
+            prev && prev.bbid === vehicle.bbid
+              ? {
+                  ...prev,
+                  latLongHistory: res.playbackData?.latLongHistory || prev.latLongHistory || [],
+                }
+              : prev
+          );
+        }
+      } catch (err) {
+        console.error("Playback API Error:", err);
+      }
+    }
   };
 
   const handleClearStatusFilter = () => {
@@ -646,96 +679,6 @@ const LiveStatusTable = () => {
     (pagination.pageIndex + 1) * pagination.pageSize,
     totalRecords
   );
-
-  // useEffect(() => {
-  //   if (paginatedData.length === 0)
-  //     return;
-
-  //   const bbids =
-  //     paginatedData.map(x => x.bbid);
-
-  //   fetch(`${API_BASE_URL}/VehicleStatus/GetFuelLevels`, {
-  //     method: 'POST',
-  //     headers: {
-  //       'Content-Type': 'application/json'
-  //     },
-  //     body: JSON.stringify({
-  //       bbids
-  //     })
-  //   })
-  //     .then(res => res.json())
-  //     .then(result => {
-
-  //       if (!result.success)
-  //         return;
-
-  //       const fuelObj =
-  //         result.data.reduce(
-  //           (acc: any, item: any) => {
-
-  //             acc[item.bbid] = item;
-
-  //             return acc;
-
-  //           }, {});
-
-  //       setFuelMap(fuelObj);
-
-  //     })
-  //     .catch(err => {
-
-  //       console.log(err);
-
-  //     });
-
-  // }, [paginatedData]);
-
-  
-  // ================= PLAYBACK =================
-  useEffect(() => {
-    let cancelled = false;
-
-    const currentDateTime = new Date();
-    async function load() {
-      if (paginatedData.length === 0) return;
-
-      try {
-        const results = await Promise.all(
-          paginatedData.map(item =>
-            fetchAndCalculatePlaybackData(
-              item.bbid,
-              currentDateTime
-            )
-          )
-        );
-
-        if (cancelled) return;
-
-        const map: any = {};
-
-        results.forEach((res, index) => {
-          const bbid = paginatedData[index].bbid;
-
-          map[bbid] = {
-            totalDistance: res.totalDistance,
-            latLongHistory:
-              res.playbackData?.latLongHistory || []
-          };
-        });
-
-        setPlaybackMap(map);
-
-      } catch (error) {
-        console.error("Playback API Error:", error);
-      }
-    }
-
-    load();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [paginatedData]);
 
   const AddonIcon = ({
     status,
@@ -1304,17 +1247,21 @@ const LiveStatusTable = () => {
         </CardFooter>
       </Card>
 
-      <VehicleDetailDialog
-        open={isDetailOpen}
-        onOpenChange={setIsDetailOpen}
-        vehicle={selectedVehicleForDetail}
-      />
+      {isDetailOpen && (
+        <VehicleDetailDialog
+          open={isDetailOpen}
+          onOpenChange={setIsDetailOpen}
+          vehicle={selectedVehicleForDetail}
+        />
+      )}
 
-      <LiveLocationDialog
-        open={isLiveLocationOpen}
-        onOpenChange={setIsLiveLocationOpen}
-        vehicle={selectedVehicleForLive}
-      />
+      {isLiveLocationOpen && (
+        <LiveLocationDialog
+          open={isLiveLocationOpen}
+          onOpenChange={setIsLiveLocationOpen}
+          vehicle={selectedVehicleForLive}
+        />
+      )}
     </>
   );
 };

@@ -71,7 +71,7 @@ const Geofencing = () => {
             </TabsList>
           </div>
         </div>
-        
+
         <div className="flex-grow overflow-hidden">
           {tabs.map((tab) => (
             <TabsContent key={tab.value} value={tab.value} className="h-full relative">

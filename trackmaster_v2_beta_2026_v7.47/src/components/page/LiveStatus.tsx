@@ -12,17 +12,20 @@ const LiveStatus = () => {
   const [vehicleStatusData, setVehicleStatusData] = useState<any | null>(null);
 
   useEffect(() => {
+    let isMounted = true;
+
     const fetchVehicleStatusData = async () => {
       try {
         const auth = JSON.parse(localStorage.getItem("trackmaster-auth") || "{}");
         const custId = auth.custId;
+        if (!custId) return;
 
         const url = `${API_BASE_URL}/Dashboard/dashboarddata?userid=${custId}&type=vehiclestatus`;
 
         const res = await fetch(url);
         const result = await res.json();
 
-        if (result.isSuccess) {
+        if (isMounted && result.isSuccess) {
           setVehicleStatusData(result);
         }
       } catch (err) {
@@ -31,11 +34,14 @@ const LiveStatus = () => {
     };
 
     fetchVehicleStatusData();
-     // Set up interval to run every 30,000 milliseconds (30 seconds)
+    // Set up interval to run every 30,000 milliseconds (30 seconds)
     const intervalId = setInterval(fetchVehicleStatusData, 30000);
 
     // Clear interval when component unmounts
-    return () => clearInterval(intervalId);
+    return () => {
+      isMounted = false;
+      clearInterval(intervalId);
+    };
   }, []);
 
   return (

@@ -43,7 +43,7 @@ const WhatsappPopup = () => {
   ]);
 
   const addNumber = () => {
-    if (numbers.length < 5) {
+    if (numbers.length < 4) {
       setNumbers([
         ...numbers,
         {
@@ -79,18 +79,17 @@ const WhatsappPopup = () => {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button variant="outline" size="icon">
+        <Button variant="outline" size="icon" title="Manage SMS & WhatsApp Numbers">
           <WhatsappIcon className="h-10 w-10" />
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[525px]">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold">
-            Manage WhatsApp Subscription
+            Manage SMS & WhatsApp Alerts Numbers
           </DialogTitle>
           <DialogDescription>
-            You can add up to 5 WhatsApp numbers to receive report
-            notifications.
+            You can add up to 4 mobile numbers to receive automated SMS and WhatsApp alert notifications.
           </DialogDescription>
         </DialogHeader>
         <div className="py-4 space-y-4">
@@ -190,7 +189,7 @@ const WhatsappPopup = () => {
             variant="link"
             className="p-0 h-auto text-brand-blue"
             onClick={addNumber}
-            disabled={numbers.length >= 5}
+            disabled={numbers.length >= 4}
           >
             <PlusCircle className="mr-2 h-4 w-4" />
             Add another number

@@ -7,6 +7,7 @@ export interface SpeedEvent {
   location: string;
   speed: number; // km/h
   duration: number; // in seconds
+  km?: number | string;
 }
 
 export interface VehicleSpeedSummary {
@@ -45,12 +46,15 @@ const generateSpeedData = (): VehicleSpeedSummary[] => {
         
         const eventDate = new Date(record.date);
         const eventTime = addMinutes(startOfDay(eventDate), Math.random() * 12 * 60);
+        const eventDuration = Math.floor(Math.random() * 240 + 60);
+        const eventKm = parseFloat(((speed * eventDuration) / 3600).toFixed(2));
         details.push({
           id: `${record.id}-speed-${i}`,
           dateTime: format(eventTime, 'yyyy-MM-dd HH:mm'),
           location: record.location,
           speed: speed,
-          duration: Math.floor(Math.random() * 240 + 60),
+          duration: eventDuration,
+          km: eventKm,
         });
       }
     });

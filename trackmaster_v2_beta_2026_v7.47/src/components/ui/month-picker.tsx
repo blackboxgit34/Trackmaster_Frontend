@@ -133,8 +133,8 @@ export function MonthPicker({
                 key={index}
                 variant={
                   date &&
-                  getMonth(date) === index &&
-                  getYear(date) === getYear(displayDate)
+                    getMonth(date) === index &&
+                    getYear(date) === getYear(displayDate)
                     ? 'default'
                     : 'ghost'
                 }

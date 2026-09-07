@@ -17,7 +17,7 @@ export interface VehicleMovementStoppageData {
 
 export const movementStoppageData: VehicleMovementStoppageData[] = [
   {
-    vehicleId: 'TR-001',
+    vehicleId: 'CH01CZ2876',
     vehicleName: 'CH01CZ2876',
     driverName: 'Ramesh Kumar',
     totalDistance: 133.40,

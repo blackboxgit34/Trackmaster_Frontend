@@ -86,7 +86,6 @@ const getVehicleStatus = (
 };
 
 const VehicleStatusWidget = ({ data }: Props) => {
-debugger;
 const statusCounts = (data || []).reduce<Record<string, number>>(
     (acc, v: Vehicle) => {
       const status = getVehicleStatus(

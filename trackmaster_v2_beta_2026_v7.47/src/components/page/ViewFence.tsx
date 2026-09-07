@@ -300,7 +300,7 @@ const ViewFence = () => {
                     </div>
                     <Switch
                       checked={fence.isActive}
-                      onCheckedChange={() => {}}
+                      onCheckedChange={() => { }}
                       onClick={e => handleToggle(fence.id, e as React.MouseEvent)}
                       className="data-[state=checked]:bg-blue-500 shrink-0"
                     />

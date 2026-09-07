@@ -21,7 +21,7 @@ const FuelConsumptionPlayback = () => {
   const { menuPosition } = useTheme();
   const [selectedVehicle, setSelectedVehicle] = useState<string | null>(actualVehicles[0]?.id ?? null);
   const [dateRange, setDateRange] = useState<DateRange | undefined>({ from: new Date(), to: new Date() });
-  
+
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [playbackTime, setPlaybackTime] = useState(0);
@@ -74,10 +74,10 @@ const FuelConsumptionPlayback = () => {
     let lastKnownCoords = { lat: 0, lng: 0 };
 
     for (const point of timeline) {
-        if ((point as any).type === 'path') {
-            lastKnownCoords = { lat: (point as any).lat, lng: (point as any).lng };
-            break;
-        }
+      if ((point as any).type === 'path') {
+        lastKnownCoords = { lat: (point as any).lat, lng: (point as any).lng };
+        break;
+      }
     }
 
     for (let i = 0; i < timeline.length; i++) {
@@ -107,7 +107,7 @@ const FuelConsumptionPlayback = () => {
         if (point.event.type === 'filling') currentFuel = Math.min(vehicleInfo.fuelTankCapacity, currentFuel + point.event.amount);
         else if (point.event.type === 'drainage') currentFuel -= point.event.amount;
       }
-      
+
       currentFuel = Math.max(0, currentFuel);
 
       processedData.push({
@@ -151,15 +151,15 @@ const FuelConsumptionPlayback = () => {
       if (targetTime >= p1.timestamp && targetTime <= p2.timestamp) {
         const ratio = (p2.timestamp - p1.timestamp) === 0 ? 0 : (targetTime - p1.timestamp) / (p2.timestamp - p1.timestamp);
         const interpolate = (key: string) => p1[key] + (p2[key] - p1[key]) * ratio;
-        
+
         let bearing = 0;
         if (p1.lat !== p2.lat || p1.lng !== p2.lng) {
-            bearing = calculateBearing(p1.lat, p1.lng, p2.lat, p2.lng);
+          bearing = calculateBearing(p1.lat, p1.lng, p2.lat, p2.lng);
         } else if (i > 0) {
-            const prevP1 = playbackData.chartData[i-1];
-            if (prevP1.lat !== p1.lat || prevP1.lng !== p1.lng) {
-                bearing = calculateBearing(prevP1.lat, prevP1.lng, p1.lat, p1.lng);
-            }
+          const prevP1 = playbackData.chartData[i - 1];
+          if (prevP1.lat !== p1.lat || prevP1.lng !== p1.lng) {
+            bearing = calculateBearing(prevP1.lat, prevP1.lng, p1.lat, p1.lng);
+          }
         }
 
         return {
@@ -188,7 +188,7 @@ const FuelConsumptionPlayback = () => {
     const now = performance.now();
     const elapsedTime = (now - playbackStartTime.current) / 1000;
     const newPlaybackTime = lastPausedTime.current + elapsedTime * playbackSpeed;
-    
+
     if (!playbackData || newPlaybackTime > playbackData.duration) {
       setIsPlaying(false);
       setPlaybackTime(playbackData?.duration || 0);
@@ -262,7 +262,7 @@ const FuelConsumptionPlayback = () => {
                   onSpeedChange={setPlaybackSpeed}
                   onSliderChange={(time) => { setIsPlaying(false); setPlaybackTime(time); }}
                   path={playbackData.chartData}
-                  onSpeedSelectOpenChange={() => {}}
+                  onSpeedSelectOpenChange={() => { }}
                 />
               </div>
             </>

@@ -16,6 +16,7 @@ import {
 import UnderConstruction from '@/components/page/UnderConstruction';
 import NotFound from '@/components/page/NotFound';
 import FuelReportsPage from './addons/FuelReportsPage';
+import RefrigeratorTempPage from './addons/RefrigeratorTempPage';
 
 const addonNav = [
   { name: 'Fuel Reports', href: 'fuel-reports', icon: Fuel },
@@ -47,6 +48,10 @@ const AddonsPage = () => {
 
   if (activeNavItem.href === 'fuel-reports') {
     return <FuelReportsPage activeTab={reportType || 'fuel-analysis'} />;
+  }
+
+  if (activeNavItem.href === 'refrigerator-temp') {
+    return <RefrigeratorTempPage activeTab={reportType || 'dashboard'} />;
   }
 
   return (

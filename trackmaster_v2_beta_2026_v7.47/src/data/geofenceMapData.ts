@@ -20,7 +20,7 @@ export const geofenceMapData: GeofenceShape[] = [
       { lat: 19.073, lng: 72.882 },
       { lat: 19.071, lng: 72.878 },
     ],
-    machines: ['VIO-001', 'V-002'],
+    machines: ['MH-02-AX-1001', 'DL-01-GA-1002'],
     isActive: true,
   },
   {
@@ -29,7 +29,7 @@ export const geofenceMapData: GeofenceShape[] = [
     type: 'circle',
     center: { lat: 28.7041, lng: 77.1025 },
     radius: 1500,
-    machines: ['C-003'],
+    machines: ['KA-05-MJ-1003'],
     isActive: true,
   },
   {
@@ -42,7 +42,7 @@ export const geofenceMapData: GeofenceShape[] = [
         { lat: 12.970, lng: 77.602 },
         { lat: 12.968, lng: 77.595 },
     ],
-    machines: ['SV-004'],
+    machines: ['GJ-01-ZZ-1004'],
     isActive: true,
   },
   {
@@ -51,7 +51,7 @@ export const geofenceMapData: GeofenceShape[] = [
     type: 'circle',
     center: { lat: 13.0827, lng: 80.2707 },
     radius: 2000,
-    machines: ['VIO-005'],
+    machines: ['MH-04-CB-1005'],
     isActive: false,
   },
 ];

@@ -5,6 +5,8 @@ import type { DataTableRequestModel } from '@/hooks/DataTableRequestModel';
 import { downloadReport } from "@/lib/utils";
 import { boolean } from 'zod';
 
+import { actualVehicles } from '@/data/mockData';
+
 type VehicleOption = {
   label: string;
   value: string;
@@ -48,26 +50,34 @@ export function useVehicleList() {
     JSON.parse(localStorage.getItem("trackmaster-auth") ?? "{}")?.custId;
 
   const apiCall = useCallback(async () => {
+    try {
+      if (custId) {
+        const res = await fetch(
+          `${API_BASE_URL}/Dashboard/GetAllVehicleListByCustId?userid=${custId}`
+        );
 
-    if (!custId) return [];
+        if (res.ok) {
+          const text = await res.text();
+          if (text) {
+            const data = JSON.parse(text);
+            const vehicles = data?.data || [];
+            if (vehicles.length > 0) {
+              return vehicles.map((v: any) => ({
+                label: v.vehName,
+                value: v.bbid,
+              }));
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Error in useVehicleList:', err);
+    }
 
-    const res = await fetch(
-      `${API_BASE_URL}/Dashboard/GetAllVehicleListByCustId?userid=${custId}`
-    );
-
-    const text = await res.text();
-
-    if (!text) return [];
-
-    const data = JSON.parse(text);
-
-    const vehicles = data?.data || [];
-
-    return vehicles.map((v: any) => ({
-      label: v.vehName,
-      value: v.bbid,
+    return actualVehicles.map((v) => ({
+      label: v.name,
+      value: v.id,
     }));
-
   }, [custId]);
 
   return useApi<VehicleOption[]>(apiCall);
@@ -254,7 +264,7 @@ export const getVehicleStatusList = async ({
     workingHours: item.todayWHour || 0,
     idlingHours: 12.5,
     fuelConsumed: 0,
-    gsmSignal:  item.gsmSignal,
+    gsmSignal: item.gsmSignal,
     deviceSignal: 1,// item.gpsAntConStatus,
     GPSFix: 2,//item.hasfix,
     battery: item.vehBattery,
@@ -283,7 +293,7 @@ export const getVehicleStatusList = async ({
       lid: getAddonStatus(true),
       immobilizer: getAddonStatus(item.immobilizer),
     },
-    alertsCount:item.alertsCount|| 0,
+    alertsCount: item.alertsCount || 0,
   }));
 };
 

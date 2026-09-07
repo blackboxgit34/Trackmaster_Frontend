@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
   Signal, SignalMedium, SignalHigh, SignalZero, TriangleAlert, BatteryFull, BatteryMedium, BatteryLow,
-  Gauge, Clock, Share2, MapPin, Play, Copy, Thermometer, Wrench, BatteryWarning, AirVent, Power,
+  Gauge, Clock, MapPin, Play, Copy, Thermometer, Wrench, BatteryWarning, AirVent, Power,
     Hand, Navigation
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -566,13 +566,13 @@ const playbackDate = useMemo(() => {
 
                 <CardContent className="p-2">
                   <div className="space-y-1">
-                    {Object.entries(alertIcons).map(([name, { icon: Icon, color, slug }]) => {
+                    {Object.entries(alertIcons).map(([name, { icon: Icon, color }]) => {
                       const count = alertCounts[name as keyof typeof alertCounts] || 0;
 
                       return (
                         <Link
                           key={name}
-                          to={`/alerts/${slug}?vehicle=${vehicle.vehicleNo}&from=${todayStr}&to=${todayStr}`}
+                          to={`/alerts?vehicle=${vehicle.vehicleNo}&from=${todayStr}&to=${todayStr}`}
                           className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50"
                         >
                           <div className="flex items-center gap-3">

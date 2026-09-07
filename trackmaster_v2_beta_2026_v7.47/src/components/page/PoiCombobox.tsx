@@ -26,6 +26,9 @@ interface PoiComboboxProps {
   onChange: (value: string) => void;
   placeholder: string;
   className?: string;
+  allowAll?: boolean;
+  allLabel?: string;
+  icon?: React.ReactNode;
 }
 
 export function PoiCombobox({
@@ -34,6 +37,9 @@ export function PoiCombobox({
   onChange,
   placeholder,
   className,
+  allowAll = true,
+  allLabel = 'All Locations',
+  icon,
 }: PoiComboboxProps) {
   const [open, setOpen] = React.useState(false);
 
@@ -46,31 +52,49 @@ export function PoiCombobox({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className={cn('justify-start font-normal', className)}
+          className={cn('justify-start font-normal text-left h-9 text-sm', className)}
         >
-          <MapPin className="mr-2 h-4 w-4 text-muted-foreground" />
-          <span className="flex-1 text-left truncate">
-            {selectedPoi ? selectedPoi.poiName : placeholder}
+          {icon || <MapPin className="mr-2 h-4 w-4 shrink-0 text-muted-foreground" />}
+          <span className="flex-1 truncate">
+            {selectedPoi ? selectedPoi.poiName : (value === '' || value === 'all' ? (allowAll ? allLabel : placeholder) : placeholder)}
           </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+      <PopoverContent className="w-[--radix-popover-trigger-width] min-w-[240px] p-0" align="start">
         <Command>
           <div className="flex items-center border-b px-3" cmdk-input-wrapper="">
             <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
             <CommandPrimitive.Input
-              placeholder="Search POI..."
-              className="flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+              placeholder="Search location..."
+              className="flex h-10 w-full rounded-md bg-transparent py-2 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
             />
-            <Separator orientation="vertical" className="h-6" />
-            <Button asChild variant="link" className="ml-2 shrink-0 pr-1 text-brand-blue">
+            <Separator orientation="vertical" className="h-5" />
+            <Button asChild variant="link" size="sm" className="ml-2 shrink-0 pr-1 text-xs text-primary font-medium">
               <Link to="/geofencing/add-poi">Add POI</Link>
             </Button>
           </div>
-          <CommandList>
-            <CommandEmpty>No POI found.</CommandEmpty>
+          <CommandList className="max-h-[220px]">
+            <CommandEmpty>No location found.</CommandEmpty>
             <CommandGroup>
+              {allowAll && (
+                <CommandItem
+                  value={allLabel}
+                  onSelect={() => {
+                    onChange('');
+                    setOpen(false);
+                  }}
+                  className="font-medium cursor-pointer"
+                >
+                  <Check
+                    className={cn(
+                      'mr-2 h-4 w-4',
+                      !value || value === '' || value === 'all' ? 'opacity-100' : 'opacity-0'
+                    )}
+                  />
+                  {allLabel}
+                </CommandItem>
+              )}
               {pois.map((poi) => (
                 <CommandItem
                   key={poi.id}
@@ -79,6 +103,7 @@ export function PoiCombobox({
                     onChange(poi.id);
                     setOpen(false);
                   }}
+                  className="cursor-pointer"
                 >
                   <Check
                     className={cn(
@@ -86,7 +111,7 @@ export function PoiCombobox({
                       value === poi.id ? 'opacity-100' : 'opacity-0'
                     )}
                   />
-                  {poi.poiName}
+                  <span className="truncate">{poi.poiName}</span>
                 </CommandItem>
               ))}
             </CommandGroup>
