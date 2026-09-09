@@ -124,7 +124,7 @@ const GsmSignalIcon = ({ signal }: { signal: number }) => {
     case signal < 10:
       Icon = SignalZero;
       text = 'No GSM Signal';
-      color = 'text-orange-500';
+      color = 'red';
       break;
 
     // Default
