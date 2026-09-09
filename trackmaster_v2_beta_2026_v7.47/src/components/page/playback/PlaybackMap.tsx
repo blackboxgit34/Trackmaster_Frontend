@@ -175,11 +175,11 @@ const PlaybackMap = ({ tripPath, markerPosition, vehicleType, showFences, showPo
 
   return (
     <div className="relative w-full h-full">
-      <GoogleMap 
-        mapContainerStyle={mapContainerStyle} 
-        center={center} 
-        zoom={14} 
-        options={mapOptions} 
+      <GoogleMap
+        mapContainerStyle={mapContainerStyle}
+        center={center}
+        zoom={14}
+        options={mapOptions}
         onLoad={onLoad}
         onDragStart={handleMapDrag}
       >
@@ -194,23 +194,23 @@ const PlaybackMap = ({ tripPath, markerPosition, vehicleType, showFences, showPo
                   <div className="absolute top-1/2 left-1/2 w-12 h-12 -mt-6 -ml-6 rounded-full animate-ripple bg-green-500" style={{ animationDelay: '1s' }} />
                 </>
               )}
-              
+
               <img
                 src={getIconUrl(vehicleType, 'Moving')}
                 alt={vehicleType}
                 className="relative z-10 w-full h-full object-contain drop-shadow-md"
                 style={{ transform: `rotate(${currentBearing}deg)`, transformOrigin: 'center' }}
               />
-              
+
               {activeStoppage && (
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-[110%] bg-background/85 backdrop-blur-md border border-border shadow-xl rounded-xl p-3 flex flex-col gap-2 min-w-[200px] pointer-events-auto transition-all animate-in fade-in zoom-in-95 z-50">
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex flex-col">
-                        <span className="text-[13px] font-bold text-foreground">Vehicle Stopped</span>
-                        <span className="text-[11px] font-medium text-muted-foreground">{activeStoppage.type === 'idle' ? 'Engine ON (Idling)' : 'Engine OFF'}</span>
+                      <span className="text-[13px] font-bold text-foreground">Vehicle Stopped</span>
+                      <span className="text-[11px] font-medium text-muted-foreground">{activeStoppage.type === 'idle' ? 'Engine ON (Idling)' : 'Engine OFF'}</span>
                     </div>
                     <span className="text-[11px] font-mono font-semibold bg-primary/10 text-primary px-2 py-1 rounded border border-primary/20 shrink-0">
-                       {formatDuration(activeStoppage.duration)}
+                      {formatDuration(activeStoppage.duration)}
                     </span>
                   </div>
                   <Button size="sm" className="h-7 w-full text-[11px] mt-1 shadow-sm bg-blue-600 hover:bg-blue-700 text-white font-semibold" onClick={(e) => { e.stopPropagation(); onSkipStoppage(); }}>
@@ -228,9 +228,9 @@ const PlaybackMap = ({ tripPath, markerPosition, vehicleType, showFences, showPo
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button 
-                variant={isFollowingVehicle ? "default" : "secondary"} 
-                size="icon" 
+              <Button
+                variant={isFollowingVehicle ? "default" : "secondary"}
+                size="icon"
                 className={`w-10 h-10 rounded-xl shadow-lg border-2 pointer-events-auto transition-colors ${isFollowingVehicle ? 'bg-blue-600 hover:bg-blue-700 border-blue-500 text-white' : 'bg-background hover:bg-background/90 border-transparent text-foreground'}`}
                 onClick={() => setIsFollowingVehicle(!isFollowingVehicle)}
               >

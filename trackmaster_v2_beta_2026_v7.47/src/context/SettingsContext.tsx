@@ -14,14 +14,31 @@ interface FleetThresholds {
   service: { value: number; preAlert: number };
 }
 
+interface UiSettings {
+  minimalMapIcons: boolean;
+  timeFormat?: '12h' | '24h';
+  showDriverName?: boolean;
+}
+
+interface ReeferThresholds {
+  minTemp: number;
+  maxTemp: number;
+  targetTemp: number;
+  applyToAllVehicles: boolean;
+}
+
 interface Settings {
   fuelThresholds: FuelThresholds;
   fleetThresholds: FleetThresholds;
+  uiSettings: UiSettings;
+  reeferThresholds: ReeferThresholds;
 }
 
 interface SettingsContextType extends Settings {
   updateFuelThresholds: (newThresholds: Partial<FuelThresholds>) => void;
   updateFleetThresholds: (newThresholds: Partial<FleetThresholds>) => void;
+  updateUiSettings: (newSettings: Partial<UiSettings>) => void;
+  updateReeferThresholds: (newThresholds: Partial<ReeferThresholds>) => void;
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
@@ -40,7 +57,18 @@ const defaultSettings: Settings = {
     overIdling: { value: 15, unit: 'min' as 'min' | 'hr' },
     overStoppage: { value: 30, unit: 'min' as 'min' | 'hr' },
     service: { value: 500, preAlert: 50 },
-  }
+  },
+  uiSettings: {
+    minimalMapIcons: false,
+    timeFormat: '12h',
+    showDriverName: true,
+  },
+  reeferThresholds: {
+    minTemp: -25,
+    maxTemp: -10,
+    targetTemp: -18,
+    applyToAllVehicles: true,
+  },
 };
 
 export const SettingsProvider = ({ children }: { children: ReactNode }) => {
@@ -58,6 +86,8 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
         return {
           fuelThresholds: { ...defaultSettings.fuelThresholds, ...parsed.fuelThresholds },
           fleetThresholds: { ...defaultSettings.fleetThresholds, ...parsed.fleetThresholds },
+          uiSettings: { ...defaultSettings.uiSettings, ...parsed.uiSettings },
+          reeferThresholds: { ...defaultSettings.reeferThresholds, ...parsed.reeferThresholds },
         };
       }
     } catch (e) {
@@ -102,8 +132,44 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
+  const updateUiSettings = (newSettings: Partial<UiSettings>) => {
+    setSettings(prev => {
+      const updatedSettings = {
+        ...prev,
+        uiSettings: {
+          ...prev.uiSettings,
+          ...newSettings,
+        },
+      };
+      try {
+        localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(updatedSettings));
+      } catch (e) {
+        console.error("Failed to save settings to localStorage", e);
+      }
+      return updatedSettings;
+    });
+  };
+
+  const updateReeferThresholds = (newThresholds: Partial<ReeferThresholds>) => {
+    setSettings(prev => {
+      const updatedSettings = {
+        ...prev,
+        reeferThresholds: {
+          ...prev.reeferThresholds,
+          ...newThresholds,
+        },
+      };
+      try {
+        localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(updatedSettings));
+      } catch (e) {
+        console.error("Failed to save settings to localStorage", e);
+      }
+      return updatedSettings;
+    });
+  };
+
   return (
-    <SettingsContext.Provider value={{ ...settings, updateFuelThresholds, updateFleetThresholds }}>
+    <SettingsContext.Provider value={{ ...settings, updateFuelThresholds, updateFleetThresholds, updateUiSettings, updateReeferThresholds }}>
       {children}
     </SettingsContext.Provider>
   );

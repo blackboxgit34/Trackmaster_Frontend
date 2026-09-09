@@ -38,10 +38,11 @@ export const VEHICLE_TYPES = {
   'Transit Mixer': { prefix: 'TMX', models: ['Tata Prima', 'Ashok Leyland'], make: 'Various' },
   'Truck': { prefix: 'TRK', models: ['Tata Ultra', 'Eicher Pro'], make: 'Various' },
   'Van': { prefix: 'VAN', models: ['Maruti Eeco', 'Tata Winger'], make: 'Various' },
+  'Reefer': { prefix: 'RFR', models: ['Thermo King T-Series', 'Carrier Transicold Supra', 'Tata Signa Reefer', 'Eicher Pro Reefer'], make: 'Various' },
   'Water Tanker': { prefix: 'WTK', models: ['Tata LPT', 'Ashok Leyland Ecomet'], make: 'Various' },
 };
 
-const LOCATIONS = [
+export const LOCATIONS = [
     { name: 'Mumbai Site A', lat: 19.0760, lng: 72.8777 },
     { name: 'Delhi Quarry', lat: 28.7041, lng: 77.1025 },
     { name: 'Bangalore Metro Project', lat: 12.9716, lng: 77.5946 },
@@ -51,8 +52,8 @@ const LOCATIONS = [
     { name: 'Pune Industrial Park', lat: 18.5204, lng: 73.8567 },
     { name: 'Ahmedabad Smart City', lat: 23.0225, lng: 72.5714 },
 ];
-const DRIVERS = ['Ramesh Kumar', 'Suresh Patel', 'Vijay Singh', 'Anil Sharma', 'Sunil Gupta', 'Manoj Verma', 'Rajesh Reddy', 'Sanjay Yadav', 'Deepak Chauhan', 'Prakash Mishra'];
-const ERROR_CODES = [
+export const DRIVERS = ['Ramesh Kumar', 'Suresh Patel', 'Vijay Singh', 'Anil Sharma', 'Sunil Gupta', 'Manoj Verma', 'Rajesh Reddy', 'Sanjay Yadav', 'Deepak Chauhan', 'Prakash Mishra'];
+export const ERROR_CODES = [
   { code: 'E-101', description: 'Low Hydraulic Pressure' },
   { code: 'E-204', description: 'Engine Overheat Warning' },
   { code: 'E-305', description: 'Sensor Malfunction (Track A)' },
@@ -76,13 +77,16 @@ const generateVehicles = () => {
     fuelTankCapacity: number;
   }[] = [];
   const typeKeys = Object.keys(VEHICLE_TYPES);
+  const REG_PREFIXES = ['MH-02-AX', 'DL-01-GA', 'KA-05-MJ', 'GJ-01-ZZ', 'MH-04-CB', 'MH-12-RS', 'MH-14-BT', 'MH-43-CQ', 'HR-26-DK', 'UP-16-AB'];
 
   for (let i = 0; i < NUM_VEHICLES; i++) {
     const type = typeKeys[i % typeKeys.length] as keyof typeof VEHICLE_TYPES;
     const typeInfo = VEHICLE_TYPES[type];
     const model = typeInfo.models[i % typeInfo.models.length];
-    const id = `${typeInfo.prefix}-${String(i + 1).padStart(3, '0')}`;
-    const name = `${model} #${i + 1}`;
+    const regPrefix = REG_PREFIXES[i % REG_PREFIXES.length];
+    const regNum = String(1001 + i);
+    const id = `${regPrefix}-${regNum}`;
+    const name = `${model} (${id})`;
     
     vehicleList.push({ 
       id, 
@@ -221,10 +225,10 @@ dailyRecords.forEach(record => {
     }
 });
 
-// Add more realistic data for TR-001
+// Add more realistic data for default vehicle
 fuelFillingDetails.push(
-  { id: 'ff-today-1', vehicleId: 'TR-001', date: format(today, 'yyyy-MM-dd'), beforeFillingDate: format(addHours(startOfDay(today), 10), 'yyyy-MM-dd HH:mm'), beforeFilling: 50, afterFillingDate: format(addMinutes(addHours(startOfDay(today), 10), 10), 'yyyy-MM-dd HH:mm'), afterFilling: 200, filling: 150, fillingStation: 'IOCL, Panvel' },
-  { id: 'ff-today-2', vehicleId: 'TR-001', date: format(today, 'yyyy-MM-dd'), beforeFillingDate: format(addHours(startOfDay(today), 18), 'yyyy-MM-dd HH:mm'), beforeFilling: 80, afterFillingDate: format(addMinutes(addHours(startOfDay(today), 18), 8), 'yyyy-MM-dd HH:mm'), afterFilling: 180, filling: 100, fillingStation: 'BPCL, Lonavala' }
+  { id: 'ff-today-1', vehicleId: actualVehicles[0]?.id || 'MH-02-AX-1001', date: format(today, 'yyyy-MM-dd'), beforeFillingDate: format(addHours(startOfDay(today), 10), 'yyyy-MM-dd HH:mm'), beforeFilling: 50, afterFillingDate: format(addMinutes(addHours(startOfDay(today), 10), 10), 'yyyy-MM-dd HH:mm'), afterFilling: 200, filling: 150, fillingStation: 'IOCL, Panvel' },
+  { id: 'ff-today-2', vehicleId: actualVehicles[0]?.id || 'MH-02-AX-1001', date: format(today, 'yyyy-MM-dd'), beforeFillingDate: format(addHours(startOfDay(today), 18), 'yyyy-MM-dd HH:mm'), beforeFilling: 80, afterFillingDate: format(addMinutes(addHours(startOfDay(today), 18), 8), 'yyyy-MM-dd HH:mm'), afterFilling: 180, filling: 100, fillingStation: 'BPCL, Lonavala' }
 );
 
 // Fuel Theft/Drainage Details
@@ -256,10 +260,10 @@ dailyRecords.forEach(record => {
     }
 });
 
-// Add more realistic data for TR-001
+// Add more realistic data for default vehicle
 fuelTheftDetails.push(
-  { id: 'ft-today-1', vehicleId: 'TR-001', date: format(today, 'yyyy-MM-dd'), beforeDrainDate: format(addHours(startOfDay(today), 14), 'yyyy-MM-dd HH:mm'), beforeDrain: 180, afterDrainDate: format(addMinutes(addHours(startOfDay(today), 14), 5), 'yyyy-MM-dd HH:mm'), afterDrain: 160, drainage: 20, drainageLocation: 'Near Food Mall, Expressway' },
-  { id: 'ft-today-2', vehicleId: 'TR-001', date: format(today, 'yyyy-MM-dd'), beforeDrainDate: format(addHours(startOfDay(today), 23), 'yyyy-MM-dd HH:mm'), beforeDrain: 150, afterDrainDate: format(addMinutes(addHours(startOfDay(today), 23), 3), 'yyyy-MM-dd HH:mm'), afterDrain: 135, drainage: 15, drainageLocation: 'Parking Yard, Pune' }
+  { id: 'ft-today-1', vehicleId: actualVehicles[0]?.id || 'MH-02-AX-1001', date: format(today, 'yyyy-MM-dd'), beforeDrainDate: format(addHours(startOfDay(today), 14), 'yyyy-MM-dd HH:mm'), beforeDrain: 180, afterDrainDate: format(addMinutes(addHours(startOfDay(today), 14), 5), 'yyyy-MM-dd HH:mm'), afterDrain: 160, drainage: 20, drainageLocation: 'Near Food Mall, Expressway' },
+  { id: 'ft-today-2', vehicleId: actualVehicles[0]?.id || 'MH-02-AX-1001', date: format(today, 'yyyy-MM-dd'), beforeDrainDate: format(addHours(startOfDay(today), 23), 'yyyy-MM-dd HH:mm'), beforeDrain: 150, afterDrainDate: format(addMinutes(addHours(startOfDay(today), 23), 3), 'yyyy-MM-dd HH:mm'), afterDrain: 135, drainage: 15, drainageLocation: 'Parking Yard, Pune' }
 );
 
 // Fuel Rod Disconnection Details
@@ -385,10 +389,10 @@ export const engineTempData = alertsData['Engine Temp'].map((a, i) => ({
   location: a.location, engineTemp: parseFloat(a.value), status: 'High'
 }));
 
-// ADDING MANUAL DATA FOR SV-016
+// ADDING MANUAL DATA FOR VEHICLE
 const todayDateForTemp = format(new Date(), 'yyyy-MM-dd');
-const vehicleIdForTemp = 'SV-016';
-const vehicleNameForTemp = 'SV100-2A #16';
+const vehicleIdForTemp = actualVehicles[15]?.id || 'MH-04-CB-1016';
+const vehicleNameForTemp = actualVehicles[15]?.name || 'Tata Winger (MH-04-CB-1016)';
 const locationForTemp = 'Pune Industrial Park';
 
 const extraEngineTempData = [

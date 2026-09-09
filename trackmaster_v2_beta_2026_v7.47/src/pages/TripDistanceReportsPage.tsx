@@ -1,14 +1,12 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import DistanceReportTable from '@/components/page/DistanceReportTable';
 import NotFound from '@/components/page/NotFound';
 import MonthlyDayWiseDistanceReport from '@/components/page/MonthlyDayWiseDistanceReport';
 import TripReport from '@/components/page/TripReport';
 import DistanceReport2 from '@/components/page/DistanceReport2';
 
 const tabs = [
-  { value: 'distance', label: 'Distance Report', component: <DistanceReportTable /> },
-  { value: 'distance-2', label: 'Distance Report 2', component: <DistanceReport2 /> },
+  { value: 'distance', label: 'Distance Report', component: <DistanceReport2 /> },
   { value: 'trip-report', label: 'Trip Report', component: <TripReport /> },
   { value: 'monthly-day-wise', label: 'Monthly Day-Wise Distance Report', component: <MonthlyDayWiseDistanceReport /> },
 ];
@@ -17,7 +15,7 @@ const TripDistanceReportsPage = () => {
   const { subpage } = useParams();
   const navigate = useNavigate();
 
-  const activeTab = subpage || 'distance';
+  const activeTab = subpage === 'distance-2' ? 'distance' : (subpage || 'distance');
 
   const isValidSubpage = tabs.some((tab) => tab.value === activeTab);
   if (!isValidSubpage) {

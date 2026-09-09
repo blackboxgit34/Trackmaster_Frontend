@@ -1,23 +1,21 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import NotFound from '@/components/page/NotFound';
-import StoppageAnalysisTable from '@/components/page/StoppageAnalysisTable';
-import IdlingAnalysisTable from '@/components/page/IdlingAnalysisTable';
+import VehicleStatusReportTable from '@/components/page/VehicleStatusReportTable';
 import IgnitionOnOffAnalysisTable from '@/components/page/IgnitionOnOffAnalysisTable';
-import CombinedTripReportTable from '@/components/page/CombinedTripReportTable';
+import CombinedStoppageIdlingTable from '@/components/page/CombinedStoppageIdlingTable';
 
 const tabs = [
-  { value: 'stoppage-analysis', label: 'Stoppage Analysis', component: <StoppageAnalysisTable /> },
-  { value: 'idling-analysis', label: 'Idling Analysis', component: <IdlingAnalysisTable /> },
+  { value: 'vehicle-status', label: 'Vehicle Status Report', component: <VehicleStatusReportTable /> },
+  { value: 'combined-stoppage-idling', label: 'Combined Stoppage & Idling', component: <CombinedStoppageIdlingTable /> },
   { value: 'ignition-on-off-analysis', label: 'Ignition On/Off Analysis', component: <IgnitionOnOffAnalysisTable /> },
-  { value: 'combined-trip-report', label: 'Combined Trip Report', component: <CombinedTripReportTable /> },
 ];
 
 const TimeActivityReportsPage = () => {
   const { subpage } = useParams();
   const navigate = useNavigate();
 
-  const activeTab = subpage || 'stoppage-analysis';
+  const activeTab = subpage || 'vehicle-status';
 
   const isValidSubpage = tabs.some((tab) => tab.value === activeTab);
   if (!isValidSubpage) {

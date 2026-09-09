@@ -287,7 +287,7 @@ const RoutePlayback = () => {
     };
 
     fetchPlayback();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedVehicle, selectedDate]);
 
   // ─── Playback controls ───────────────────────────────────────────────────
@@ -461,180 +461,180 @@ const RoutePlayback = () => {
       libraries={libraries}
       loadingElement={loadingSpinner}
     >
-    {vehiclesLoading ? loadingSpinner : (
-    <div className="flex h-full w-full bg-muted/40">
-      {dataLoading && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white p-4 rounded-lg flex items-center gap-3 shadow-lg">
-            <div className="animate-spin h-5 w-5 border-2 border-black border-t-transparent rounded-full" />
-            <span>Please wait...</span>
-          </div>
-        </div>
-      )}
-      {/* Sidebar */}
-      {summary && playbackData ? (
-        <PlaybackSidebar
-          selectedVehicle={selectedVehicle}
-          onVehicleChange={handleVehicleChange}
-          selectedDate={selectedDate}
-          onDateChange={setSelectedDate}
-          vehicles={vehicles.map(v => ({ label: v.name, value: v.id }))}
-          vehicleName={summary.vehicleName}
-          totalDistance={summary.totalDistance}
-          drivingTime={summary.drivingTime}
-          totalStoppageTime={summary.totalStoppageTime}
-          totalIdling={summary.totalIdling}
-          path={playbackData.path}
-          unifiedStoppages={playbackData.stoppages}
-        />
-      ) : (
-        <div className="w-[350px] flex-shrink-0 bg-card border-r flex flex-col h-full overflow-hidden p-4">
-          <div className="flex items-center gap-2">
-            <VehicleCombobox
+      {vehiclesLoading ? loadingSpinner : (
+        <div className="flex h-full w-full bg-muted/40">
+          {dataLoading && (
+            <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+              <div className="bg-white p-4 rounded-lg flex items-center gap-3 shadow-lg">
+                <div className="animate-spin h-5 w-5 border-2 border-black border-t-transparent rounded-full" />
+                <span>Please wait...</span>
+              </div>
+            </div>
+          )}
+          {/* Sidebar */}
+          {summary && playbackData ? (
+            <PlaybackSidebar
+              selectedVehicle={selectedVehicle}
+              onVehicleChange={handleVehicleChange}
+              selectedDate={selectedDate}
+              onDateChange={setSelectedDate}
               vehicles={vehicles.map(v => ({ label: v.name, value: v.id }))}
-              value={selectedVehicle || ''}
-              onChange={handleVehicleChange}
-              className="w-full"
+              vehicleName={summary.vehicleName}
+              totalDistance={summary.totalDistance}
+              drivingTime={summary.drivingTime}
+              totalStoppageTime={summary.totalStoppageTime}
+              totalIdling={summary.totalIdling}
+              path={playbackData.path}
+              unifiedStoppages={playbackData.stoppages}
             />
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="w-full justify-start text-left font-normal">
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {selectedDate ? format(selectedDate, 'dd MMM yyyy') : 'Select Date'}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar mode="single" selected={selectedDate} onSelect={setSelectedDate} initialFocus />
-              </PopoverContent>
-            </Popover>
-          </div>
-          <div className="flex-1 flex items-center justify-center text-center text-muted-foreground">
-            {dataLoading ? (
-              <Loader className="animate-spin" />
+          ) : (
+            <div className="w-[350px] flex-shrink-0 bg-card border-r flex flex-col h-full overflow-hidden p-4">
+              <div className="flex items-center gap-2">
+                <VehicleCombobox
+                  vehicles={vehicles.map(v => ({ label: v.name, value: v.id }))}
+                  value={selectedVehicle || ''}
+                  onChange={handleVehicleChange}
+                  className="w-full"
+                />
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-start text-left font-normal">
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {selectedDate ? format(selectedDate, 'dd MMM yyyy') : 'Select Date'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar mode="single" selected={selectedDate} onSelect={setSelectedDate} initialFocus />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div className="flex-1 flex items-center justify-center text-center text-muted-foreground">
+                {dataLoading ? (
+                  <Loader className="animate-spin" />
+                ) : (
+                  <p>No trip data found for the selected vehicle and date.</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Map area */}
+          <div className="flex-1 relative bg-muted">
+            {dataLoading ? null : playbackData ? (
+              <>
+                <PlaybackMap
+                  tripPath={playbackData.path}
+                  markerPosition={currentDataPoint ? { lat: currentDataPoint.lat, lng: currentDataPoint.lng } : null}
+                  vehicleType={vehicleType}
+                  showFences={false}
+                  showPois={false}
+                  showLabels={true}
+                  showStoppages={showStoppages}
+                  currentBearing={currentDataPoint?.bearing || 0}
+                  isPlaying={isPlaying}
+                  unifiedStoppages={playbackData.stoppages.filter(
+                    (s) => showIdleStoppages || s.type !== 'idle'
+                  )}
+                  activeStoppage={activeStoppage}
+                  onSkipStoppage={handleSkipStoppage}
+                />
+                <PlaybackTimeline
+                  startTime={playbackData.startTime}
+                  endTime={playbackData.endTime}
+                  currentTime={playbackTime}
+                  isPlaying={isPlaying}
+                  speed={playbackSpeed}
+                  currentData={currentDataPoint}
+                  onPlayPause={() => setIsPlaying(!isPlaying)}
+                  onSpeedChange={setPlaybackSpeed}
+                  onSliderChange={handleSliderChange}
+                />
+
+                {/* Settings popover */}
+                <div className="absolute top-4 right-4 z-10">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="secondary"
+                        size="icon"
+                        className="w-10 h-10 rounded-xl shadow-lg border-2 bg-background hover:bg-background/90 border-transparent text-foreground"
+                      >
+                        <Settings2 className="w-5 h-5" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-72 mr-4 p-4 shadow-xl border-border/50 rounded-xl" align="end">
+                      <div className="space-y-5">
+                        <div className="flex items-center gap-2 border-b pb-3">
+                          <Settings2 className="w-4 h-4 text-primary" />
+                          <h4 className="font-semibold tracking-tight text-sm">Playback Preferences</h4>
+                        </div>
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between gap-4">
+                            <div className="flex flex-col gap-1">
+                              <div className="flex items-center gap-2">
+                                <MapPin className="w-4 h-4 text-muted-foreground" />
+                                <label htmlFor="show-stoppages" className="text-sm font-medium cursor-pointer leading-none">
+                                  Show All Stoppages
+                                </label>
+                              </div>
+                              <p className="text-[11px] text-muted-foreground pl-6 leading-tight">
+                                Display markers for all vehicle stop events along the route.
+                              </p>
+                            </div>
+                            <Switch id="show-stoppages" checked={showStoppages} onCheckedChange={setShowStoppages} />
+                          </div>
+
+                          <div className={`flex items-center justify-between gap-4 transition-opacity ${!showStoppages ? 'opacity-50 pointer-events-none' : ''}`}>
+                            <div className="flex flex-col gap-1">
+                              <div className="flex items-center gap-2">
+                                <Clock className="w-4 h-4 text-muted-foreground" />
+                                <label htmlFor="show-idle" className="text-sm font-medium cursor-pointer leading-none">
+                                  Show Idle Stops
+                                </label>
+                              </div>
+                              <p className="text-[11px] text-muted-foreground pl-6 leading-tight">
+                                Include stops where the engine was left running.
+                              </p>
+                            </div>
+                            <Switch
+                              id="show-idle"
+                              checked={showIdleStoppages}
+                              onCheckedChange={setShowIdleStoppages}
+                              disabled={!showStoppages}
+                            />
+                          </div>
+
+                          <div className="flex items-center justify-between gap-4">
+                            <div className="flex flex-col gap-1">
+                              <div className="flex items-center gap-2">
+                                <FastForward className="w-4 h-4 text-muted-foreground" />
+                                <label htmlFor="skip-stoppages" className="text-sm font-medium cursor-pointer leading-none">
+                                  Auto-skip Stoppages
+                                </label>
+                              </div>
+                              <p className="text-[11px] text-muted-foreground pl-6 leading-tight">
+                                Automatically fast-forward through stoppage times.
+                              </p>
+                            </div>
+                            <Switch id="skip-stoppages" checked={skipStoppages} onCheckedChange={setSkipStoppages} />
+                          </div>
+                        </div>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </>
             ) : (
-              <p>No trip data found for the selected vehicle and date.</p>
+              <div className="flex items-center justify-center h-full">
+                <div className="text-center text-muted-foreground">
+                  <h3 className="text-lg font-semibold">No Trip Data</h3>
+                  <p>No trips recorded for this vehicle on the selected date.</p>
+                </div>
+              </div>
             )}
           </div>
         </div>
       )}
-
-      {/* Map area */}
-      <div className="flex-1 relative bg-muted">
-        {dataLoading ? null : playbackData ? (
-          <>
-            <PlaybackMap
-              tripPath={playbackData.path}
-              markerPosition={currentDataPoint ? { lat: currentDataPoint.lat, lng: currentDataPoint.lng } : null}
-              vehicleType={vehicleType}
-              showFences={false}
-              showPois={false}
-              showLabels={true}
-              showStoppages={showStoppages}
-              currentBearing={currentDataPoint?.bearing || 0}
-              isPlaying={isPlaying}
-              unifiedStoppages={playbackData.stoppages.filter(
-                (s) => showIdleStoppages || s.type !== 'idle'
-              )}
-              activeStoppage={activeStoppage}
-              onSkipStoppage={handleSkipStoppage}
-            />
-            <PlaybackTimeline
-              startTime={playbackData.startTime}
-              endTime={playbackData.endTime}
-              currentTime={playbackTime}
-              isPlaying={isPlaying}
-              speed={playbackSpeed}
-              currentData={currentDataPoint}
-              onPlayPause={() => setIsPlaying(!isPlaying)}
-              onSpeedChange={setPlaybackSpeed}
-              onSliderChange={handleSliderChange}
-            />
-
-            {/* Settings popover */}
-            <div className="absolute top-4 right-4 z-10">
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="secondary"
-                    size="icon"
-                    className="w-10 h-10 rounded-xl shadow-lg border-2 bg-background hover:bg-background/90 border-transparent text-foreground"
-                  >
-                    <Settings2 className="w-5 h-5" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-72 mr-4 p-4 shadow-xl border-border/50 rounded-xl" align="end">
-                  <div className="space-y-5">
-                    <div className="flex items-center gap-2 border-b pb-3">
-                      <Settings2 className="w-4 h-4 text-primary" />
-                      <h4 className="font-semibold tracking-tight text-sm">Playback Preferences</h4>
-                    </div>
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between gap-4">
-                        <div className="flex flex-col gap-1">
-                          <div className="flex items-center gap-2">
-                            <MapPin className="w-4 h-4 text-muted-foreground" />
-                            <label htmlFor="show-stoppages" className="text-sm font-medium cursor-pointer leading-none">
-                              Show All Stoppages
-                            </label>
-                          </div>
-                          <p className="text-[11px] text-muted-foreground pl-6 leading-tight">
-                            Display markers for all vehicle stop events along the route.
-                          </p>
-                        </div>
-                        <Switch id="show-stoppages" checked={showStoppages} onCheckedChange={setShowStoppages} />
-                      </div>
-
-                      <div className={`flex items-center justify-between gap-4 transition-opacity ${!showStoppages ? 'opacity-50 pointer-events-none' : ''}`}>
-                        <div className="flex flex-col gap-1">
-                          <div className="flex items-center gap-2">
-                            <Clock className="w-4 h-4 text-muted-foreground" />
-                            <label htmlFor="show-idle" className="text-sm font-medium cursor-pointer leading-none">
-                              Show Idle Stops
-                            </label>
-                          </div>
-                          <p className="text-[11px] text-muted-foreground pl-6 leading-tight">
-                            Include stops where the engine was left running.
-                          </p>
-                        </div>
-                        <Switch
-                          id="show-idle"
-                          checked={showIdleStoppages}
-                          onCheckedChange={setShowIdleStoppages}
-                          disabled={!showStoppages}
-                        />
-                      </div>
-
-                      <div className="flex items-center justify-between gap-4">
-                        <div className="flex flex-col gap-1">
-                          <div className="flex items-center gap-2">
-                            <FastForward className="w-4 h-4 text-muted-foreground" />
-                            <label htmlFor="skip-stoppages" className="text-sm font-medium cursor-pointer leading-none">
-                              Auto-skip Stoppages
-                            </label>
-                          </div>
-                          <p className="text-[11px] text-muted-foreground pl-6 leading-tight">
-                            Automatically fast-forward through stoppage times.
-                          </p>
-                        </div>
-                        <Switch id="skip-stoppages" checked={skipStoppages} onCheckedChange={setSkipStoppages} />
-                      </div>
-                    </div>
-                  </div>
-                </PopoverContent>
-              </Popover>
-            </div>
-          </>
-        ) : (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center text-muted-foreground">
-              <h3 className="text-lg font-semibold">No Trip Data</h3>
-              <p>No trips recorded for this vehicle on the selected date.</p>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-    )}
     </LoadScript>
   );
 };

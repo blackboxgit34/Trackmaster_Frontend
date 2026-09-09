@@ -43,6 +43,7 @@ import { Label } from '@/components/ui/label';
 import { API_BASE_URL } from '@/config/Api';
 import { DataTableRequestModel } from '@/hooks/DataTableRequestModel';
 import { useReportDownload } from '@/hooks/useApi';
+import { useSettings } from '@/context/SettingsContext';
 import { useSearchParams } from 'react-router-dom';
 
 type IdlingReportData = {
@@ -151,6 +152,9 @@ const filterByInterval = (details: StoppageDetail[], interval: string) => {
 };
 
 const IdlingAnalysisTable = () => {
+  const { uiSettings } = useSettings();
+  const showDriverName = uiSettings?.showDriverName ?? true;
+  const visibleHeaders = useMemo(() => showDriverName ? headers : headers.filter(h => h.key !== 'driverName'), [showDriverName]);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [sortConfig, setSortConfig] = useState<{ key: ReportDataKey; direction: 'asc' | 'desc'; }>({ key: 'vehicleName', direction: 'asc' });
@@ -456,7 +460,7 @@ const exportPdf = async () => {
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/50 hover:bg-muted/50 border-b">
-                {headers.map((header) => (
+                {visibleHeaders.map((header) => (
                   <SortableHeader key={header.key as string} onClick={() => handleSort(header.key)} isSorted={sortConfig.key === header.key} sortDirection={sortConfig.key === header.key ? sortConfig.direction : undefined}>
                     {header.label}
                   </SortableHeader>
@@ -499,7 +503,9 @@ const exportPdf = async () => {
                   <React.Fragment key={row.bbid}>
                     <TableRow className="bg-card hover:bg-muted/50 border-b">
                       <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-foreground">{row.vehicleName}</TableCell>
-                      <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{row.driverName || 'N/A'}</TableCell>
+                      {showDriverName && (
+                        <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{row.driverName || 'N/A'}</TableCell>
+                      )}
                       <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{row.idlingCount}</TableCell>
                      <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">{row.totalIdlingTime || "N/A"}</TableCell>
                       <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-right">
@@ -510,7 +516,7 @@ const exportPdf = async () => {
                     </TableRow>
                     {isExpanded && (
                       <TableRow className="bg-muted/20 hover:bg-muted/20">
-                        <TableCell colSpan={headers.length + 1} className="p-0">
+                        <TableCell colSpan={visibleHeaders.length + 1} className="p-0">
                           <div className="bg-muted/50 p-8">
                             <div className="bg-card rounded-lg shadow-sm h-full flex flex-col overflow-hidden">
                               <div className="p-6 border-b">

@@ -7,11 +7,14 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { useTheme } from '@/components/theme-provider';
-import { Sun, Moon, Laptop } from 'lucide-react';
+import { useSettings } from '@/context/SettingsContext';
+import { Sun, Moon, Laptop, UserCheck } from 'lucide-react';
 
 const AppearanceSettings = () => {
   const { theme, setTheme, menuPosition, setMenuPosition } = useTheme();
+  const { uiSettings, updateUiSettings } = useSettings();
 
   return (
     <div className="space-y-6">
@@ -65,6 +68,32 @@ const AppearanceSettings = () => {
                 Header
               </Button>
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Display & Visibility</CardTitle>
+          <CardDescription>
+            Control the visibility of optional data elements across reports, dashboards, and dialogs.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between border p-4 rounded-lg">
+            <div className="space-y-0.5 pr-4">
+              <div className="flex items-center gap-2">
+                <UserCheck className="h-4 w-4 text-primary" />
+                <Label className="text-base font-semibold">Show Driver Name</Label>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Display driver names across reports, tracking tables, and vehicle detail popups. Turn this off if your fleet vehicles do not have dedicated drivers.
+              </p>
+            </div>
+            <Switch
+              checked={uiSettings?.showDriverName ?? true}
+              onCheckedChange={(checked) => updateUiSettings?.({ showDriverName: checked })}
+            />
           </div>
         </CardContent>
       </Card>

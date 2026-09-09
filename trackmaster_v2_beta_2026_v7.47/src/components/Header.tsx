@@ -25,9 +25,8 @@ interface User {
   isStaffMember: boolean;
 }
 type HeaderProps = {
-  //setIsCustomizationSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>; previous
   setIsCustomizationSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  onSearchChange: (value: string) => void; // neha k
+  onSearchChange?: (value: string) => void;
 };
 
 // const Header = ({ setIsCustomizationSidebarOpen }: HeaderProps) => {previous

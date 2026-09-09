@@ -1,6 +1,6 @@
 import { isWithinInterval, parseISO, startOfDay, endOfDay } from 'date-fns';
 import { DateRange } from 'react-day-picker';
-import type { ReportRow, DetailRow, ReportSortKey, DetailSortKey, BaseDetailData } from '@/types/report-types';
+import type { ReportRow, DetailRow, ReportSortKey, DetailSortKey } from '@/types/report-types';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import Papa from 'papaparse';
@@ -47,65 +47,36 @@ export const sortReportData = (data: ReportRow[], sortConfig: { key: ReportSortK
 export const sortAndCalculateDetails = (details: BaseDetailData[], totalDistance: number, sortConfig: { key: DetailSortKey; direction: 'asc' | 'desc' }): DetailRow[] => {
   const totalDuration = details.reduce((sum, d) => sum + d.duration, 0);
 
-  // First, compute sessionDistance for each detail
-  const withSession = details.map(detail => {
-    const explicitDistance = (detail as any).sessionDistance;
-    const sessionDistance = typeof explicitDistance === 'number' && !Number.isNaN(explicitDistance)
-      ? explicitDistance
-      : totalDuration > 0
-        ? (detail.duration / totalDuration) * totalDistance
-        : 0;
-    return { ...detail, sessionDistance };
+  // Step 1: Initial calculation (chronological)
+  const chronologicallyCalculated = [...details]
+    .sort((a, b) => a.startTime.localeCompare(b.startTime))
+    .map(detail => {
+      // NOTE: This is placeholder logic for mock data as pointed out.
+      // In a real scenario, this would come from actual trip segment data.
+      const sessionDistance = totalDuration > 0 ? (detail.duration / totalDuration) * totalDistance : 0;
+      return { ...detail, sessionDistance, cumulativeDistance: 0 };
+    });
+
+  // Step 2: Sort based on user's choice
+  const sorted = [...chronologicallyCalculated].sort((a, b) => {
+    const aValue = a[sortConfig.key];
+    const bValue = b[sortConfig.key];
+    if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+    if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+    return 0;
   });
 
-  // Compute cumulativeDistance in chronological order (based on startTime)
-  const chronological = [...withSession].sort(
-    (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
-  ); let cumulative = 0;
-  const withCumulative = chronological.map(d => {
-    cumulative += d.sessionDistance;
-    return { ...d, cumulativeDistance: cumulative };
+  // Step 3: Recalculate cumulative distance based on the final sorted order
+  let cumulativeDistance = 0;
+  return sorted.map(detail => {
+    cumulativeDistance += detail.sessionDistance;
+    return { ...detail, cumulativeDistance };
   });
-
-  // Now sort the final array based on the requested key. Sorting uses the already-computed cumulativeDistance when requested.
-  const sorted = [...withCumulative].sort((a, b) => {
-    const aValue = a[sortConfig.key as keyof typeof a];
-    const bValue = b[sortConfig.key as keyof typeof b];
-
-    // Handle undefined/null gracefully
-    if (aValue == null && bValue == null) return 0;
-    if (aValue == null) return sortConfig.direction === 'asc' ? -1 : 1;
-    if (bValue == null) return sortConfig.direction === 'asc' ? 1 : -1;
-
-    // If values are numbers, compare numerically
-    if (typeof aValue === 'number' && typeof bValue === 'number') {
-      return sortConfig.direction === 'asc' ? aValue - bValue : bValue - aValue;
-    }
-
-    // Handle date sorting
-    const aDate = new Date(aValue as string);
-    const bDate = new Date(bValue as string);
-
-    if (!isNaN(aDate.getTime()) && !isNaN(bDate.getTime())) {
-      return sortConfig.direction === 'asc'
-        ? aDate.getTime() - bDate.getTime()
-        : bDate.getTime() - aDate.getTime();
-    }
-
-    // Fallback to string compare
-    const aStr = String(aValue).toLowerCase();
-    const bStr = String(bValue).toLowerCase();
-
-    return sortConfig.direction === 'asc'
-      ? aStr.localeCompare(bStr)
-      : bStr.localeCompare(aStr);
-  });
-
-  return sorted;
 };
 
 const generateExportData = (data: ReportRow[]) => {
   return data.map(row => ({
+    'Date': row.date,
     'Vehicle ID': row.vehicleId,
     'Vehicle Name': row.vehicleName,
     'Distance (km)': (row.distance ?? 0).toFixed(1),
@@ -136,4 +107,32 @@ export const handleExportCSV = (data: ReportRow[]) => {
   link.click();
   document.body.removeChild(link);
   URL.revokeObjectURL(url); // Clean up blob URL
+};
+
+export const exportGenericPDF = (
+  title: string,
+  columns: string[],
+  rows: (string | number)[][],
+  filename: string
+) => {
+  if (rows.length === 0) return;
+  const doc = new jsPDF({ orientation: columns.length > 6 ? 'landscape' : 'portrait' });
+  doc.setFontSize(16);
+  doc.setTextColor(31, 41, 55);
+  doc.text(title, 14, 15);
+  doc.setFontSize(9);
+  doc.setTextColor(107, 114, 128);
+  doc.text(`Generated on: ${new Date().toLocaleString()} | Total Records: ${rows.length}`, 14, 22);
+
+  autoTable(doc, {
+    head: [columns],
+    body: rows.map(r => r.map(String)),
+    startY: 28,
+    headStyles: { fillColor: [31, 41, 55], textColor: [255, 255, 255], fontSize: 9, fontStyle: 'bold' },
+    bodyStyles: { fontSize: 8 },
+    alternateRowStyles: { fillColor: [249, 250, 251] },
+  });
+
+  const dateTag = new Date().toISOString().split('T')[0];
+  doc.save(`${filename}-${dateTag}.pdf`);
 };

@@ -87,7 +87,7 @@ export function DateRangePicker({
         setStartTime("00:00")
         const currentEndTime = format(new Date(), "HH:mm")
         setEndTime(currentEndTime)
-        
+
         setTempDate({
           from: mergeTime(selectedDay, "00:00"),
           to: undefined,
@@ -110,7 +110,7 @@ export function DateRangePicker({
 
       const from = newRange.from ? mergeTime(newRange.from, currentStartTime) : undefined
       const to = newRange.to ? mergeTime(newRange.to, currentEndTime) : undefined
-      
+
       setTempDate({ from, to })
     },
     [startTime, endTime, tempDate],
@@ -175,6 +175,22 @@ export function DateRangePicker({
   // Hard limit: nothing before 2 months ago, nothing after today
   const twoMonthsAgo = subMonths(new Date(), 2)
 
+  const renderTriggerLabel = () => {
+    if (!date?.from) return <span>Pick date range</span>
+    if (!date.to) return format(date.from, "dd MMM yyyy")
+
+    const sameDay = format(date.from, "yyyy-MM-dd") === format(date.to, "yyyy-MM-dd")
+    if (sameDay) {
+      return format(date.from, "dd MMM yyyy")
+    }
+
+    const sameYear = format(date.from, "yyyy") === format(date.to, "yyyy")
+    if (sameYear) {
+      return `${format(date.from, "dd MMM")} – ${format(date.to, "dd MMM yyyy")}`
+    }
+    return `${format(date.from, "dd MMM yy")} – ${format(date.to, "dd MMM yy")}`
+  }
+
   // ── Render ──────────────────────────────────────────────────────────────
   return (
     <div className={cn("grid gap-2", className)}>
@@ -184,7 +200,7 @@ export function DateRangePicker({
         <PopoverTrigger asChild>
           {showIconOnly ? (
             <Button id="date" variant="outline" size="icon" className="h-9 w-9">
-              <CalendarIcon className="h-4 w-4" />
+              <CalendarIcon className="h-4 w-4 text-muted-foreground" />
               <span className="sr-only">Pick a date</span>
             </Button>
           ) : (
@@ -192,40 +208,29 @@ export function DateRangePicker({
               id="date"
               variant="outline"
               className={cn(
-                "w-auto justify-start text-left font-normal",
+                "h-9 text-xs px-2.5 w-auto justify-start text-left font-normal bg-background",
                 !date && "text-muted-foreground",
               )}
             >
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {date?.from ? (
-                date.to ? (
-                  <>
-                    {format(date.from, "LLL dd, y")} –{" "}
-                    {format(date.to, "LLL dd, y")}
-                  </>
-                ) : (
-                  format(date.from, "LLL dd, y")
-                )
-              ) : (
-                <span>Pick a date</span>
-              )}
+              <CalendarIcon className="mr-1.5 h-3.5 w-3.5 text-muted-foreground shrink-0" />
+              <span className="truncate">{renderTriggerLabel()}</span>
             </Button>
           )}
         </PopoverTrigger>
 
         {/* ── Popover content ────────────────────────────────────────── */}
-        <PopoverContent className="w-auto p-0" align="end">
+        <PopoverContent className="w-auto p-0 shadow-lg border rounded-lg" align="end">
           <div className="flex flex-col sm:flex-row">
 
             {/* ── Left sidebar: presets ─────────────────────────────── */}
-            <div className="flex flex-col gap-1 border-b sm:border-b-0 sm:border-r p-3 min-w-[150px]">
+            <div className="flex flex-col gap-0.5 border-b sm:border-b-0 sm:border-r p-2 min-w-[125px] bg-muted/20">
               {presetRanges.map((r) => (
                 <Button
                   key={r.value}
                   variant="ghost"
                   size="sm"
                   className={cn(
-                    "justify-start text-sm font-normal h-8",
+                    "justify-start text-xs font-normal h-7 px-2.5 rounded-md",
                     activePreset === r.value &&
                       "bg-primary/10 text-primary font-medium",
                   )}
@@ -240,14 +245,14 @@ export function DateRangePicker({
                 variant="ghost"
                 size="sm"
                 className={cn(
-                  "justify-start text-sm font-normal h-8 mt-2",
+                  "justify-start text-xs font-normal h-7 px-2.5 mt-1 rounded-md",
                   activePreset === "custom" &&
                     "bg-primary/10 text-primary font-medium",
                 )}
                 onClick={() => setActivePreset("custom")}
               >
                 {activePreset === "custom" && (
-                  <Check className="mr-1.5 h-3.5 w-3.5" />
+                  <Check className="mr-1 h-3 w-3" />
                 )}
                 Custom
               </Button>
@@ -257,34 +262,34 @@ export function DateRangePicker({
             <div className="flex flex-col">
 
               {/* ── Date/Time header row ──────────────────────────────── */}
-              <div className="flex items-center justify-between gap-3 border-b px-4 py-3">
+              <div className="flex items-center justify-between gap-2 border-b px-3 py-2 bg-muted/10">
                 {/* From */}
-                <div className="flex flex-1 items-center gap-2 rounded-md border bg-background px-3 py-1.5 shadow-sm focus-within:ring-1 focus-within:ring-ring">
-                  <span className="text-sm tabular-nums text-muted-foreground select-none whitespace-nowrap">
-                    {tempDate?.from ? format(tempDate.from, "MMM dd, yyyy") : "-- / -- / ----"}
+                <div className="flex flex-1 items-center gap-1.5 rounded border bg-background px-2 py-1 shadow-sm focus-within:ring-1 focus-within:ring-ring">
+                  <span className="text-xs tabular-nums text-muted-foreground select-none whitespace-nowrap">
+                    {tempDate?.from ? format(tempDate.from, "dd MMM yyyy") : "-- / -- / ----"}
                   </span>
-                  <div className="h-4 w-px bg-border shrink-0" />
+                  <div className="h-3 w-px bg-border shrink-0" />
                   <Input
                     type="time"
                     value={startTime}
                     onChange={(e) => handleTimeChange("start", e.target.value)}
-                    className="h-7 w-full min-w-[110px] border-0 p-0 text-sm shadow-none focus-visible:ring-0"
+                    className="h-5 w-full min-w-[70px] border-0 p-0 text-xs shadow-none focus-visible:ring-0 text-center font-mono"
                   />
                 </div>
 
-                <span className="text-muted-foreground select-none">→</span>
+                <span className="text-xs text-muted-foreground select-none">→</span>
 
                 {/* To */}
-                <div className="flex flex-1 items-center gap-2 rounded-md border bg-background px-3 py-1.5 shadow-sm focus-within:ring-1 focus-within:ring-ring">
-                  <span className="text-sm tabular-nums text-muted-foreground select-none whitespace-nowrap">
-                    {tempDate?.to ? format(tempDate.to, "MMM dd, yyyy") : "-- / -- / ----"}
+                <div className="flex flex-1 items-center gap-1.5 rounded border bg-background px-2 py-1 shadow-sm focus-within:ring-1 focus-within:ring-ring">
+                  <span className="text-xs tabular-nums text-muted-foreground select-none whitespace-nowrap">
+                    {tempDate?.to ? format(tempDate.to, "dd MMM yyyy") : "-- / -- / ----"}
                   </span>
-                  <div className="h-4 w-px bg-border shrink-0" />
+                  <div className="h-3 w-px bg-border shrink-0" />
                   <Input
                     type="time"
                     value={endTime}
                     onChange={(e) => handleTimeChange("end", e.target.value)}
-                    className="h-7 w-full min-w-[110px] border-0 p-0 text-sm shadow-none focus-visible:ring-0"
+                    className="h-5 w-full min-w-[70px] border-0 p-0 text-xs shadow-none focus-visible:ring-0 text-center font-mono"
                   />
                 </div>
               </div>
@@ -298,15 +303,27 @@ export function DateRangePicker({
                 onSelect={handleCalendarSelect}
                 numberOfMonths={2}
                 disabled={{ before: twoMonthsAgo, after: new Date() }}
+                className="p-2"
+                classNames={{
+                  months: "flex flex-col sm:flex-row space-y-2 sm:space-x-3 sm:space-y-0",
+                  month: "space-y-2",
+                  caption_label: "text-xs font-semibold",
+                  nav_button: "h-6 w-6 bg-transparent p-0 opacity-60 hover:opacity-100",
+                  head_cell: "text-muted-foreground rounded-md w-7 font-normal text-[0.75rem]",
+                  cell: "relative p-0 text-center text-xs focus-within:relative focus-within:z-20 [&:has([aria-selected])]:bg-accent [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected].day-range-end)]:rounded-r-md",
+                  day: "h-7 w-7 p-0 font-normal text-xs aria-selected:opacity-100 rounded-md",
+                  row: "flex w-full mt-1",
+                }}
               />
 
               {/* ── Footer ────────────────────────────────────────────── */}
-              <div className="flex items-center justify-end gap-2 border-t p-3">
-                <Button variant="ghost" size="sm" onClick={handleCancel}>
+              <div className="flex items-center justify-end gap-1.5 border-t px-3 py-2 bg-muted/5">
+                <Button variant="ghost" size="sm" className="h-7 text-xs px-2.5" onClick={handleCancel}>
                   Cancel
                 </Button>
-                <Button 
-                  size="sm" 
+                <Button
+                  size="sm"
+                  className="h-7 text-xs px-3"
                   onClick={handleApply}
                   disabled={!!tempDate?.from && !tempDate?.to}
                 >

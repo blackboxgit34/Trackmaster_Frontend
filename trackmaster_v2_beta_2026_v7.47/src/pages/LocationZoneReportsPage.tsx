@@ -2,11 +2,10 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import NotFound from '@/components/page/NotFound';
 import EntryExitReportTable from '@/components/page/EntryExitReportTable';
-import ExitEntryReportTable from '@/components/page/ExitEntryReportTable';
 
 const tabs = [
-  { value: 'entry-exit-report', label: 'Entry / Exit Report', component: <EntryExitReportTable /> },
-  { value: 'exit-entry-report', label: 'Exit / Entry Report', component: <ExitEntryReportTable /> },
+  { value: 'entry-exit-report', label: 'Entry / Exit Report', component: <EntryExitReportTable initialMode="entry-exit" /> },
+  { value: 'exit-entry-report', label: 'Exit / Entry Report', component: <EntryExitReportTable initialMode="exit-entry" /> },
 ];
 
 const LocationZoneReportsPage = () => {

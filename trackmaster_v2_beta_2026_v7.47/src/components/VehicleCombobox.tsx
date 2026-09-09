@@ -45,43 +45,21 @@ const selectedVehicle = vehicles.find(
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className={cn('justify-start font-normal', className)}
+          className={cn('justify-start text-left font-normal', className)}
         >
-          <Car className="mr-2 h-4 w-4 text-muted-foreground" />
+          <Car className="mr-2 h-4 w-4 shrink-0 text-muted-foreground" />
           <span className="flex-1 text-left truncate">
-            {/* {selectedVehicle ? selectedVehicle.name : 'All Vehicles'} */}
-             {selectedVehicle ? selectedVehicle.label : 'All Vehicles'}
+            {selectedVehicle ? selectedVehicle.label : 'All Vehicles'}
           </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+      <PopoverContent className="w-[--radix-popover-trigger-width] min-w-[200px] p-0" align="start">
         <Command>
           <CommandInput placeholder="Search vehicle..." />
           <CommandList>
             <CommandEmpty>No vehicle found.</CommandEmpty>
-            {/* <CommandGroup>
-              {vehicles.map((vehicle) => (
-                <CommandItem
-                  key={vehicle.id}
-                  value={vehicle.name}
-                  onSelect={() => {
-                    onChange(vehicle.id);
-                    setOpen(false);
-                  }}
-                >
-                  <Check
-                    className={cn(
-                      'mr-2 h-4 w-4',
-                      value === vehicle.id ? 'opacity-100' : 'opacity-0'
-                    )}
-                  />
-                  {vehicle.name}
-                </CommandItem>
-              ))}
-            </CommandGroup> */}
-  
-                    <CommandGroup>
+            <CommandGroup>
               {vehicles.map((vehicle) => (
                 <CommandItem
                   key={vehicle.value}
@@ -90,16 +68,17 @@ const selectedVehicle = vehicles.find(
                     onChange(vehicle.value);
                     setOpen(false);
                   }}
+                  className="flex items-center justify-between text-left cursor-pointer px-2.5 py-1.5"
                 >
+                  <span className="truncate text-left flex-1">{vehicle.label}</span>
                   <Check
                     className={cn(
-                      'mr-2 h-4 w-4',
+                      'ml-2 h-4 w-4 shrink-0',
                       value === vehicle.value
                         ? 'opacity-100'
                         : 'opacity-0'
                     )}
                   />
-                  {vehicle.label}
                 </CommandItem>
               ))}
             </CommandGroup>

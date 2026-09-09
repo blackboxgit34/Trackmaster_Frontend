@@ -84,6 +84,15 @@ const AddPoi = ({ onAddPoi }: AddPoiProps) => {
     }
   }, [searchBox, map]);
 
+  const onMarkerDragEnd = useCallback((e: google.maps.MapMouseEvent) => {
+    if (e.latLng) {
+      const pos = { lat: e.latLng.lat(), lng: e.latLng.lng() };
+      setMarkerPosition(pos);
+      setLat(pos.lat.toFixed(6));
+      setLng(pos.lng.toFixed(6));
+    }
+  }, []);
+  
   const handleReset = () => {
     setRadius(200);
     setPoiMethod('location');
@@ -234,7 +243,11 @@ const AddPoi = ({ onAddPoi }: AddPoiProps) => {
         >
           {markerPosition && (
             <>
-              <Marker position={markerPosition} />
+              <Marker
+                position={markerPosition}
+                draggable={true}
+                onDragEnd={onMarkerDragEnd}
+              />
               <Circle
                 center={markerPosition}
                 radius={radius}
@@ -255,7 +268,11 @@ const AddPoi = ({ onAddPoi }: AddPoiProps) => {
           {/* Existing marker while creating POI */}
           {markerPosition && (
             <>
-              <Marker position={markerPosition} />
+              <Marker
+                position={markerPosition}
+                draggable={true}
+                onDragEnd={onMarkerDragEnd}
+              />
               <Circle
                 center={markerPosition}
                 radius={radius}
@@ -429,7 +446,7 @@ const AddPoi = ({ onAddPoi }: AddPoiProps) => {
                 Instructions:
               </h3>
               <ol className="list-decimal list-inside text-xs text-muted-foreground space-y-1">
-                <li>Click on the map to place a marker or search for a location.</li>
+                <li>Click or drag the marker on the map, or search for a location.</li>
                 <li>Add the location name in the text-box and click Create.</li>
                 <li>All saved POIs will be visible on the "Manage POI" page.</li>
               </ol>

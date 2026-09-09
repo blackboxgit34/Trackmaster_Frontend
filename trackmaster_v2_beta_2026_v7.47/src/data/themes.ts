@@ -43,13 +43,13 @@ export const baseCssVars = {
 
 export const defaultThemeCssVars = {
   light: {
-    '--primary': '248 83% 53%',
+    '--primary': '217.2 91.2% 59.8%', // Matching #3b82f6 exactly
     '--primary-foreground': '0 0% 100%',
     '--sidebar': '0 0% 0%',
     '--sidebar-foreground': '60 9.1% 97.8%',
   },
   dark: {
-    '--primary': '248 83% 53%',
+    '--primary': '217.2 91.2% 59.8%', // Matching #3b82f6 exactly
     '--primary-foreground': '0 0% 100%',
     '--sidebar': '0 0% 0%',
     '--sidebar-foreground': '60 9.1% 97.8%',

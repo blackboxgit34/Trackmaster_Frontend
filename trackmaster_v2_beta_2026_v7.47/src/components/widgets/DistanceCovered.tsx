@@ -9,7 +9,6 @@ import {
 } from 'recharts';
 
 import {
-  CalendarIcon,
   ChevronLeft,
   ChevronRight,
   Info,
@@ -17,18 +16,11 @@ import {
   ArrowDownNarrowWide
 } from 'lucide-react';
 
-import { format } from 'date-fns';
+import type { DateRange } from 'react-day-picker';
 import { API_BASE_URL } from '@/config/Api';
 
 import { Button } from '@/components/ui/button';
-import { Calendar } from '@/components/ui/calendar';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
-
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger
-} from '@/components/ui/popover';
 
 import {
   Card,
@@ -46,14 +38,13 @@ import {
 
 type Props = {
   data: any[];
-  dateRange: {
-    start: Date;
-    end: Date;
+  dateRange?: {
+    start?: Date;
+    end?: Date;
+    from?: Date;
+    to?: Date;
   };
-  setDateRange: (range: {
-    start: Date;
-    end: Date;
-  }) => void;
+  setDateRange?: (range: any) => void;
 };
 
 /* ---------------- TOOLTIP ---------------- */
@@ -118,29 +109,42 @@ const DistanceCovered = ({
   dateRange,
   setDateRange
 }: Props) => {
-  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
-
   const [sortOrder, setSortOrder] =
     useState<'asc' | 'desc' | 'default'>('default');
 
   const [data, setData] = useState<any[]>(initialData || []);
   const [loading, setLoading] = useState(false);
-  const [selecting, setSelecting] = useState<'start' | 'end'>('start');
 
-    useEffect(() => {
+  useEffect(() => {
     if (initialData?.length) {
       setData(initialData);
     }
   }, [initialData]);
 
-  /* ---------------- TEMP RANGE ---------------- */
-  const [tempRange, setTempRange] = useState<{
-    start: Date | null;
-    end: Date | null;
-  }>({
-    start: null,
-    end: null
+  // Fallback internal date range if not controlled
+  const [internalDateRange, setInternalDateRange] = useState<DateRange | undefined>(() => {
+    if (dateRange) {
+      const from = (dateRange as any).from || (dateRange as any).start;
+      const to = (dateRange as any).to || (dateRange as any).end;
+      if (from || to) return { from, to };
+    }
+    const now = new Date();
+    const start = new Date(now);
+    start.setDate(start.getDate() - 1);
+    start.setHours(0, 0, 0, 0);
+    return { from: start, to: now };
   });
+
+  const selectedDateRange: DateRange | undefined = useMemo(() => {
+    if (dateRange) {
+      const from = (dateRange as any).from || (dateRange as any).start;
+      const to = (dateRange as any).to || (dateRange as any).end;
+      if (from || to) {
+        return { from, to };
+      }
+    }
+    return internalDateRange;
+  }, [dateRange, internalDateRange]);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -206,16 +210,24 @@ const DistanceCovered = ({
     }
   };
 
- 
-  /* ---------------- PREFILL TEMP RANGE ---------------- */
-  useEffect(() => {
-    if (isCalendarOpen) {
-      setTempRange({
-        start: dateRange.start,
-        end: dateRange.end
+  const handleDateChange = async (newRange: DateRange | undefined) => {
+    setInternalDateRange(newRange);
+    if (!newRange?.from) return;
+
+    const start = newRange.from;
+    const end = newRange.to || newRange.from;
+
+    if (setDateRange) {
+      setDateRange({
+        start,
+        end,
+        from: start,
+        to: end
       });
     }
-  }, [isCalendarOpen, dateRange]);
+
+    await fetchData({ start, end });
+  };
 
   /* ---------------- CHART DATA ---------------- */
   const chartData = useMemo(() => {
@@ -253,7 +265,7 @@ const DistanceCovered = ({
     <Card className="relative flex flex-col overflow-hidden">
 
       {/* HEADER */}
-      <CardHeader>
+      <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 space-y-0 p-6 pb-2">
         <div className="flex items-center gap-2">
           <CardTitle className="text-base">
             Distance Covered
@@ -273,147 +285,60 @@ const DistanceCovered = ({
             </UITooltip>
           </TooltipProvider>
         </div>
+
+        {/* CONTROLS */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* REPORTS DATE RANGE PICKER */}
+          <DateRangePicker
+            date={selectedDateRange}
+            setDate={handleDateChange}
+          />
+
+          {/* SORT ASC */}
+          <Button
+            size="icon"
+            variant={sortOrder === 'asc' ? 'secondary' : 'outline'}
+            onClick={() =>
+              setSortOrder((p) => (p === 'asc' ? 'default' : 'asc'))
+            }
+            title="Sort Ascending"
+          >
+            <ArrowUpNarrowWide className="h-4 w-4" />
+          </Button>
+
+          {/* SORT DESC */}
+          <Button
+            size="icon"
+            variant={sortOrder === 'desc' ? 'secondary' : 'outline'}
+            onClick={() =>
+              setSortOrder((p) => (p === 'desc' ? 'default' : 'desc'))
+            }
+            title="Sort Descending"
+          >
+            <ArrowDownNarrowWide className="h-4 w-4" />
+          </Button>
+
+          {/* SCROLL LEFT */}
+          <Button
+            size="icon"
+            variant="outline"
+            onClick={() => scroll('left')}
+            title="Scroll Left"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+
+          {/* SCROLL RIGHT */}
+          <Button
+            size="icon"
+            variant="outline"
+            onClick={() => scroll('right')}
+            title="Scroll Right"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
       </CardHeader>
-
-      {/* CONTROLS */}
-      <div className="absolute right-4 top-4 z-10 flex items-center gap-2">
-
-        {/* CALENDAR */}
-        <Popover
-          open={isCalendarOpen}
-          onOpenChange={setIsCalendarOpen}
-        >
-          <PopoverTrigger asChild>
-            <Button variant="outline">
-              <CalendarIcon className="mr-2 h-4 w-4" />
-
-              {format(dateRange.start, 'LLL dd, yyyy')} -{' '}
-              {format(dateRange.end, 'LLL dd, yyyy')}
-            </Button>
-          </PopoverTrigger>
-
-          <PopoverContent className="w-auto p-0">
-
-            <Calendar
-              mode="range"
-              selected={{
-                from: tempRange.start || undefined,
-                to: tempRange.end || undefined
-              }}
-              disabled={(date) => date >= new Date()}
-              onSelect={(range, selectedDay) => {
-                if (!selectedDay) return;
-
-                // FIRST CLICK -> START
-                if (selecting === 'start') {
-                  setTempRange({
-                    start: selectedDay,
-                    end: null
-                  });
-
-                  setSelecting('end');
-                  return;
-                }
-
-                // SECOND CLICK -> END
-                if (selecting === 'end') {
-                  const start = tempRange.start;
-
-                  if (!start) return;
-
-                  if (selectedDay < start) {
-                    setTempRange({
-                      start: selectedDay,
-                      end: start
-                    });
-                  } else {
-                    setTempRange({
-                      start,
-                      end: selectedDay
-                    });
-                  }
-
-                  setSelecting('start');
-                }
-              }}
-              numberOfMonths={2}
-            />
-            {/* APPLY BUTTONS */}
-            <div className="flex justify-end gap-2 border-t p-3">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setIsCalendarOpen(false)}
-              >
-                Cancel
-              </Button>
-
-              <Button
-                size="sm"
-                disabled={!tempRange.start || !tempRange.end}
-                onClick={async () => {
-                if (tempRange.start && tempRange.end) {
-                  const newRange = {
-                    start: tempRange.start,
-                    end: tempRange.end
-                  };
-
-                  setDateRange(newRange);
-
-                  // CLOSE CALENDAR IMMEDIATELY
-                  setIsCalendarOpen(false);
-
-                  // FETCH IN BACKGROUND
-                  await fetchData(newRange);
-                }
-              }}
-              >
-                Apply
-              </Button>
-            </div>
-          </PopoverContent>
-        </Popover>
-
-        {/* SORT ASC */}
-        <Button
-          size="icon"
-          variant={sortOrder === 'asc' ? 'secondary' : 'outline'}
-          onClick={() =>
-            setSortOrder((p) => (p === 'asc' ? 'default' : 'asc'))
-          }
-        >
-          <ArrowUpNarrowWide className="h-4 w-4" />
-        </Button>
-
-        {/* SORT DESC */}
-        <Button
-          size="icon"
-          variant={sortOrder === 'desc' ? 'secondary' : 'outline'}
-          onClick={() =>
-            setSortOrder((p) => (p === 'desc' ? 'default' : 'desc'))
-          }
-        >
-          <ArrowDownNarrowWide className="h-4 w-4" />
-        </Button>
-
-        {/* SCROLL LEFT */}
-        <Button
-          size="icon"
-          variant="outline"
-          onClick={() => scroll('left')}
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </Button>
-
-        {/* SCROLL RIGHT */}
-        <Button
-          size="icon"
-          variant="outline"
-          onClick={() => scroll('right')}
-        >
-          <ChevronRight className="h-4 w-4" />
-        </Button>
-      </div>
 
       {/* CONTENT */}
       <CardContent className="relative flex-1 p-6 pt-0">

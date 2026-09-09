@@ -10,6 +10,7 @@ import { GoogleMap, OverlayView, Polyline, Marker } from '@react-google-maps/api
 import { getIconUrl, calculateBearing, getStatusColor, getVehiclePngUrl } from '@/lib/map-utils';
 import { cn } from '@/lib/utils';
 import { useEffect, useRef, useState } from 'react';
+import { useSettings } from '@/context/SettingsContext';
 
 interface VehicleDetailDialogProps {
   open: boolean;
@@ -43,6 +44,8 @@ const mapOptions = {
 };
 
 const VehicleDetailDialog = ({ open, onOpenChange, vehicle }: VehicleDetailDialogProps) => {
+  const { uiSettings } = useSettings();
+  const showDriverName = uiSettings?.showDriverName ?? true;
   const [pathPoints, setPathPoints] = useState<{ lat: number; lng: number }[]>([]);
   const [markerPosition, setMarkerPosition] = useState<{ lat: number; lng: number } | null>(null);
   const [currentBearing, setCurrentBearing] = useState(0);
@@ -55,12 +58,20 @@ const VehicleDetailDialog = ({ open, onOpenChange, vehicle }: VehicleDetailDialo
       return;
     }
 
-    const history = vehicle.latLongHistory?.length
-      ? vehicle.latLongHistory.map((point) => ({ lat: point.lat, lng: point.lng }))
-      : [{ lat: vehicle.lat, lng: vehicle.lng }];
+    const rawHistory = vehicle.latLongHistory?.length
+      ? vehicle.latLongHistory
+          .map((point) => ({ lat: Number(point.lat), lng: Number(point.lng) }))
+          .filter((p) => !isNaN(p.lat) && !isNaN(p.lng) && p.lat !== 0 && p.lng !== 0)
+      : (vehicle.lat && vehicle.lng ? [{ lat: Number(vehicle.lat), lng: Number(vehicle.lng) }] : []);
+
+    let history = rawHistory;
+    if (rawHistory.length > 250) {
+      const step = Math.ceil(rawHistory.length / 250);
+      history = rawHistory.filter((_, idx) => idx % step === 0 || idx === rawHistory.length - 1);
+    }
 
     setPathPoints(history);
-    setMarkerPosition(history[0]);
+    setMarkerPosition(history[0] || (vehicle.lat && vehicle.lng ? { lat: Number(vehicle.lat), lng: Number(vehicle.lng) } : null));
     setCurrentBearing(0);
   }, [vehicle]);
 
@@ -84,7 +95,10 @@ const VehicleDetailDialog = ({ open, onOpenChange, vehicle }: VehicleDetailDialo
       setCurrentBearing(calculateBearing(prev.lat, prev.lng, next.lat, next.lng));
 
       if (mapRef.current) {
-        mapRef.current.panTo(next);
+        const bounds = mapRef.current.getBounds();
+        if (bounds && !bounds.contains(new window.google.maps.LatLng(next.lat, next.lng))) {
+          mapRef.current.panTo(next);
+        }
       }
 
       currentIndex = nextIndex;
@@ -95,7 +109,7 @@ const VehicleDetailDialog = ({ open, onOpenChange, vehicle }: VehicleDetailDialo
     };
   }, [open, pathPoints]);
 
-  if (!vehicle) return null;
+  if (!open || !vehicle) return null;
 
   const vehicleDetails = actualVehicles.find(m => m.id === vehicle.vehicleNo);
   const position = markerPosition ?? { lat: vehicle.lat, lng: vehicle.lng };
@@ -244,8 +258,12 @@ const VehicleDetailDialog = ({ open, onOpenChange, vehicle }: VehicleDetailDialo
               </div>
               <div className="space-y-2 pt-4 border-t">
                 <DailyStatusItem label="BBID" value={vehicle.id} />
-                <DailyStatusItem label="Driver Name" value={vehicle.driverName} />
-                <DailyStatusItem label="Driver Mobile" value={vehicle.mob_no} />
+                {showDriverName && (
+                  <>
+                    <DailyStatusItem label="Driver Name" value={vehicle.driverName} />
+                    <DailyStatusItem label="Driver Mobile" value={vehicle.mob_no} />
+                  </>
+                )}
                 <DailyStatusItem label="Coordinates" value={`${vehicle.lat}, ${vehicle.lng}`} />
                 <DailyStatusItem label="Two Way Comms" value="5754160173629" />
               </div>

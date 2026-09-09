@@ -45,12 +45,20 @@ const LiveLocationDialog = ({ open, onOpenChange, vehicle }: LiveLocationDialogP
       return;
     }
 
-    const history = vehicle.latLongHistory?.length
-      ? vehicle.latLongHistory.map((point) => ({ lat: point.lat, lng: point.lng }))
-      : [{ lat: vehicle.lat, lng: vehicle.lng }];
+    const rawHistory = vehicle.latLongHistory?.length
+      ? vehicle.latLongHistory
+          .map((point) => ({ lat: Number(point.lat), lng: Number(point.lng) }))
+          .filter((p) => !isNaN(p.lat) && !isNaN(p.lng) && p.lat !== 0 && p.lng !== 0)
+      : (vehicle.lat && vehicle.lng ? [{ lat: Number(vehicle.lat), lng: Number(vehicle.lng) }] : []);
+
+    let history = rawHistory;
+    if (rawHistory.length > 250) {
+      const step = Math.ceil(rawHistory.length / 250);
+      history = rawHistory.filter((_, idx) => idx % step === 0 || idx === rawHistory.length - 1);
+    }
 
     setPathPoints(history);
-    setMarkerPosition(history[0]);
+    setMarkerPosition(history[0] || (vehicle.lat && vehicle.lng ? { lat: Number(vehicle.lat), lng: Number(vehicle.lng) } : null));
     setCurrentBearing(0);
     setLastUpdated(new Date());
   }, [vehicle]);
@@ -74,7 +82,10 @@ const LiveLocationDialog = ({ open, onOpenChange, vehicle }: LiveLocationDialogP
       setCurrentBearing(calculateBearing(prev.lat, prev.lng, next.lat, next.lng));
       setLastUpdated(new Date());
       if (mapRef.current) {
-        mapRef.current.panTo(next);
+        const bounds = mapRef.current.getBounds();
+        if (bounds && !bounds.contains(new window.google.maps.LatLng(next.lat, next.lng))) {
+          mapRef.current.panTo(next);
+        }
       }
       currentIndex = nextIndex;
     }, 1000);
@@ -84,7 +95,7 @@ const LiveLocationDialog = ({ open, onOpenChange, vehicle }: LiveLocationDialogP
     };
   }, [open, pathPoints]);
 
-  if (!vehicle) return null;
+  if (!open || !vehicle) return null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -152,26 +163,26 @@ const LiveLocationDialog = ({ open, onOpenChange, vehicle }: LiveLocationDialogP
           )}
           <Card className="absolute bottom-4 left-4 right-4 shadow-lg">
             <CardContent className="p-3 grid grid-cols-5 gap-2 text-center">
-                <div>
-                    <p className="text-xs text-muted-foreground">STATUS</p>
-                    <p className="text-sm font-bold">{vehicle.status}</p>
-                </div>
-                <div>
-                    <p className="text-xs text-muted-foreground">WORKING HRS</p>
-                    <p className="text-sm font-bold">{vehicle.workingHours.toFixed(1)}</p>
-                </div>
-                <div>
-                    <p className="text-xs text-muted-foreground">FUEL</p>
-                    <p className="text-sm font-bold">{vehicle.fuelLevel}%</p>
-                </div>
-                <div>
-                    <p className="text-xs text-muted-foreground">ENGINE TEMP</p>
-                    <p className="text-sm font-bold">{vehicle.engineTemp}°C</p>
-                </div>
-                <div>
-                    <p className="text-xs text-muted-foreground">HYDRAULIC TEMP</p>
-                    <p className="text-sm font-bold">{vehicle.hydraulicTemp}°C</p>
-                </div>
+              <div>
+                <p className="text-xs text-muted-foreground">STATUS</p>
+                <p className="text-sm font-bold">{vehicle.status}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">WORKING HRS</p>
+                <p className="text-sm font-bold">{vehicle.workingHours.toFixed(1)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">FUEL</p>
+                <p className="text-sm font-bold">{vehicle.fuelLevel}%</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">ENGINE TEMP</p>
+                <p className="text-sm font-bold">{vehicle.engineTemp}°C</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">HYDRAULIC TEMP</p>
+                <p className="text-sm font-bold">{vehicle.hydraulicTemp}°C</p>
+              </div>
             </CardContent>
           </Card>
         </div>

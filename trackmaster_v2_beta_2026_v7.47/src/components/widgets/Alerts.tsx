@@ -125,7 +125,7 @@ const Alerts = () => {
             const searchParams = new URLSearchParams();
             if (fromDate) searchParams.set('from', fromDate);
             if (toDate) searchParams.set('to', toDate);
-            const linkTo = `/alerts/${alert.id}?${searchParams.toString()}`;
+            const linkTo = searchParams.toString() ? `/alerts?${searchParams.toString()}` : '/alerts';
 
             return (
               <Link

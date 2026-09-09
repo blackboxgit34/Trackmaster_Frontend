@@ -69,13 +69,14 @@ export interface Vehicle {
 
 //========= for Speed Analysis =============
 export interface SpeedEvent {
-  id: string;
+  id: string | number;
   dateTime: string;
   location: string;
   latitude: number;
   longitude: number;
   speed: number; // km/h
-  duration: number; // in seconds
+  duration?: number | string; // in seconds or formatted string
+  km?: number | string; // in km
 }
 
 export interface VehicleSpeedSummary {

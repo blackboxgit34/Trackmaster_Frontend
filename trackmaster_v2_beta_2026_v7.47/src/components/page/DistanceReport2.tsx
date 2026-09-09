@@ -25,6 +25,9 @@ import {
 } from 'date-fns';
 import DistanceReportToolbar from './reports/DistanceReportToolbar';
 import { useDistanceReportData } from '@/hooks/useDistanceReportData';
+import { StatusBadge } from './LiveStatusTable';
+import { getVehicleStatusList } from '@/hooks/useApi';
+import { liveStatusData } from '@/data/mockData';
 // import { API_BASE_URL } from '@/config/Api'; // KPI summary — disabled
 import type { ReportSortKey } from '@/types/report-types';
 
@@ -235,7 +238,7 @@ const DistanceReport2 = () => {
   //   from: subWeeks(new Date(), 1),
   //   to: new Date(),
   // });
-const [dateRange, setDateRange] = useState<DateRange | undefined>({from: startOfDay(new Date()), to: new Date()});
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({ from: startOfDay(new Date()), to: new Date() });
   const [selectedVehicle, setSelectedVehicle] = useState('');
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [pageIndex, setPageIndex] = useState(0);
@@ -271,6 +274,46 @@ const [dateRange, setDateRange] = useState<DateRange | undefined>({from: startOf
   useEffect(() => {
     setPageIndex(0);
   }, [dateRange, selectedVehicle]);
+
+  // Map of vehicleId/vehicleName -> live status ('Moving' | 'Parked' | etc.)
+  const [vehicleStatusMap, setVehicleStatusMap] = useState<Record<string, string>>(() => {
+    const map: Record<string, string> = {};
+    (liveStatusData || []).forEach((v: any) => {
+      if (v.id) map[v.id] = v.status;
+      if (v.vehicleNo) map[v.vehicleNo] = v.status;
+    });
+    return map;
+  });
+
+  useEffect(() => {
+    const fetchStatuses = async () => {
+      try {
+        const auth = JSON.parse(localStorage.getItem('trackmaster-auth') || '{}');
+        const custId = Number(auth.custId ?? 0) || 0;
+        const list = await getVehicleStatusList({
+          pageName: 'livestatus',
+          CustId: custId,
+          requestModel: {
+            CustId: custId,
+            iDisplayStart: 0,
+            iDisplayLength: 9999,
+          },
+        });
+        if (Array.isArray(list) && list.length > 0) {
+          const map: Record<string, string> = {};
+          list.forEach((v) => {
+            if (v.id) map[v.id] = v.status;
+            if (v.vehicleNo) map[v.vehicleNo] = v.status;
+          });
+          setVehicleStatusMap((prev) => ({ ...prev, ...map }));
+        }
+      } catch (err) {
+        console.error('Failed to load vehicle statuses in DistanceReport2', err);
+      }
+    };
+
+    fetchStatuses();
+  }, []);
 
   /* ── KPI summary useEffects — disabled (uncomment to re-enable) ─────────────
 
@@ -621,10 +664,16 @@ const [dateRange, setDateRange] = useState<DateRange | undefined>({from: startOf
           : `${firstDate} to ${lastDate}`
         : filterDateDisplay;
 
+      const vehicleStatus =
+        vehicleStatusMap[row.vehicleId] ||
+        vehicleStatusMap[row.vehicleName] ||
+        (row as any).status ||
+        'Parked';
+
       rows.push({
         id: idCounter++,
         vehicleId: row.vehicleId,
-        status: 'Active',
+        status: vehicleStatus,
         statusColor: 'bg-green-500',
         statusBg: 'bg-green-50',
         statusText: 'text-green-700',
@@ -646,7 +695,7 @@ const [dateRange, setDateRange] = useState<DateRange | undefined>({from: startOf
     });
 
     return rows;
-  }, [reportRows, detailRows, dateRange]);
+  }, [reportRows, detailRows, dateRange, vehicleStatusMap]);
 
   const totalPages = Math.ceil(totalRows / itemsPerPage);
 
@@ -665,8 +714,8 @@ const [dateRange, setDateRange] = useState<DateRange | undefined>({from: startOf
         </div>
 
         <DistanceReportToolbar
-           dateRange={dateRange}
-           setDateRange={setDateRange}
+          dateRange={dateRange}
+          setDateRange={setDateRange}
           selectedVehicle={selectedVehicle}
           setSelectedVehicle={setSelectedVehicle}
           onExportPDF={handleExportPDF}
@@ -771,15 +820,7 @@ const [dateRange, setDateRange] = useState<DateRange | undefined>({from: startOf
           >
             {/* Top Row */}
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <span className="rounded-full bg-blue-600 px-2.5 py-0.5 text-xs font-semibold text-white">
-                  {item.vehicleId}
-                </span>
-                <div className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${item.statusBg} ${item.statusText} ${item.statusBorder}`}>
-                  <span className={`h-1.5 w-1.5 rounded-full ${item.statusColor}`} />
-                  {item.status}
-                </div>
-              </div>
+              <StatusBadge status={item.status} />
               <div className="flex items-center gap-1.5 text-sm font-medium text-slate-500">
                 <Clock className="h-4 w-4" />
                 {item.date}
@@ -839,7 +880,7 @@ const [dateRange, setDateRange] = useState<DateRange | undefined>({from: startOf
               </button>
             </div>
 
-             {/* Dropdown Content */}
+            {/* Dropdown Content */}
             {expandedId === item.id && item.timeline && item.timeline.length > 0 && (
               <div className="mt-4 border-t border-slate-200 pt-4">
                 <h4 className="text-[10px] font-bold text-slate-900 mb-2 uppercase tracking-wider">Activity Timeline</h4>

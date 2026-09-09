@@ -26,13 +26,13 @@ import { LoadScript } from '@react-google-maps/api';
 import { GOOGLE_MAPS_API_KEY } from '@/config/maps';
 import { useApi } from '@/hooks/useApi';
 import { getIconUrl, getMinimalDotUrl, getVehiclePngUrl } from '@/lib/map-utils';
-import type {LiveVehicleStatus,VehicleStatus} from '@/types';
+import type { LiveVehicleStatus, VehicleStatus } from '@/types';
 import { getVehicleStatusList } from '@/hooks/useApi';
 import { fetchAndCalculatePlaybackData } from '@/lib/playback-utils';
 
 const libraries: ('drawing' | 'places')[] = ['drawing', 'places'];
 
-  const VehicleOnMap = () => {
+const VehicleOnMap = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
   const [isDataSidebarOpen, setIsDataSidebarOpen] = useState(false);
@@ -51,98 +51,98 @@ const libraries: ('drawing' | 'places')[] = ['drawing', 'places'];
   // State for vehicle type filter search
   const [typeSearch, setTypeSearch] = useState('');
   const [vehicleExtraDetails, setVehicleExtraDetails] =
-  useState<Partial<LiveVehicleStatus>>({});
+    useState<Partial<LiveVehicleStatus>>({});
   // calling API to get vehicle on map
   const getLiveStatusData = useCallback(async () => {
-  const auth = JSON.parse(localStorage.getItem("trackmaster-auth") || "{}");
-  return await getVehicleStatusList({
-    pageName: 'vehonmap',
-    CustId: auth.custId,
-  });
+    const auth = JSON.parse(localStorage.getItem("trackmaster-auth") || "{}");
+    return await getVehicleStatusList({
+      pageName: 'vehonmap',
+      CustId: auth.custId,
+    });
   }, []);
 
   // Data fetching
-  const { data: liveStatusData, loading, refetch} = useApi(getLiveStatusData);
+  const { data: liveStatusData, loading, refetch } = useApi(getLiveStatusData);
   const selectedVehicle = useMemo(() => {
     if (!selectedVehicleId || !liveStatusData) return null;
     return liveStatusData.find(m => m.id === selectedVehicleId);
   }, [selectedVehicleId, liveStatusData]);
 
-    
+
   const refreshPlaybackData = useCallback(async () => {
 
-  try {
+    try {
 
-    if (!selectedVehicle?.bbid) return;
+      if (!selectedVehicle?.bbid) return;
 
-    const playbackStats =
-      await fetchAndCalculatePlaybackData(
-        selectedVehicle.bbid,
-        new Date()
+      const playbackStats =
+        await fetchAndCalculatePlaybackData(
+          selectedVehicle.bbid,
+          new Date()
+        );
+
+      setVehicleExtraDetails({
+        workingHours: playbackStats.drivingTime || 0,
+        idlingHours: playbackStats.totalIdlingTime || 0,
+        stoppageTime: playbackStats.totalStoppageTime || 0,
+      });
+
+    } catch (error) {
+
+      console.error(
+        'Failed to refresh playback data',
+        error
       );
 
-    setVehicleExtraDetails({
-      workingHours: playbackStats.drivingTime || 0,
-      idlingHours: playbackStats.totalIdlingTime || 0,
-      stoppageTime: playbackStats.totalStoppageTime || 0,
-    });
-
-  } catch (error) {
-
-    console.error(
-      'Failed to refresh playback data',
-      error
-    );
-
-  }
-
-}, [selectedVehicle]);
-  //Auto-refresh logic
-useEffect(() => {
-
-  if (!autoRefresh) return;
-
-  const intervalId = setInterval(async () => {
-
-    // Refresh vehicle list/map
-    await refetch();
-
-    // Refresh playback only if sidebar open
-    if (isDataSidebarOpen && selectedVehicle) {
-      await refreshPlaybackData();
     }
 
-  }, 60000);
+  }, [selectedVehicle]);
+  //Auto-refresh logic
+  useEffect(() => {
 
-  return () => clearInterval(intervalId);
+    if (!autoRefresh) return;
 
-}, [
-  autoRefresh,
-  isDataSidebarOpen,
-  selectedVehicle,
-  refreshPlaybackData,
-  refetch
-]);
+    const intervalId = setInterval(async () => {
+
+      // Refresh vehicle list/map
+      await refetch();
+
+      // Refresh playback only if sidebar open
+      if (isDataSidebarOpen && selectedVehicle) {
+        await refreshPlaybackData();
+      }
+
+    }, 60000);
+
+    return () => clearInterval(intervalId);
+
+  }, [
+    autoRefresh,
+    isDataSidebarOpen,
+    selectedVehicle,
+    refreshPlaybackData,
+    refetch
+  ]);
 
   // Handle vehicle from URL parameter
-    useEffect(() => {
-      const vehicleFromUrl = searchParams.get('vehicle');
-      if (vehicleFromUrl && liveStatusData) {
-        const vehicle = liveStatusData.find(m => m.vehicleNo === vehicleFromUrl);
-        if (vehicle) {
-          setSelectedVehicleId(vehicle.id);
-          setIsDataSidebarOpen(true);
-        }
+  useEffect(() => {
+    const vehicleFromUrl = searchParams.get('vehicle');
+    if (vehicleFromUrl && liveStatusData) {
+      const vehicle = liveStatusData.find(m => m.vehicleNo === vehicleFromUrl);
+      if (vehicle) {
+        setSelectedVehicleId(vehicle.id);
+        setIsDataSidebarOpen(true);
       }
-    }, [searchParams, liveStatusData]);
+    }
+  }, [searchParams, liveStatusData]);
 
-    const { allStatuses, allTypes } = useMemo(() => {
-      if (!liveStatusData) return { allStatuses: [], allTypes: [] };
-      return {
-        allStatuses: [...new Set(liveStatusData.map(m => m.status))],
-        allTypes: [...new Set(liveStatusData.map(m => m.type))],
-      };
-    }, [liveStatusData]);
+  const { allStatuses, allTypes } = useMemo(() => {
+    if (!liveStatusData) return { allStatuses: [], allTypes: [] };
+    return {
+      allStatuses: [...new Set(liveStatusData.map(m => m.status))],
+      allTypes: [...new Set(liveStatusData.map(m => m.type))],
+    };
+  }, [liveStatusData]);
 
   const filteredVehicles = useMemo(() => {
     if (!liveStatusData) return [];
@@ -155,12 +155,12 @@ useEffect(() => {
       return matchesSearch && matchesStatus && matchesType;
     });
   }, [liveStatusData, searchTerm, selectedStatuses, selectedTypes]);
-const handleSelectVehicle = useCallback((vehicleId: string) => {
+  const handleSelectVehicle = useCallback((vehicleId: string) => {
     setSelectedVehicleId(vehicleId);
     setIsDataSidebarOpen(true);
   }, []);
-  
-  
+
+
 
   const handleStatusChange = (status: VehicleStatus) => {
     setSelectedStatuses(prev => {
@@ -306,23 +306,23 @@ const handleSelectVehicle = useCallback((vehicleId: string) => {
                 <Loader className="animate-spin text-muted-foreground" />
               </div>
             ) : (
-                <div className="p-2 space-y-1 relative">
-                  {loading && (
-                    <div className="absolute top-2 right-2 z-10">
-                      <Loader className="animate-spin h-4 w-4" />
-                    </div>
-                  )}
-                  {filteredVehicles.map(vehicle => (
-                      <div
-                      key={vehicle.id}
-                      onClick={() => handleSelectVehicle(vehicle.id)}
-                      className={cn(
+              <div className="p-2 space-y-1 relative">
+                {loading && (
+                  <div className="absolute top-2 right-2 z-10">
+                    <Loader className="animate-spin h-4 w-4" />
+                  </div>
+                )}
+                {filteredVehicles.map(vehicle => (
+                  <div
+                    key={vehicle.id}
+                    onClick={() => handleSelectVehicle(vehicle.id)}
+                    className={cn(
                       "flex items-center gap-3 p-2 rounded-md cursor-pointer transition-colors",
                       selectedVehicleId === vehicle.id ? 'bg-primary/10' : 'hover:bg-accent'
                     )}
                   >
-                    
-                       <img
+
+                    <img
                       src={getVehiclePngUrl(vehicle.type)}
                       alt={vehicle.type}
                       className="h-10 w-10 object-contain"
@@ -330,17 +330,17 @@ const handleSelectVehicle = useCallback((vehicleId: string) => {
                         (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?q=80&w=200&auto=format&fit=crop';
                       }}
                     />
-                      <div className="flex-1">
-                        <p className="font-semibold text-sm">{vehicle.vehicleNo}</p>
-                        {/* <p className="text-xs text-muted-foreground">{vehicle.model} / {vehicle.type}</p> */}
-                        <p className="text-xs text-muted-foreground">{vehicle.type}</p>
-                      </div>
-                     <div title={vehicle.status}>
+                    <div className="flex-1">
+                      <p className="font-semibold text-sm">{vehicle.vehicleNo}</p>
+                      {/* <p className="text-xs text-muted-foreground">{vehicle.model} / {vehicle.type}</p> */}
+                      <p className="text-xs text-muted-foreground">{vehicle.type}</p>
+                    </div>
+                    <div title={vehicle.status}>
                       <img src={getMinimalDotUrl(vehicle.status)} alt={vehicle.status} className="w-6 h-6 drop-shadow-sm" />
                     </div>
-                    </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
+              </div>
             )}
           </ScrollArea>
         </div>
@@ -350,27 +350,27 @@ const handleSelectVehicle = useCallback((vehicleId: string) => {
           {/* Map */}
           <div className="flex-1 relative bg-muted overflow-hidden">
             <MapComponent
-            machines={filteredVehicles}
-            selectedMachineId={selectedVehicleId}
-            onMarkerClick={handleSelectVehicle}
-            showLabels={showLabels}
-            autoZoom={autoZoom}
-            showPois={showPois}
-            showFences={showFences}
-            onMapLoad={handleMapLoad}
-          />
-          <MapControls
-            showLabels={showLabels}
-            setShowLabels={setShowLabels}
-            autoRefresh={autoRefresh}
-            setAutoRefresh={setAutoRefresh}
-            autoZoom={autoZoom}
-            setAutoZoom={setAutoZoom}
-            showPois={showPois}
-            setShowPois={setShowPois}
-            showFences={showFences}
-            setShowFences={setShowFences}
-          />
+              machines={filteredVehicles}
+              selectedMachineId={selectedVehicleId}
+              onMarkerClick={handleSelectVehicle}
+              showLabels={showLabels}
+              autoZoom={autoZoom}
+              showPois={showPois}
+              showFences={showFences}
+              onMapLoad={handleMapLoad}
+            />
+            <MapControls
+              showLabels={showLabels}
+              setShowLabels={setShowLabels}
+              autoRefresh={autoRefresh}
+              setAutoRefresh={setAutoRefresh}
+              autoZoom={autoZoom}
+              setAutoZoom={setAutoZoom}
+              showPois={showPois}
+              setShowPois={setShowPois}
+              showFences={showFences}
+              setShowFences={setShowFences}
+            />
           </div>
 
           {/* Right Sidebar: Vehicle Data */}

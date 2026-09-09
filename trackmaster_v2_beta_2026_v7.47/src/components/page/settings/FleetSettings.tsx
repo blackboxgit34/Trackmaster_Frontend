@@ -54,7 +54,7 @@ interface ThresholdOverride {
 
 const initialOverrides: ThresholdOverride[] = [
   { id: 'override-1', alertType: 'hydraulic-temp', applyTo: 'type', target: 'Mini Excavator', value: 85 },
-  { id: 'override-2', alertType: 'high-temp', applyTo: 'vehicle', target: 'VIO-001', value: 105 },
+  { id: 'override-2', alertType: 'high-temp', applyTo: 'vehicle', target: 'MH-02-AX-1001', value: 105 },
   { id: 'override-3', alertType: 'overIdling', applyTo: 'type', target: 'Compact Wheel Loader', value: 20, unit: 'min' },
 ];
 
