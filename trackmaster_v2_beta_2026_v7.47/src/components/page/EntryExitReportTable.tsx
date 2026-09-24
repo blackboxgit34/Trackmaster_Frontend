@@ -98,12 +98,26 @@ const safeFormatDate = (value: string | Date | null | undefined) => {
   }
 };
 
+// const formatTimeOnly = (value: string | Date | null | undefined) => {
+//   if (!value) return '-';
+//   try {
+//     const d = new Date(value);
+//     if (isNaN(d.getTime())) return String(value);
+//     return format(d, 'hh:mm a');
+//   } catch {
+//     return String(value);
+//   }
+// };
+
 const formatTimeOnly = (value: string | Date | null | undefined) => {
   if (!value) return '-';
+
   try {
     const d = new Date(value);
+
     if (isNaN(d.getTime())) return String(value);
-    return format(d, 'hh:mm a');
+
+    return format(d, 'hh:mm:ss a');
   } catch {
     return String(value);
   }

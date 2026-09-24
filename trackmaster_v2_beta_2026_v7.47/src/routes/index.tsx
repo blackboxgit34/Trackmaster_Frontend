@@ -28,6 +28,7 @@ import LocationZoneReportsPage from '@/pages/LocationZoneReportsPage';
 import OperationalCrewReportsPage from '@/pages/OperationalCrewReportsPage';
 import SummaryManagementReportsPage from '@/pages/SummaryManagementReportsPage';
 import CustomReport from '@/components/page/CustomReport';
+import SelectCustomerPage from '@/pages/SelectCustomerPage';
 import { cn } from '@/lib/utils';
 import { Toaster } from '@/components/ui/toaster';
 import TripManagement from '@/components/page/TripManagement';
@@ -78,13 +79,17 @@ function AppLayout() {
 
 // This component protects routes that require authentication.
 function ProtectedRoutes() {
-  const { isAuthenticated } = useUser();
+  const { isAuthenticated, isStaffMember } = useUser();
+  const location = useLocation();
 
   // If the user is not authenticated, redirect them to the login page.
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
+  if (isStaffMember && location.pathname !== "/select-customer") {
+    return <Navigate to="/select-customer" replace />;
+  }
   // If they are authenticated, render the main application layout.
   // The nested routes will be rendered inside the <Outlet /> of AppLayout.
   return <AppLayout />;
@@ -101,7 +106,7 @@ export default function AppRoutes() {
         path="/login"
         element={isAuthenticated ? <Navigate to="/" replace /> : <LoginPage />}
       />
-
+<Route path="/select-customer" element={<SelectCustomerPage />} />
       {/* Protected Routes Wrapper */}
       {/* All routes inside this wrapper require authentication. */}
       <Route element={<ProtectedRoutes />}>
