@@ -375,6 +375,7 @@ const BatteryIconDevice = ({ deviceBattery, tooltipLabel }: { deviceBattery: num
     </TooltipProvider>
   );
 };
+
 const TableSkeleton = () => (
   <TableBody>
     {Array.from({ length: 5 }).map((_, index) => (
@@ -471,6 +472,7 @@ const LiveStatusTable = () => {
           sSearch: searchTerm || "",
           sortColumn: sortConfig.sortColumn,
           sortDirection: sortConfig.sortDirection,
+          Status: statusFromUrl || null,
         };
 
         const allRecords = await getVehicleStatusList({
@@ -499,6 +501,7 @@ const LiveStatusTable = () => {
           sSearch: searchTerm || "",
           sortColumn: sortConfig.sortColumn,
           sortDirection: sortConfig.sortDirection,
+          Status: statusFromUrl || null,
         };
 
         const response = await getVehicleStatusList({

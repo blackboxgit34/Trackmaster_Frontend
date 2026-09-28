@@ -158,11 +158,13 @@ type GetVehicleStatusParams = {
   Status?: string | null;
 };
 const getVehicleStatus = (
+
   speed: number,
   overspeed: number,
   lastUpdated: string,
   ignitionStatus: boolean
 ): string => {
+
 
   // const hoursDiff =
   //   (new Date().getTime() - new Date(lastUpdated).getTime()) /
@@ -238,8 +240,9 @@ export const getVehicleStatusList = async ({
   }
 
   const result = await response.json();
+  const records = Array.isArray(result?.data) ? result.data : [];
 
-  return result.data.map((item: any) => ({
+  return records.map((item: any) => ({
 
     id: item.bbid,
     vehicleNo: item.vehName,
@@ -282,7 +285,7 @@ export const getVehicleStatusList = async ({
     hydraulicTemp: 0,
     acStatus: item.acSignal,
     ignitionStatus: item.ignitionStatus,
-    totalRecords: item.totalRecords || 0,
+    totalRecords: Number(item.totalRecords ?? item.TotalRecords ?? 0),
     driverName: item.driverName || '',
     mob_no: item.mob_no || '',
     addons: {
